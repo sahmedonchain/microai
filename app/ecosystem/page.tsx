@@ -32,9 +32,9 @@ const categories = [
 const projects: Project[] = [
   {
     name: "MicroAI",
-    desc: "Pay-per-use AI chatbot dApp on Arc Testnet. Ask any Arc or Circle question for $0.001 USDC. The Arc & Circle Intelligence Hub.",
+    desc: "Pay-per-use AI chatbot dApp on Arc MAINNET. Ask any Arc or Circle question for $0.001 USDC. The Arc & Circle Intelligence Hub.",
     category: "COMMUNITY BUILDS",
-    tags: ["AI", "Pay-per-use", "USDC", "Arc Testnet"],
+    tags: ["AI", "Pay-per-use", "USDC", "Arc MAINNET"],
     url: "https://microai-tan.vercel.app",
     logo: "M",
     logoColor: "#10b981",
@@ -69,7 +69,7 @@ const projects: Project[] = [
   },
   {
     name: "MetaMask",
-    desc: "The leading EVM browser wallet. Fully compatible with Arc Testnet for connecting dApps and managing USDC.",
+    desc: "The leading EVM browser wallet. Fully compatible with Arc MAINNET for connecting dApps and managing USDC.",
     category: "WALLETS",
     tags: ["EVM", "Browser Wallet", "USDC"],
     url: "https://metamask.io",
@@ -87,7 +87,7 @@ const projects: Project[] = [
   },
   {
     name: "Rainbow",
-    desc: "Mobile-first Ethereum wallet with Arc testnet support. Clean UX for retail users interacting with USDC on Arc.",
+    desc: "Mobile-first Ethereum wallet with Arc MAINNET support. Clean UX for retail users interacting with USDC on Arc.",
     category: "WALLETS",
     tags: ["Mobile", "Retail", "EVM"],
     url: "https://rainbow.me",
@@ -105,7 +105,7 @@ const projects: Project[] = [
   },
   {
     name: "Ledger",
-    desc: "Hardware wallet with Arc Testnet integration for secure offline key management of USDC assets.",
+    desc: "Hardware wallet with Arc MAINNET integration for secure offline key management of USDC assets.",
     category: "WALLETS",
     tags: ["Hardware Wallet", "Security", "Cold Storage"],
     url: "https://ledger.com",
@@ -312,7 +312,7 @@ const projects: Project[] = [
   },
   {
     name: "BRLA (Avenia)",
-    desc: "Brazilian Real stablecoin on Arc testnet. Targeting Brazil's large digital payment market.",
+    desc: "Brazilian Real stablecoin on Arc MAINNET. Targeting Brazil's large digital payment market.",
     category: "STABLECOINS",
     tags: ["BRL", "Brazil", "Real"],
     url: "https://avenia.com.br",
@@ -339,7 +339,7 @@ const projects: Project[] = [
   },
   {
     name: "AWS",
-    desc: "Amazon Web Services providing cloud infrastructure backbone for Arc testnet and validator nodes.",
+    desc: "Amazon Web Services providing cloud infrastructure backbone for Arc MAINNET and validator nodes.",
     category: "INFRASTRUCTURE",
     tags: ["Cloud", "Validators", "Infrastructure"],
     url: "https://aws.amazon.com",
@@ -605,7 +605,7 @@ export default function EcosystemPage() {
             <div style={{ fontSize: 10, color: "#475569" }}>MICROAI · THE ARC & CIRCLE HUB</div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-            {[{ l: "ARC", h: "https://arc.io" }, { l: "CIRCLE", h: "https://circle.com" }, { l: "GITHUB", h: "https://github.com/sahmedonchain/microai" }, { l: "EXPLORER", h: "https://testnet.arcscan.app" }].map((link) => (
+            {[{ l: "ARC", h: "https://arc.io" }, { l: "CIRCLE", h: "https://circle.com" }, { l: "GITHUB", h: "https://github.com/sahmedonchain/microai" }, { l: "EXPLORER", h: "https://explorer.arc.io" }].map((link) => (
               <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#475569", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "monospace", textDecoration: "none" }}>{link.l}</a>
             ))}
           </div>

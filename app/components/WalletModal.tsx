@@ -16,13 +16,13 @@ declare global {
   }
 }
 
-const ARC_CHAIN_ID = "0x4cef52";
+const ARC_CHAIN_ID = "0x13b2";
 const ARC_CHAIN_PARAMS = {
   chainId: ARC_CHAIN_ID,
-  chainName: "Arc Testnet",
+  chainName: "Arc MAINNET",
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
-  rpcUrls: ["https://rpc.testnet.arc.network"],
-  blockExplorerUrls: ["https://testnet.arcscan.app"],
+  rpcUrls: ["https://rpc.mainnet.arc.io"],
+  blockExplorerUrls: ["https://explorer.arc.io"],
 };
 
 type WalletOption = {
@@ -87,7 +87,7 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
       const provider = await getProviderForWallet(wallet.id);
       if (!provider) throw new Error("Provider not found");
 
-      // Switch or add Arc Testnet
+      // Switch or add Arc MAINNET
       try {
         await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID }] });
       } catch (switchErr: unknown) {
@@ -124,7 +124,7 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>Connect Wallet</div>
-            <div style={{ fontSize: 10, color: "#334155", fontFamily: "monospace", letterSpacing: "0.08em", marginTop: 2 }}>ARC TESTNET · USDC GAS</div>
+            <div style={{ fontSize: 10, color: "#334155", fontFamily: "monospace", letterSpacing: "0.08em", marginTop: 2 }}>ARC MAINNET · USDC GAS</div>
           </div>
           <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#475569", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
@@ -182,7 +182,7 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
 
         {/* Info */}
         <div style={{ marginTop: 16, padding: "10px 12px", borderRadius: 10, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.08)" }}>
-          <div style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", letterSpacing: "0.08em", marginBottom: 4 }}>NEED TESTNET USDC?</div>
+          <div style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", letterSpacing: "0.08em", marginBottom: 4 }}>NEED MAINNET USDC?</div>
           <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#34d399", textDecoration: "none", fontWeight: 600 }}>
             Get free USDC at faucet.circle.com ↗
           </a>

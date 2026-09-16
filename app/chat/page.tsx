@@ -5,12 +5,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { WalletModal } from "@/app/components/WalletModal";
 
-const ARC_CHAIN_ID = "0x4cef52";
+const ARC_CHAIN_ID = "0x13b2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const OPERATOR_ADDRESS = process.env.NEXT_PUBLIC_OPERATOR_ADDRESS || "0xd5c544D8aE72B0135eCD0Fb4adD0B2C807498499";
 const STORAGE_KEY = "microai_chat_history";
 const BUNDLE_KEY = "microai_bundle";
-const EXPLORER = "https://testnet.arcscan.app/tx/";
+const EXPLORER = "https://explorer.arc.io/tx/";
 
 // USDC amount per query in 6-decimal units
 const COST_PER_QUERY = 1000; // 0.001 USDC
@@ -42,7 +42,7 @@ interface BundleState {
 const SUGGESTIONS = [
   { title: "What is Arc Blockchain?", desc: "L1 stablecoin commerce chain" },
   { title: "How does Circle USDC work?", desc: "Cross-chain transfers & APIs" },
-  { title: "Deploy on Arc Testnet", desc: "Step-by-step contract guide" },
+  { title: "Deploy on Arc MAINNET", desc: "Step-by-step contract guide" },
   { title: "ERC-8004 AI Agents", desc: "Register your AI agent on Arc" },
 ];
 
@@ -382,7 +382,7 @@ export default function Chat() {
           <div ref={netMenuRef} style={{ position: "relative" }}>
             <button onClick={() => setShowNetMenu(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(52,211,153,0.18)", background: "rgba(1,8,3,0.8)", color: "#34d399", fontSize: 9, fontWeight: 700, fontFamily: "monospace", cursor: "pointer", letterSpacing: "0.08em" }}>
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", animation: "pulse 2s infinite" }} />
-              TESTNET
+              MAINNET
               <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showNetMenu ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -390,7 +390,7 @@ export default function Chat() {
             {showNetMenu && (
               <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: "rgba(2,10,5,0.98)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 10, overflow: "hidden", minWidth: 130, zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
                 <button onClick={() => setShowNetMenu(false)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", background: "rgba(16,185,129,0.08)", border: "none", color: "#34d399", fontSize: 10, fontWeight: 700, fontFamily: "monospace", cursor: "pointer", textAlign: "left" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399" }} />TESTNET<span style={{ marginLeft: "auto", fontSize: 8 }}>✓</span>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399" }} />MAINNET<span style={{ marginLeft: "auto", fontSize: 8 }}>✓</span>
                 </button>
                 <div style={{ height: 1, background: "rgba(16,185,129,0.06)" }} />
                 <button onClick={() => { alert("Mainnet coming soon."); setShowNetMenu(false); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#475569", fontSize: 10, fontWeight: 700, fontFamily: "monospace", cursor: "not-allowed", textAlign: "left" }}>
@@ -537,7 +537,7 @@ export default function Chat() {
               ? <span style={{ color: "#f59e0b", animation: "pulse 1.5s infinite" }}>{txStep.toUpperCase()}</span>
               : bundle && bundle.remaining > 0
               ? <span style={{ color: "#34d399" }}>{bundle.remaining} QUERIES REMAINING · NO WALLET POPUP</span>
-              : "ARC TESTNET · 0.001 USDC PER QUERY · BUY BUNDLE TO START"
+              : "ARC MAINNET · 0.001 USDC PER QUERY · BUY BUNDLE TO START"
             }
           </div>
         </div>

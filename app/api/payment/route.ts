@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const ARC_RPC = "https://rpc.testnet.arc.network";
+const ARC_RPC = "https://rpc.mainnet.arc.io";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const RECEIVER = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const { ethers } = await import("ethers");
 
     // Static network — no eth_chainId call
-    const network = new ethers.Network("arc-testnet", 5042002);
+    const network = new ethers.Network("arc-MAINNET", 5042002);
     const provider = new ethers.JsonRpcProvider(ARC_RPC, network, {
       staticNetwork: network,
     });

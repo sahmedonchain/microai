@@ -74,7 +74,7 @@ export default function Home() {
       <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(40px,8vw,80px) 20px clamp(32px,5vw,52px)', textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(16,185,129,0.18)', background: 'rgba(3,17,10,0.7)', marginBottom: 24 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-          <span style={{ fontSize: 9, color: '#34d399', fontWeight: 700, letterSpacing: '0.18em', fontFamily: 'monospace' }}>NOW LIVE ON TESTNET</span>
+          <span style={{ fontSize: 9, color: '#34d399', fontWeight: 700, letterSpacing: '0.18em', fontFamily: 'monospace' }}>NOW LIVE ON MAINNET</span>
         </div>
 
         <h1 style={{ fontSize: 'clamp(2rem, 8vw, 5rem)', fontWeight: 900, lineHeight: 1.05, margin: '0 0 20px', letterSpacing: '-0.03em' }}>
@@ -93,7 +93,7 @@ export default function Home() {
           {[
             { val: 'ERC-8004', label: 'Agent Registered' },
             { val: '$0.001', label: 'Per Question' },
-            { val: 'Arc Testnet', label: 'Live Now' },
+            { val: 'Arc MAINNET', label: 'Live Now' },
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'clamp(13px,3vw,16px)', fontWeight: 900, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.01em' }}>{s.val}</div>
@@ -123,7 +123,7 @@ export default function Home() {
               </div>
               <span style={{ fontSize: 9, color: '#334155', fontFamily: 'monospace', letterSpacing: '0.1em' }}>MICROAI — LIVE DEMO</span>
             </div>
-            <span style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace' }}>ARC TESTNET</span>
+            <span style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace' }}>ARC MAINNET</span>
           </div>
 
           <div style={{ padding: '16px' }}>
@@ -208,7 +208,7 @@ export default function Home() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 4 }}>
             {[
-              { n: '1', name: 'Connect Wallet', desc: 'MetaMask on Arc Testnet. Takes 30 seconds.' },
+              { n: '1', name: 'Connect Wallet', desc: 'MetaMask on Arc MAINNET. Takes 30 seconds.' },
               { n: '2', name: 'Ask Your Question', desc: 'Anything about Arc SDK, Circle APIs, or smart contracts.' },
               { n: '3', name: 'Sign 0.001 USDC', desc: 'One click in your wallet. No subscription, no account.' },
               { n: '4', name: 'Get the Answer', desc: 'Instant response with on-chain TX proof on Arc Explorer.' },
@@ -296,7 +296,7 @@ export default function Home() {
             <div style={{ fontSize: 9, color: '#1e3a29', fontFamily: 'monospace', letterSpacing: '0.1em' }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-            {[{ l: 'ARC', h: 'https://arc.io' }, { l: 'CIRCLE', h: 'https://circle.com' }, { l: 'GITHUB', h: 'https://github.com/sahmedonchain/microai' }, { l: 'EXPLORER', h: 'https://testnet.arcscan.app' }].map(link => (
+            {[{ l: 'ARC', h: 'https://arc.io' }, { l: 'CIRCLE', h: 'https://circle.com' }, { l: 'GITHUB', h: 'https://github.com/sahmedonchain/microai' }, { l: 'EXPLORER', h: 'https://explorer.arc.io' }].map(link => (
               <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: '#1e3a29', fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'monospace', textDecoration: 'none' }}>{link.l}</a>
             ))}
           </div>

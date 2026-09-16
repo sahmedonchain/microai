@@ -3,11 +3,11 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Navbar } from "@/app/components/Navbar";
 
-const ARC_RPC = "https://rpc.testnet.arc.network";
+const ARC_RPC = "https://rpc.mainnet.arc.io";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const EURC_CONTRACT = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
+const EURC_CONTRACT = "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1";
 const RECEIVER_WALLET = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
-const ARC_EXPLORER_API = "https://testnet.arcscan.app/api/v2";
+const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
 
 interface NetworkStats {
   blockNumber: number;
@@ -146,7 +146,7 @@ export default function StatsPage() {
           Arc Network Stats
         </h1>
         <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
-          Real-time data pulled directly from Arc Testnet RPC. No static numbers — this refreshes every 10 seconds.
+          Real-time data pulled directly from Arc Mainnet RPC. No static numbers — this refreshes every 10 seconds.
         </p>
       </section>
 
@@ -198,7 +198,7 @@ export default function StatsPage() {
           </div>
         </div>
         <a
-          href={`https://testnet.arcscan.app/address/${RECEIVER_WALLET}`}
+          href={`https://explorer.arc.io/address/${RECEIVER_WALLET}`}
           target="_blank"
           rel="noreferrer"
           style={{ display: "inline-block", marginTop: 10, fontSize: 10, color: "#34d399", fontFamily: "monospace", fontWeight: 700, textDecoration: "none", letterSpacing: "0.06em" }}
@@ -219,7 +219,7 @@ export default function StatsPage() {
               value={walletInput}
               onChange={(e) => setWalletInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && lookupWallet()}
-              placeholder="0x... (any Arc testnet address)"
+              placeholder="0x... (any Arc mainnet address)"
               style={{
                 flex: 1,
                 minWidth: 0,
@@ -277,7 +277,7 @@ export default function StatsPage() {
 
           {!walletData && !walletError && (
             <div style={{ marginTop: 12, fontSize: 10, color: "#334155", fontFamily: "monospace" }}>
-              Paste any Arc testnet wallet address to see live USDC, EURC, and native gas balance.
+              Paste any Arc MAINNET wallet address to see live USDC, EURC, and native gas balance.
             </div>
           )}
         </div>
@@ -304,7 +304,7 @@ export default function StatsPage() {
               { l: "ECOSYSTEM", h: "/ecosystem" },
               { l: "GRANTS", h: "/grants" },
               { l: "DEBUGGER", h: "/debug" },
-              { l: "EXPLORER", h: "https://testnet.arcscan.app" },
+              { l: "EXPLORER", h: "https://explorer.arc.io" },
             ].map((link) => (
               <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#1e3a29", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "monospace", textDecoration: "none" }}>
                 {link.l}

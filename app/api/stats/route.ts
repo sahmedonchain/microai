@@ -5,7 +5,7 @@ const RECEIVER = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
 export async function GET() {
   try {
     const res = await fetch(
-      `https://testnet.arcscan.app/api/v2/addresses/${RECEIVER}/token-transfers?type=ERC-20`,
+      `https://explorer.arc.io/api/v2/addresses/${RECEIVER}/token-transfers?type=ERC-20`,
       { cache: "no-store" }
     );
 

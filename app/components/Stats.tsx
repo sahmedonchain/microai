@@ -42,7 +42,7 @@ export default function Stats() {
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 bg-green-900/30 border border-green-700/30 text-green-300 text-xs px-4 py-1.5 rounded-full mb-4">
           <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-          Live On-Chain Data from Arc Testnet
+          Live On-Chain Data from Arc MAINNET
         </div>
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Real Usage. Real Transactions.</h2>
         <p className="text-gray-400 text-sm md:text-base">Every number below is pulled directly from Arc blockchain.</p>
@@ -59,7 +59,7 @@ export default function Stats() {
         ))}
       </div>
       <div className="text-center mt-6">
-        <a href="https://testnet.arcscan.app" target="_blank" rel="noreferrer" className="text-xs text-purple-500 hover:text-purple-300 transition-colors">Verify all transactions on Arc Explorer</a>
+        <a href="https://explorer.arc.io" target="_blank" rel="noreferrer" className="text-xs text-purple-500 hover:text-purple-300 transition-colors">Verify all transactions on Arc Explorer</a>
       </div>
     </section>
   );

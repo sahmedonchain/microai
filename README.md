@@ -1,6 +1,6 @@
 # μ MicroAI — The Arc & Circle Intelligence Hub
 
-> Pay-per-use AI chatbot, live ecosystem directory, grants tracker, transaction debugger, and real-time Arc network stats — all running on Arc Testnet, powered by USDC micropayments.
+> Pay-per-use AI chatbot, live ecosystem directory, grants tracker, transaction debugger, and real-time Arc network stats — all running on Arc MAINNET, powered by USDC micropayments.
 
 **Live:** https://microai-tan.vercel.app
 
@@ -8,7 +8,7 @@
 
 ## What is MicroAI?
 
-MicroAI started as a simple pay-per-use AI chatbot on Arc Testnet. It has grown into a full knowledge and tooling hub for anyone building in the Arc + Circle ecosystem.
+MicroAI started as a simple pay-per-use AI chatbot on Arc MAINNET. It has grown into a full knowledge and tooling hub for anyone building in the Arc + Circle ecosystem.
 
 Every AI query costs **$0.001 USDC**, settled directly on-chain. No subscriptions, no accounts, no ETH needed.
 
@@ -31,7 +31,7 @@ Every AI query costs **$0.001 USDC**, settled directly on-chain. No subscription
 
 ### AI Chat (`/chat`)
 - Ask any Arc or Circle question for $0.001 USDC
-- Wallet signs USDC transfer on Arc Testnet before each response
+- Wallet signs USDC transfer on Arc MAINNET before each response
 - AI trained on Arc docs, Circle developer docs, CCTP, ERC-8004, ERC-8183
 - Every answer comes with a verifiable on-chain TX proof
 - Chat history saved locally across sessions
@@ -50,7 +50,7 @@ Every AI query costs **$0.001 USDC**, settled directly on-chain. No subscription
 - Direct apply links with reward and deadline info
 
 ### Transaction Debugger (`/debug`)
-- Paste any Arc testnet TX hash
+- Paste any Arc MAINNET TX hash
 - Fetches real data from Arc Explorer API
 - AI analyzes root cause: insufficient USDC, wrong chain, gas limit, contract revert, invalid input, nonce issues
 - Shows severity level (HIGH / MEDIUM / LOW) with fix instructions
@@ -68,12 +68,12 @@ Every AI query costs **$0.001 USDC**, settled directly on-chain. No subscription
 
 | Item | Value |
 |------|-------|
-| Network | Arc Testnet |
-| Chain ID | 314573 (0x4cef52) |
-| RPC | https://rpc.testnet.arc.network |
-| Explorer | https://testnet.arcscan.app |
+| Network | Arc MAINNET |
+| Chain ID | 5042 (0x13b2) |
+| RPC | https://rpc.mainnet.arc.io |
+| Explorer | https://explorer.arc.io |
 | USDC Contract | `0x3600000000000000000000000000000000000000` |
-| EURC Contract | `0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a` |
+| EURC Contract | `0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1` |
 | Payment Receiver | `0x9a318CD2BC533B5B2e96F7f5b499738732492b15` |
 | ERC-8004 Agent ID | 69168 |
 | ERC-8183 Job ID | 110278 |
@@ -82,10 +82,10 @@ Every AI query costs **$0.001 USDC**, settled directly on-chain. No subscription
 
 ## Circle Tools Used
 
-- **USDC** — Native payment token and gas token on Arc Testnet
+- **USDC** — Native payment token and gas token on Arc MAINNET
 - **EURC** — Supported in wallet lookup and ecosystem directory
 - **CCTP** — Documented in AI knowledge base (TokenMessengerV2, MessageTransmitterV2)
-- **Arc Testnet** — All transactions settled on-chain, no ETH needed
+- **Arc MAINNET** — All transactions settled on-chain, no ETH needed
 - **Arc Explorer API** — Powers the transaction debugger and revenue counter
 - **Arc RPC** — Powers live network stats and wallet balance lookup
 
@@ -104,7 +104,7 @@ Every AI query costs **$0.001 USDC**, settled directly on-chain. No subscription
 ## Architecture
 
 ```
-User → Connect Wallet (Arc Testnet)
+User → Connect Wallet (Arc MAINNET)
      → Ask Question
      → Wallet signs 0.001 USDC transfer on-chain
      → USDC settled on Arc (instant finality)
@@ -133,16 +133,16 @@ GROQ_API_KEY=your_groq_api_key
 pnpm dev
 ```
 
-Open `http://localhost:3000` — connect MetaMask to Arc Testnet to test payments.
+Open `http://localhost:3000` — connect MetaMask to Arc MAINNET to test payments.
 
-**Arc Testnet config for MetaMask:**
-- Network Name: Arc Testnet
-- RPC URL: https://rpc.testnet.arc.network
-- Chain ID: 314573
+**Arc MAINNET config for MetaMask:**
+- Network Name: Arc MAINNET
+- RPC URL: https://rpc.mainnet.arc.io
+- Chain ID: 5042
 - Currency Symbol: USDC
-- Explorer: https://testnet.arcscan.app
+- Explorer: https://explorer.arc.io
 
-Get testnet USDC: https://faucet.circle.com
+Get MAINNET USDC: https://faucet.circle.com
 
 ---
 
@@ -158,6 +158,6 @@ Built for the **Arc Office Hours** submission and the **Stablecoin Commerce Stac
 
 - **Live App:** https://microai-tan.vercel.app
 - **GitHub:** https://github.com/sahmedonchain/microai
-- **Arc Explorer (receiver wallet):** https://testnet.arcscan.app/address/0x9a318CD2BC533B5B2e96F7f5b499738732492b15
-- **Arc Testnet Explorer:** https://testnet.arcscan.app
+- **Arc Explorer (receiver wallet):** https://explorer.arc.io/address/0x9a318CD2BC533B5B2e96F7f5b499738732492b15
+- **Arc MAINNET Explorer:** https://explorer.arc.io
 - **Circle Faucet:** https://faucet.circle.com

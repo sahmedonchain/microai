@@ -21,9 +21,9 @@ Arc is built as an EVM-compatible Layer-1 blockchain. This means:
 The key difference: USDC replaces ETH as the gas token. You must have USDC to pay transaction fees — no ETH needed.
 
 GUIDE:
-Step 1: Change your RPC to https://rpc.testnet.arc.network
+Step 1: Change your RPC to https://rpc.mainnet.arc.io
 Step 2: Change chain ID to 5042002
-Step 3: Make sure your deployer wallet has testnet USDC (for gas)
+Step 3: Make sure your deployer wallet has MAINNET USDC (for gas)
 Step 4: Deploy exactly as you would on Ethereum
 
 KEY DIFFERENCES FROM ETHEREUM:
@@ -62,13 +62,13 @@ GUIDE (Hardhat setup):
 Step 1: npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
 Step 2: In hardhat.config.ts, add:
 networks: {
-  arcTestnet: {
-    url: "https://rpc.testnet.arc.network",
+  arcMAINNET: {
+    url: "https://rpc.mainnet.arc.io",
     chainId: 5042002,
     accounts: [process.env.PRIVATE_KEY],
   }
 }
-Step 3: npx hardhat run scripts/deploy.ts --network arcTestnet
+Step 3: npx hardhat run scripts/deploy.ts --network arcMAINNET
 
 SOURCE:
 docs.arc.io/arc/tutorials/deploy-on-arc.md
@@ -154,7 +154,7 @@ SPECS:
 - Max base fee: 1e-3 USDC (~$0.001 per gas unit)
 
 NOTE:
-Arc testnet has processed over 244M transactions as of May 2026. Mainnet specs may differ slightly. Performance is optimized for financial transactions, not gaming or high-frequency NFT minting.
+Arc MAINNET has processed over 244M transactions as of May 2026. Mainnet specs may differ slightly. Performance is optimized for financial transactions, not gaming or high-frequency NFT minting.
 
 SOURCE:
 docs.arc.io/arc/references/gas-and-fees.md
@@ -195,18 +195,18 @@ docs.arc.io/arc/tools/account-abstraction.md
   // ============================================================
   {
     id: "setup-1",
-    keywords: ["add arc testnet metamask", "metamask arc setup", "connect arc metamask", "arc network metamask"],
-    title: "How do I add Arc Testnet to MetaMask?",
+    keywords: ["add arc MAINNET metamask", "metamask arc setup", "connect arc metamask", "arc network metamask"],
+    title: "How do I add Arc MAINNET to MetaMask?",
     content: `
 SHORT_ANSWER:
 Open MetaMask → Settings → Networks → Add network manually → enter the details below → Save.
 
 NETWORK DETAILS:
-- Network name: Arc Testnet
-- New RPC URL: https://rpc.testnet.arc.network
+- Network name: Arc MAINNET
+- New RPC URL: https://rpc.mainnet.arc.io
 - Chain ID: 5042002
 - Currency symbol: USDC
-- Block Explorer URL: https://testnet.arcscan.app
+- Block Explorer URL: https://explorer.arc.io
 
 STEP-BY-STEP:
 Step 1: Open MetaMask browser extension
@@ -215,17 +215,17 @@ Step 3: Click "Add Network"
 Step 4: Click "Add a network manually"
 Step 5: Fill in the fields above
 Step 6: Click "Save"
-Step 7: Click "Switch to Arc Testnet"
+Step 7: Click "Switch to Arc MAINNET"
 
 PROGRAMMATIC (for dApps):
 await window.ethereum.request({
   method: "wallet_addEthereumChain",
   params: [{
-    chainId: "0x4cef52",
-    chainName: "Arc Testnet",
+    chainId: "0x13b2",
+    chainName: "Arc MAINNET",
     nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
-    rpcUrls: ["https://rpc.testnet.arc.network"],
-    blockExplorerUrls: ["https://testnet.arcscan.app"],
+    rpcUrls: ["https://rpc.mainnet.arc.io"],
+    blockExplorerUrls: ["https://explorer.arc.io"],
   }],
 });
 
@@ -239,22 +239,22 @@ docs.arc.io/arc/references/connect-to-arc.md
   {
     id: "setup-2",
     keywords: ["arc rpc url", "rpc endpoint arc", "arc rpc", "arc endpoint"],
-    title: "What is Arc Testnet's RPC URL and network details?",
+    title: "What is Arc MAINNET's RPC URL and network details?",
     content: `
 SHORT_ANSWER:
-RPC URL: https://rpc.testnet.arc.network | Chain ID: 5042002 (hex: 0x4cef52) | Explorer: https://testnet.arcscan.app
+RPC URL: https://rpc.mainnet.arc.io | Chain ID: 5042002 (hex: 0x13b2) | Explorer: https://explorer.arc.io
 
 COMPLETE NETWORK DETAILS:
-- Network name: Arc Testnet
-- RPC URL: https://rpc.testnet.arc.network
-- Chain ID: 5042002 (hex: 0x4cef52)
+- Network name: Arc MAINNET
+- RPC URL: https://rpc.mainnet.arc.io
+- Chain ID: 5042002 (hex: 0x13b2)
 - Currency symbol: USDC
-- Block Explorer: https://testnet.arcscan.app
+- Block Explorer: https://explorer.arc.io
 - Faucet: https://faucet.circle.com
 
-CONTRACT ADDRESSES (Testnet):
+CONTRACT ADDRESSES (MAINNET):
 - USDC: 0x3600000000000000000000000000000000000000
-- EURC: 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a
+- EURC: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
 - CCTP TokenMessengerV2: 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA
 - CCTP MessageTransmitterV2: 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
 - Gateway: 0x0077777d7EBA4688BDeF3E311b846F25870A19B9
@@ -269,27 +269,27 @@ docs.arc.io/arc/references/contract-addresses.md
 
   {
     id: "setup-3",
-    keywords: ["testnet usdc faucet", "get usdc testnet", "free usdc arc", "arc faucet", "faucet circle"],
-    title: "How do I get testnet USDC on Arc?",
+    keywords: ["MAINNET usdc faucet", "get usdc MAINNET", "free usdc arc", "arc faucet", "faucet circle"],
+    title: "How do I get MAINNET USDC on Arc?",
     content: `
 SHORT_ANSWER:
-Go to faucet.circle.com → Select Arc Testnet → Enter your wallet address → Click Send. USDC arrives in seconds.
+Go to faucet.circle.com → Select Arc MAINNET → Enter your wallet address → Click Send. USDC arrives in seconds.
 
 STEP-BY-STEP:
 Step 1: Go to https://faucet.circle.com
-Step 2: Select network: ARC Testnet
+Step 2: Select network: ARC MAINNET
 Step 3: Select token: USDC
 Step 4: Enter your wallet address
 Step 5: Click "Send"
 Step 6: Wait 10-30 seconds
-Step 7: Check balance at https://testnet.arcscan.app
+Step 7: Check balance at https://explorer.arc.io
 
 ALSO AVAILABLE:
-- EURC testnet tokens from same faucet
-- USYC testnet (requires allowlisting via Circle Support)
+- EURC MAINNET tokens from same faucet
+- USYC MAINNET (requires allowlisting via Circle Support)
 
 KEY POINTS:
-- Testnet USDC has no real monetary value
+- MAINNET USDC has no real monetary value
 - You can request multiple times
 - USDC required for gas fees on Arc
 - USDC Contract: 0x3600000000000000000000000000000000000000
@@ -302,11 +302,11 @@ docs.arc.io/arc/references/contract-addresses.md
 
   {
     id: "setup-4",
-    keywords: ["hardhat config arc", "hardhat arc setup", "deploy hardhat arc", "hardhat testnet arc"],
+    keywords: ["hardhat config arc", "hardhat arc setup", "deploy hardhat arc", "hardhat MAINNET arc"],
     title: "How do I set up Hardhat for Arc?",
     content: `
 SHORT_ANSWER:
-Install Hardhat, add Arc Testnet network config with RPC and Chain ID, then deploy with --network arcTestnet flag.
+Install Hardhat, add Arc MAINNET network config with RPC and Chain ID, then deploy with --network arcMAINNET flag.
 
 COMPLETE SETUP:
 Step 1: Install dependencies
@@ -324,8 +324,8 @@ dotenv.config();
 const config: HardhatUserConfig = {
   solidity: "0.8.24",
   networks: {
-    arcTestnet: {
-      url: "https://rpc.testnet.arc.network",
+    arcMAINNET: {
+      url: "https://rpc.mainnet.arc.io",
       chainId: 5042002,
       accounts: [process.env.PRIVATE_KEY!],
     },
@@ -346,13 +346,13 @@ async function main() {
 main().catch(console.error);
 
 Step 6: Deploy
-npx hardhat run scripts/deploy.ts --network arcTestnet
+npx hardhat run scripts/deploy.ts --network arcMAINNET
 
 Step 7: View on explorer
-https://testnet.arcscan.app/address/YOUR_CONTRACT_ADDRESS
+https://explorer.arc.io/address/YOUR_CONTRACT_ADDRESS
 
 KEY POINTS:
-- Deployer wallet must have testnet USDC for gas
+- Deployer wallet must have MAINNET USDC for gas
 - Gas is automatically paid in USDC
 - No ETH needed
 
@@ -385,18 +385,18 @@ out = "out"
 libs = ["lib"]
 
 [rpc_endpoints]
-arc_testnet = "https://rpc.testnet.arc.network"
+arc_MAINNET = "https://rpc.mainnet.arc.io"
 
 Step 4: Write contract in src/MyContract.sol
 
 Step 5: Deploy
 forge create src/MyContract.sol:MyContract \
-  --rpc-url https://rpc.testnet.arc.network \
+  --rpc-url https://rpc.mainnet.arc.io \
   --private-key $PRIVATE_KEY \
   --chain-id 5042002
 
 Step 6: Run tests
-forge test --rpc-url https://rpc.testnet.arc.network
+forge test --rpc-url https://rpc.mainnet.arc.io
 
 KEY POINTS:
 - forge test works locally without RPC
@@ -414,10 +414,10 @@ docs.arc.io/arc/tutorials/deploy-on-arc.md
     title: "How do I verify contracts on Arc Explorer?",
     content: `
 SHORT_ANSWER:
-Go to testnet.arcscan.app, find your contract, click "Verify & Publish", upload your Solidity source code and compiler settings.
+Go to explorer.arc.io, find your contract, click "Verify & Publish", upload your Solidity source code and compiler settings.
 
 STEP-BY-STEP:
-Step 1: Go to https://testnet.arcscan.app
+Step 1: Go to https://explorer.arc.io
 Step 2: Search your contract address
 Step 3: Click "Contract" tab
 Step 4: Click "Verify & Publish"
@@ -430,22 +430,22 @@ npm install --save-dev @nomicfoundation/hardhat-verify
 
 In hardhat.config.ts add:
 etherscan: {
-  apiKey: { arcTestnet: "placeholder" },
+  apiKey: { arcMAINNET: "placeholder" },
   customChains: [{
-    network: "arcTestnet",
+    network: "arcMAINNET",
     chainId: 5042002,
     urls: {
-      apiURL: "https://testnet.arcscan.app/api",
-      browserURL: "https://testnet.arcscan.app",
+      apiURL: "https://explorer.arc.io/api",
+      browserURL: "https://explorer.arc.io",
     },
   }],
 },
 
 Then run:
-npx hardhat verify --network arcTestnet YOUR_CONTRACT_ADDRESS
+npx hardhat verify --network arcMAINNET YOUR_CONTRACT_ADDRESS
 
 SOURCE:
-https://testnet.arcscan.app
+https://explorer.arc.io
 `
   },
 
@@ -471,7 +471,7 @@ Arc's fee model:
 
 HOW TO SET GAS (ethers.js):
 import { ethers } from "ethers";
-const provider = new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
+const provider = new ethers.JsonRpcProvider("https://rpc.mainnet.arc.io");
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 const tx = await wallet.sendTransaction({
@@ -491,15 +491,15 @@ docs.arc.io/arc/references/gas-and-fees.md
 
   {
     id: "gas-2",
-    keywords: ["usdc contract address arc", "usdc address testnet", "arc usdc contract", "usdc token arc"],
-    title: "What is the USDC contract address on Arc Testnet?",
+    keywords: ["usdc contract address arc", "usdc address MAINNET", "arc usdc contract", "usdc token arc"],
+    title: "What is the USDC contract address on Arc MAINNET?",
     content: `
 SHORT_ANSWER:
-USDC Contract on Arc Testnet: 0x3600000000000000000000000000000000000000 (6 decimals for ERC-20 interface)
+USDC Contract on Arc MAINNET: 0x3600000000000000000000000000000000000000 (6 decimals for ERC-20 interface)
 
-ALL CONTRACT ADDRESSES (Arc Testnet):
+ALL CONTRACT ADDRESSES (Arc MAINNET):
 - USDC: 0x3600000000000000000000000000000000000000
-- EURC: 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a
+- EURC: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
 - USYC: 0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C
 - CCTP TokenMessengerV2: 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA
 - CCTP MessageTransmitterV2: 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
@@ -533,7 +533,7 @@ import { ethers } from "ethers";
 const USDC = "0x3600000000000000000000000000000000000000";
 const ERC20_ABI = ["function transfer(address to, uint256 amount) returns (bool)"];
 
-const provider = new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
+const provider = new ethers.JsonRpcProvider("https://rpc.mainnet.arc.io");
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const usdc = new ethers.Contract(USDC, ERC20_ABI, wallet);
 
@@ -599,10 +599,10 @@ async function main() {
 main().catch(console.error);
 
 Step 4: Deploy to Arc
-npx hardhat run scripts/deploy.ts --network arcTestnet
+npx hardhat run scripts/deploy.ts --network arcMAINNET
 
 Step 5: Verify on explorer
-https://testnet.arcscan.app/address/YOUR_TOKEN_ADDRESS
+https://explorer.arc.io/address/YOUR_TOKEN_ADDRESS
 
 SOURCE:
 docs.arc.io/arc/tutorials/deploy-on-arc.md
@@ -755,7 +755,7 @@ developers.circle.com/wallets/developer-controlled/quickstart
     title: "How do I create and manage wallets on Arc with Circle SDK?",
     content: `
 SHORT_ANSWER:
-Create a WalletSet first, then create wallets inside it. Each WalletSet can hold up to 10 million wallets. Use blockchain: "ARC-TESTNET" for Arc.
+Create a WalletSet first, then create wallets inside it. Each WalletSet can hold up to 10 million wallets. Use blockchain: "ARC-MAINNET" for Arc.
 
 CODE:
 // Create wallet set
@@ -763,9 +763,9 @@ const walletSet = await client.createWalletSet({
   name: "My App Wallets",
 });
 
-// Create wallets on Arc Testnet
+// Create wallets on Arc MAINNET
 const walletsResponse = await client.createWallets({
-  blockchains: ["ARC-TESTNET"],
+  blockchains: ["ARC-MAINNET"],
   count: 1, // number of wallets to create
   walletSetId: walletSet.data.walletSet.id,
   accountType: "SCA", // Smart Contract Account (recommended)
@@ -805,7 +805,7 @@ CODE:
 // Send 1 USDC from a Circle-managed wallet
 const tx = await client.createTransaction({
   walletAddress: "0xYourWalletAddress",
-  blockchain: "ARC-TESTNET",
+  blockchain: "ARC-MAINNET",
   tokenAddress: "0x3600000000000000000000000000000000000000", // USDC
   destinationAddress: "0xRecipientAddress",
   amount: ["1"], // 1 USDC (string array)
@@ -901,7 +901,7 @@ EOA: Simple scripts, testing, basic transfers
 
 CODE (create SCA):
 const wallets = await client.createWallets({
-  blockchains: ["ARC-TESTNET"],
+  blockchains: ["ARC-MAINNET"],
   count: 1,
   walletSetId: walletSetId,
   accountType: "SCA", // use this for Arc
@@ -936,7 +936,7 @@ Step 1: Create metadata JSON
   "payment": {
     "cost_per_query": "0.001",
     "token": "USDC",
-    "network": "ARC-TESTNET"
+    "network": "ARC-MAINNET"
   }
 }
 
@@ -949,7 +949,7 @@ Step 2: Upload to IPFS (Pinata)
 Step 3: Register using Circle SDK
 const tx = await client.createContractExecutionTransaction({
   walletAddress: ownerWalletAddress,
-  blockchain: "ARC-TESTNET",
+  blockchain: "ARC-MAINNET",
   contractAddress: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   abiFunctionSignature: "register(string)",
   abiParameters: ["ipfs://YOUR_CID"],
@@ -958,7 +958,7 @@ const tx = await client.createContractExecutionTransaction({
 
 Step 4: Get your Agent ID
 // Listen for Transfer event to get tokenId (your Agent ID)
-// Or check your wallet on testnet.arcscan.app
+// Or check your wallet on explorer.arc.io
 
 CONTRACT ADDRESSES:
 - IdentityRegistry: 0x8004A818BFB912233c491871b3d84c89A494BD9e
@@ -988,7 +988,7 @@ CONTRACT: 0x0747EEf0706327138c69792bF28Cd525089e4583
 Step 1: Create job (client wallet)
 const tx = await client.createContractExecutionTransaction({
   walletAddress: clientWalletAddress,
-  blockchain: "ARC-TESTNET",
+  blockchain: "ARC-MAINNET",
   contractAddress: "0x0747EEf0706327138c69792bF28Cd525089e4583",
   abiFunctionSignature: "createJob(address,address,uint256,string,address)",
   abiParameters: [
@@ -1051,10 +1051,10 @@ VIEM ADAPTER SETUP:
 import { AppKit } from "@circle-fin/app-kit";
 import { createViemAdapter } from "@circle-fin/app-kit/adapters/viem";
 import { createWalletClient, http } from "viem";
-import { arcTestnet } from "viem/chains";
+import { arcMAINNET } from "viem/chains";
 
 const walletClient = createWalletClient({
-  chain: arcTestnet,
+  chain: arcMAINNET,
   transport: http(),
 });
 
@@ -1130,42 +1130,42 @@ developers.circle.com/cctp
   // ============================================================
   {
     id: "frontend-1",
-    keywords: ["viem arc config", "arc testnet viem", "define arc chain viem", "viem chain arc"],
-    title: "How do I define Arc Testnet in viem?",
+    keywords: ["viem arc config", "arc MAINNET viem", "define arc chain viem", "viem chain arc"],
+    title: "How do I define Arc MAINNET in viem?",
     content: `
 SHORT_ANSWER:
-Use defineChain() with Arc's network details, or import arcTestnet from viem/chains if available.
+Use defineChain() with Arc's network details, or import arcMAINNET from viem/chains if available.
 
 CODE:
 import { defineChain } from "viem";
 
-export const arcTestnet = defineChain({
+export const arcMAINNET = defineChain({
   id: 5042002,
-  name: "Arc Testnet",
-  network: "arc-testnet",
+  name: "Arc MAINNET",
+  network: "arc-MAINNET",
   nativeCurrency: {
     name: "USDC",
     symbol: "USDC",
     decimals: 6,
   },
   rpcUrls: {
-    default: { http: ["https://rpc.testnet.arc.network"] },
-    public: { http: ["https://rpc.testnet.arc.network"] },
+    default: { http: ["https://rpc.mainnet.arc.io"] },
+    public: { http: ["https://rpc.mainnet.arc.io"] },
   },
   blockExplorers: {
     default: {
       name: "ArcScan",
-      url: "https://testnet.arcscan.app",
+      url: "https://explorer.arc.io",
     },
   },
-  testnet: true,
+  MAINNET: true,
 });
 
 // Use in wagmi config
 import { createConfig, http } from "wagmi";
 const config = createConfig({
-  chains: [arcTestnet],
-  transports: { [arcTestnet.id]: http() },
+  chains: [arcMAINNET],
+  transports: { [arcMAINNET.id]: http() },
 });
 
 SOURCE:
@@ -1194,9 +1194,9 @@ const getBalance = async (address: string) => {
 
 CODE (viem):
 import { createPublicClient, http } from "viem";
-import { arcTestnet } from "./arcChain";
+import { arcMAINNET } from "./arcChain";
 
-const client = createPublicClient({ chain: arcTestnet, transport: http() });
+const client = createPublicClient({ chain: arcMAINNET, transport: http() });
 
 const balance = await client.readContract({
   address: "0x3600000000000000000000000000000000000000",
@@ -1214,14 +1214,14 @@ docs.arc.io/arc/references/contract-addresses.md
   {
     id: "frontend-3",
     keywords: ["switch network metamask", "switch arc chain", "wallet switch chain", "add arc dapp"],
-    title: "How do I switch users to Arc Testnet in a dApp?",
+    title: "How do I switch users to Arc MAINNET in a dApp?",
     content: `
 SHORT_ANSWER:
 Use wallet_switchEthereumChain. If Arc isn't added yet, catch error code 4902 and call wallet_addEthereumChain to add it automatically.
 
 COMPLETE CODE:
 const switchToArc = async () => {
-  const ARC_CHAIN_ID = "0x4cef52"; // 5042002 in hex
+  const ARC_CHAIN_ID = "0x13b2"; // 5042002 in hex
 
   try {
     await window.ethereum.request({
@@ -1235,10 +1235,10 @@ const switchToArc = async () => {
         method: "wallet_addEthereumChain",
         params: [{
           chainId: ARC_CHAIN_ID,
-          chainName: "Arc Testnet",
+          chainName: "Arc MAINNET",
           nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
-          rpcUrls: ["https://rpc.testnet.arc.network"],
-          blockExplorerUrls: ["https://testnet.arcscan.app"],
+          rpcUrls: ["https://rpc.mainnet.arc.io"],
+          blockExplorerUrls: ["https://explorer.arc.io"],
         }],
       });
     } else if (err.code === 4001) {
@@ -1266,7 +1266,7 @@ Use ethers.js JsonRpcProvider or viem createPublicClient with Arc's RPC URL.
 ethers.js:
 import { ethers } from "ethers";
 
-const provider = new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
+const provider = new ethers.JsonRpcProvider("https://rpc.mainnet.arc.io");
 
 // Get block number
 const blockNumber = await provider.getBlockNumber();
@@ -1289,11 +1289,11 @@ await tx.wait();
 
 viem:
 import { createPublicClient, http } from "viem";
-import { arcTestnet } from "./arcChain";
+import { arcMAINNET } from "./arcChain";
 
 const client = createPublicClient({
-  chain: arcTestnet,
-  transport: http("https://rpc.testnet.arc.network"),
+  chain: arcMAINNET,
+  transport: http("https://rpc.mainnet.arc.io"),
 });
 
 const blockNumber = await client.getBlockNumber();
@@ -1314,7 +1314,7 @@ Use getLogs() with the Transfer event topic. USDC Transfer topic: 0xddf252ad1be2
 ethers.js:
 import { ethers } from "ethers";
 
-const provider = new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
+const provider = new ethers.JsonRpcProvider("https://rpc.mainnet.arc.io");
 const USDC = "0x3600000000000000000000000000000000000000";
 const ABI = ["event Transfer(address indexed from, address indexed to, uint256 value)"];
 const usdc = new ethers.Contract(USDC, ABI, provider);
@@ -1364,7 +1364,7 @@ Fix: Set maxFeePerGas: ethers.parseUnits("20", "gwei")
 
 2. "insufficient funds for gas * price + value"
 Cause: Not enough USDC to cover gas + transfer amount
-Fix: Get more testnet USDC at faucet.circle.com
+Fix: Get more MAINNET USDC at faucet.circle.com
 
 3. "intrinsic gas too low"
 Cause: Gas limit too low
@@ -1379,8 +1379,8 @@ Cause: Business logic error, wrong parameters, or insufficient allowance
 Fix: Check ABI parameters match contract expectations, ensure USDC allowance approved
 
 DEBUGGING STEPS:
-Step 1: Check USDC balance at testnet.arcscan.app
-Step 2: Verify you're on Arc Testnet (Chain ID: 5042002)
+Step 1: Check USDC balance at explorer.arc.io
+Step 2: Verify you're on Arc MAINNET (Chain ID: 5042002)
 Step 3: Check maxFeePerGas is at least 20 Gwei
 Step 4: Use eth_estimateGas to check gas limit
 Step 5: Check Arc Discord for network issues
@@ -1442,7 +1442,7 @@ developers.circle.com/wallets/developer-controlled/entity-secret
     title: "What does Circle error code 155258 mean?",
     content: `
 SHORT_ANSWER:
-Error 155258 means "The wallet does not have enough USDC balance for this transaction." You need to fund the Circle-managed wallet with testnet USDC.
+Error 155258 means "The wallet does not have enough USDC balance for this transaction." You need to fund the Circle-managed wallet with MAINNET USDC.
 
 FIX:
 Step 1: Get your wallet address
@@ -1450,9 +1450,9 @@ const wallets = await client.listWallets({});
 const address = wallets.data.wallets[0].address;
 console.log("Fund this address:", address);
 
-Step 2: Fund with testnet USDC
+Step 2: Fund with MAINNET USDC
 - Go to faucet.circle.com
-- Select Arc Testnet
+- Select Arc MAINNET
 - Enter the wallet address
 - Click Send
 
@@ -1481,7 +1481,7 @@ MetaMask doesn't natively display custom gas tokens correctly. Manually add USDC
 FIX:
 Step 1: Add USDC token manually
 - Open MetaMask
-- Make sure you're on Arc Testnet
+- Make sure you're on Arc MAINNET
 - Click "Import tokens"
 - Enter: 0x3600000000000000000000000000000000000000
 - Symbol: USDC, Decimals: 6
@@ -1533,7 +1533,7 @@ WHAT IS NOT CONFIRMED:
 - No TGE (Token Generation Event) date
 
 HONEST ADVICE:
-Testnet participation is speculative but low-risk. Focus on meaningful contributions (building, content creation) rather than simple faucet farming.
+MAINNET participation is speculative but low-risk. Focus on meaningful contributions (building, content creation) rather than simple faucet farming.
 
 SOURCE:
 Circle CEO statement at Seoul event, April 14, 2026
@@ -1575,13 +1575,13 @@ Circle whitepaper (2026)
     title: "How do I increase my chances of a potential Arc airdrop?",
     content: `
 SHORT_ANSWER:
-Participate meaningfully on Arc Testnet — deploy contracts, use dApps, join Arc House community program, get Discord roles, create content, and build real projects.
+Participate meaningfully on Arc MAINNET — deploy contracts, use dApps, join Arc House community program, get Discord roles, create content, and build real projects.
 
 RECOMMENDED ACTIVITIES (from community guides):
 
-1. TESTNET TRANSACTIONS
-- Add Arc Testnet to MetaMask (Chain ID: 5042002)
-- Get testnet USDC from faucet.circle.com
+1. MAINNET TRANSACTIONS
+- Add Arc MAINNET to MetaMask (Chain ID: 5042002)
+- Get MAINNET USDC from faucet.circle.com
 - Send transactions regularly
 - Do cross-chain swaps
 - Interact with multiple dApps
@@ -1631,21 +1631,21 @@ airdrops.io/arc, cryptorank.io/drophunting/arc-chain-activity
     title: "When will Arc mainnet launch?",
     content: `
 SHORT_ANSWER:
-No official mainnet date confirmed. Arc public testnet launched October 28, 2025. Mainnet Beta is expected in 2026 based on Circle's roadmap.
+No official mainnet date confirmed. Arc public MAINNET launched October 28, 2025. Mainnet Beta is expected in 2026 based on Circle's roadmap.
 
 TIMELINE SO FAR:
-- Private testnet: Early 2025
-- Public testnet: October 28, 2025
+- Private MAINNET: Early 2025
+- Public MAINNET: October 28, 2025
 - Mainnet Beta: Expected 2026 (no specific date)
 - Full mainnet: TBD
 
-WHAT ARC HAS AT TESTNET LAUNCH:
+WHAT ARC HAS AT MAINNET LAUNCH:
 - 100+ institutional partners (BlackRock, Visa, Goldman Sachs, HSBC, Mastercard, AWS, Anthropic)
 - ERC-8004 AI Agent Registry
 - ERC-8183 Agentic Commerce
 - CCTP cross-chain transfers
 - Arc App Kit (Bridge, Swap, Send, Unified Balance)
-- Over 244M+ transactions on testnet as of May 2026
+- Over 244M+ transactions on MAINNET as of May 2026
 
 WHAT COMES WITH MAINNET:
 - Privacy Module (confidential transactions)
@@ -1726,7 +1726,7 @@ Step 6: Once approved, start completing tasks
 PROFILE TIPS:
 - Add all your social links (GitHub, Twitter, LinkedIn)
 - Write a clear bio about what you build
-- Link your Arc testnet wallet address
+- Link your Arc MAINNET wallet address
 - Add your YouTube channel if you create content
 
 NOTE:
@@ -1749,7 +1749,7 @@ Earn points by completing tasks: building dApps, creating content, participating
 WAYS TO EARN POINTS:
 
 HIGH VALUE ACTIVITIES:
-- Build and deploy a dApp on Arc Testnet
+- Build and deploy a dApp on Arc MAINNET
 - Create educational YouTube video about Arc
 - Get featured in Arc Discord #user-made-things
 - Present at Arc Office Hours
@@ -1793,7 +1793,7 @@ Creator role requires building meaningful projects OR creating quality education
 
 CREATOR ROLE REQUIREMENTS:
 Option A — Build something:
-- Deploy a working dApp on Arc Testnet
+- Deploy a working dApp on Arc MAINNET
 - Must use Arc-native features (USDC payment, ERC-8004, ERC-8183)
 - Share in #user-made-things Discord channel
 - Include GitHub repo and demo link/video
@@ -1841,7 +1841,7 @@ WHAT IS IT:
 - Great for visibility and ecosystem recognition
 
 HOW TO APPLY:
-Step 1: Build a working project on Arc (testnet or prototype)
+Step 1: Build a working project on Arc (MAINNET or prototype)
 Step 2: Fill out the Arc Office Hours Google Form
 Step 3: Include: project name, GitHub, demo link, what feedback you want
 Step 4: Wait for confirmation from Arc community team
@@ -1849,7 +1849,7 @@ Step 5: Present live on scheduled date
 
 WHAT TO PREPARE:
 - 5-10 minute demo of your project
-- Live transaction on Arc Testnet
+- Live transaction on Arc MAINNET
 - Clear explanation of how you use Arc/Circle
 - What feedback you're looking for
 
@@ -1899,7 +1899,7 @@ WHO IS BUILDING ON ARC:
 KEY FACTS:
 - Made by Circle (creator of USDC)
 - Circle is publicly traded on NYSE
-- Public testnet launched October 28, 2025
+- Public MAINNET launched October 28, 2025
 - Over 100 institutional partners
 
 SOURCE:
@@ -1957,16 +1957,16 @@ WHY ARC IS TRUSTWORTHY:
 6. Open source code — anyone can verify it
 
 RISKS TO BE AWARE OF:
-- Arc Testnet is still in testing phase — bugs possible
-- Testnet USDC has no real value
+- Arc MAINNET is still in testing phase — bugs possible
+- MAINNET USDC has no real value
 - No confirmed token or airdrop — be skeptical of claims
 - Mainnet not launched yet
-- Smart contracts on testnet may have vulnerabilities
+- Smart contracts on MAINNET may have vulnerabilities
 
 WHAT IS SAFE:
-- Using Arc Testnet with test USDC (no real money)
+- Using Arc MAINNET with test USDC (no real money)
 - Joining Arc House and Discord
-- Building projects on testnet
+- Building projects on MAINNET
 - Creating educational content
 
 WHAT TO AVOID:
@@ -1988,7 +1988,7 @@ NYSE: CRCL (Circle's stock)
 SHORT_ANSWER:
 Arc launched with 100+ institutional partners including BlackRock, Visa, Goldman Sachs, HSBC, Mastercard, Amazon Web Services, and Anthropic.
 
-CONFIRMED PARTNERS AT TESTNET LAUNCH (October 2025):
+CONFIRMED PARTNERS AT MAINNET LAUNCH (October 2025):
 FINANCE:
 - BlackRock (world's largest asset manager, $10T AUM)
 - Goldman Sachs (top investment bank)
@@ -2019,7 +2019,7 @@ WHAT THESE PARTNERS DO ON ARC:
 - Test FX settlement using StableFX
 
 NOTE:
-"Partner" means they are testing on Arc testnet. Full production deployments will happen after mainnet launch.
+"Partner" means they are testing on Arc MAINNET. Full production deployments will happen after mainnet launch.
 
 SOURCE:
 airdrops.io/arc (May 2026)
@@ -2031,8 +2031,8 @@ airdrops.io/arc (May 2026)
   // ============================================================
   {
     id: "community-wallet-1",
-    keywords: ["rabby wallet arc", "rabby arc setup", "rabby testnet arc"],
-    title: "How do I add Arc Testnet to Rabby Wallet?",
+    keywords: ["rabby wallet arc", "rabby arc setup", "rabby MAINNET arc"],
+    title: "How do I add Arc MAINNET to Rabby Wallet?",
     content: `
 SHORT_ANSWER:
 Open Rabby → Click network selector (top-left) → Add Custom Network → Enter Arc details → Confirm.
@@ -2042,13 +2042,13 @@ Step 1: Open Rabby Wallet browser extension
 Step 2: Click the network selector in top-left corner
 Step 3: Click "Add Custom Network"
 Step 4: Fill in:
-   - Chain Name: Arc Testnet
+   - Chain Name: Arc MAINNET
    - Chain ID: 5042002
-   - RPC URL: https://rpc.testnet.arc.network
+   - RPC URL: https://rpc.mainnet.arc.io
    - Currency Symbol: USDC
-   - Block Explorer: https://testnet.arcscan.app
+   - Block Explorer: https://explorer.arc.io
 Step 5: Click "Confirm"
-Step 6: Select Arc Testnet from your network list
+Step 6: Select Arc MAINNET from your network list
 
 NOTE:
 Rabby is a great alternative to MetaMask — it has better security warnings and multi-chain support. Recommended for Arc users.
@@ -2060,8 +2060,8 @@ docs.arc.io/arc/references/connect-to-arc.md
 
   {
     id: "community-wallet-2",
-    keywords: ["coinbase wallet arc", "coinbase arc setup", "coinbase arc testnet"],
-    title: "How do I add Arc Testnet to Coinbase Wallet?",
+    keywords: ["coinbase wallet arc", "coinbase arc setup", "coinbase arc MAINNET"],
+    title: "How do I add Arc MAINNET to Coinbase Wallet?",
     content: `
 SHORT_ANSWER:
 Open Coinbase Wallet → Settings → Networks → Add custom network → Enter Arc details.
@@ -2072,13 +2072,13 @@ Step 2: Go to Settings
 Step 3: Tap "Networks"
 Step 4: Tap "Add custom network"
 Step 5: Enter:
-   - Network name: Arc Testnet
-   - RPC URL: https://rpc.testnet.arc.network
+   - Network name: Arc MAINNET
+   - RPC URL: https://rpc.mainnet.arc.io
    - Chain ID: 5042002
    - Currency symbol: USDC
-   - Block explorer: https://testnet.arcscan.app
+   - Block explorer: https://explorer.arc.io
 Step 6: Tap "Save"
-Step 7: Switch to Arc Testnet
+Step 7: Switch to Arc MAINNET
 
 NOTE:
 Coinbase Wallet works well with Arc. It's a good choice for users already in the Coinbase ecosystem.
@@ -2094,10 +2094,10 @@ docs.arc.io/arc/references/connect-to-arc.md
     title: "How do I check my transactions on Arc Explorer (ArcScan)?",
     content: `
 SHORT_ANSWER:
-Go to testnet.arcscan.app and search your wallet address or transaction hash to see all your Arc activity.
+Go to explorer.arc.io and search your wallet address or transaction hash to see all your Arc activity.
 
 GUIDE:
-Step 1: Go to https://testnet.arcscan.app
+Step 1: Go to https://explorer.arc.io
 Step 2: In the search bar, paste either:
    - Your wallet address (0x...) — shows all transactions
    - Transaction hash (0x...) — shows specific transaction
@@ -2119,28 +2119,28 @@ For transaction hash:
 - Timestamp
 
 USEFUL LINKS:
-- Gas tracker: https://testnet.arcscan.app/gas-tracker
-- All transactions: https://testnet.arcscan.app/txs
-- Token list: https://testnet.arcscan.app/tokens
+- Gas tracker: https://explorer.arc.io/gas-tracker
+- All transactions: https://explorer.arc.io/txs
+- Token list: https://explorer.arc.io/tokens
 
 TIP:
-Save your wallet address URL: testnet.arcscan.app/address/YOUR_ADDRESS for quick access.
+Save your wallet address URL: explorer.arc.io/address/YOUR_ADDRESS for quick access.
 
 SOURCE:
-https://testnet.arcscan.app
+https://explorer.arc.io
 `
   },
 
   // ============================================================
-  // E. TESTNET DAPPS
+  // E. MAINNET DAPPS
   // ============================================================
   {
     id: "dapps-1",
-    keywords: ["arc dapps", "arc ecosystem apps", "what to do arc testnet", "arc testnet apps", "arc dapp list"],
-    title: "What dApps are available on Arc Testnet?",
+    keywords: ["arc dapps", "arc ecosystem apps", "what to do arc MAINNET", "arc MAINNET apps", "arc dapp list"],
+    title: "What dApps are available on Arc MAINNET?",
     content: `
 SHORT_ANSWER:
-Arc Testnet has several active dApps including Zkcodex (contracts/NFTs), Omnihub (NFT marketplace), InfinityName (domains), and MicroAI (AI chatbot). More are launching regularly.
+Arc MAINNET has several active dApps including Zkcodex (contracts/NFTs), Omnihub (NFT marketplace), InfinityName (domains), and MicroAI (AI chatbot). More are launching regularly.
 
 AVAILABLE DAPPS (as of 2026):
 
@@ -2167,7 +2167,7 @@ HOW TO FIND MORE:
 - Follow @arc_xbt on Twitter for new announcements
 
 NOTE:
-Arc Testnet ecosystem is growing fast. New projects launch weekly. The best way to stay updated is Discord and Twitter.
+Arc MAINNET ecosystem is growing fast. New projects launch weekly. The best way to stay updated is Discord and Twitter.
 
 SOURCE:
 Arc Discord, cryptorank.io/drophunting/arc-chain-activity
@@ -2176,19 +2176,19 @@ Arc Discord, cryptorank.io/drophunting/arc-chain-activity
 
   {
     id: "dapps-2",
-    keywords: ["mint nft arc", "arc nft", "nft arc testnet", "cyan nft arc", "omnihub arc"],
-    title: "How do I mint an NFT on Arc Testnet?",
+    keywords: ["mint nft arc", "arc nft", "nft arc MAINNET", "cyan nft arc", "omnihub arc"],
+    title: "How do I mint an NFT on Arc MAINNET?",
     content: `
 SHORT_ANSWER:
-Use Omnihub or Zkcodex to mint NFTs on Arc Testnet. Connect your wallet, get testnet USDC, and mint — it's free except for tiny gas fees.
+Use Omnihub or Zkcodex to mint NFTs on Arc MAINNET. Connect your wallet, get MAINNET USDC, and mint — it's free except for tiny gas fees.
 
 USING OMNIHUB:
 Step 1: Go to Omnihub (search "Omnihub Arc" on Twitter for current link)
-Step 2: Connect MetaMask (on Arc Testnet)
+Step 2: Connect MetaMask (on Arc MAINNET)
 Step 3: Choose an NFT collection to mint
 Step 4: Click Mint
 Step 5: Confirm USDC gas fee in MetaMask
-Step 6: View your NFT on testnet.arcscan.app
+Step 6: View your NFT on explorer.arc.io
 
 USING ZKCODEX (for creating your own collection):
 Step 1: Go to Zkcodex (search current link on Arc Discord)
@@ -2198,7 +2198,7 @@ Step 4: Follow steps to deploy NFT contract
 Step 5: Mint from your new collection
 
 WHAT IS CYAN NFT:
-The Cyan NFT was an early Arc testnet activity. Mint it to show early participation. Search "Cyan NFT Arc" on Twitter for current link.
+The Cyan NFT was an early Arc MAINNET activity. Mint it to show early participation. Search "Cyan NFT Arc" on Twitter for current link.
 
 NOTE:
 NFT platforms' URLs may change. Always get links from official Arc Discord or @arc_xbt Twitter.
@@ -2214,11 +2214,11 @@ Arc Discord, cryptorank.io/drophunting/arc-chain-activity
     title: "How do I register a domain on Arc (InfinityName)?",
     content: `
 SHORT_ANSWER:
-InfinityName lets you register .arc domain names on Arc Testnet. Connect wallet, search for your name, and register with testnet USDC.
+InfinityName lets you register .arc domain names on Arc MAINNET. Connect wallet, search for your name, and register with MAINNET USDC.
 
 GUIDE:
 Step 1: Find InfinityName current link on Arc Discord
-Step 2: Connect MetaMask (Arc Testnet)
+Step 2: Connect MetaMask (Arc MAINNET)
 Step 3: Search for your desired domain name
 Step 4: Click Register if available
 Step 5: Confirm transaction in MetaMask
@@ -2247,11 +2247,11 @@ Zkcodex lets you deploy simple contracts on Arc with a few clicks — no Solidit
 
 GUIDE:
 Step 1: Find Zkcodex link on Arc Discord or Twitter
-Step 2: Connect MetaMask (Arc Testnet)
+Step 2: Connect MetaMask (Arc MAINNET)
 Step 3: Click "Deploy" button
 Step 4: Choose a simple contract template
 Step 5: Confirm the transaction in MetaMask
-Step 6: View your deployed contract on testnet.arcscan.app
+Step 6: View your deployed contract on explorer.arc.io
 
 WHAT THIS DOES:
 - Creates a real smart contract on Arc blockchain
@@ -2296,7 +2296,7 @@ Docs:
 - docs.arc.io
 
 CONTENT TO FOLLOW FOR:
-- New testnet dApp launches
+- New MAINNET dApp launches
 - Office Hours announcements
 - Token/airdrop news (when it comes)
 - Ecosystem partner announcements
@@ -2341,7 +2341,7 @@ TIPS FOR GETTING NOTICED:
 Step 1: Tag @arc_xbt in your posts
 Step 2: Share in Arc Discord #user-made-things
 Step 3: Use hashtag #ArcBlockchain or #BuildOnArc
-Step 4: Include real transactions on Arc testnet
+Step 4: Include real transactions on Arc MAINNET
 Step 5: Apply for Creator role after 3-5 quality pieces
 
 WHAT QUALIFIES FOR CREATOR ROLE:
@@ -2372,7 +2372,7 @@ WHAT'S PLANNED:
 - Incentives: Token rewards for validators and contributors
 - Proof-of-Stake: Replace current Proof-of-Authority validator set
 
-CURRENT STATE (Testnet):
+CURRENT STATE (MAINNET):
 - Proof-of-Authority: Arc uses a permissioned validator set of regulated institutions
 - No staking yet
 - No governance contracts yet
@@ -2407,7 +2407,7 @@ CURRENT VALIDATOR SET:
 RUN A NON-VALIDATOR NODE:
 Step 1: Check hardware requirements at docs.arc.io/arc/concepts/running-a-node.md
 Step 2: Follow setup guide at docs.arc.io/arc/tutorials/run-an-arc-node.md
-Step 3: Connect to Arc Testnet RPC
+Step 3: Connect to Arc Mainnet RPC
 Step 4: Sync the blockchain
 
 NODE PROVIDERS (if you don't want to run your own):
@@ -2431,7 +2431,7 @@ docs.arc.io/arc/tutorials/run-an-arc-node.md
     title: "What is opt-in privacy on Arc?",
     content: `
 SHORT_ANSWER:
-Arc plans to offer opt-in confidential transactions — you choose whether your transaction amounts are public or private. This is planned but not yet live on testnet.
+Arc plans to offer opt-in confidential transactions — you choose whether your transaction amounts are public or private. This is planned but not yet live on MAINNET.
 
 WHAT IT MEANS:
 - Default: All transactions are public (like Ethereum)
@@ -2462,28 +2462,28 @@ docs.arc.io/arc/concepts/system-overview.md
   // ============================================================
   {
     id: "usyc-1",
-    keywords: ["usyc arc", "what is usyc", "usyc testnet", "tokenized treasury arc", "yield arc"],
+    keywords: ["usyc arc", "what is usyc", "usyc MAINNET", "tokenized treasury arc", "yield arc"],
     title: "What is USYC on Arc and how do I get it?",
     content: `
 SHORT_ANSWER:
-USYC is Circle's yield-bearing stablecoin representing shares in a US Treasury money market fund. It's available on Arc but requires allowlisting. Minimum $100,000 USD investment for mainnet (testnet is free with approval).
+USYC is Circle's yield-bearing stablecoin representing shares in a US Treasury money market fund. It's available on Arc but requires allowlisting. Minimum $100,000 USD investment for mainnet (MAINNET is free with approval).
 
 WHAT IS USYC:
 - Issued by Circle International Bermuda Ltd.
 - Backed by short-duration US Treasury securities
 - Earns yield (like a money market fund on-chain)
-- Available on Arc Testnet and other chains
+- Available on Arc MAINNET and other chains
 
-GETTING TESTNET USYC:
-Step 1: Get testnet USDC from faucet.circle.com
+GETTING MAINNET USYC:
+Step 1: Get MAINNET USDC from faucet.circle.com
 Step 2: Request allowlisting from Circle Support (support.circle.com)
-   - Include your Arc Testnet wallet address
+   - Include your Arc MAINNET wallet address
    - Requests processed in 24-48 hours
 Step 3: Once approved, go to USYC Portal (usyc.dev.hashnote.com)
-Step 4: Deposit testnet USDC to receive USYC
+Step 4: Deposit MAINNET USDC to receive USYC
 Step 5: Or call the USYC Teller contract directly
 
-USYC CONTRACT ADDRESSES (Arc Testnet):
+USYC CONTRACT ADDRESSES (Arc MAINNET):
 - USYC: 0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C
 - Entitlements: 0xcc205224862c7641930c87679e98999d23c26113
 - Teller: 0x9fdF14c5B14173D74C08Af27AebFf39240dC105A
@@ -2514,7 +2514,7 @@ HOW IT WORKS:
 4. Swap settles instantly on Arc via escrow contract
 5. No slippage risk — price locked at quote time
 
-STABLEFX CONTRACTS (Arc Testnet):
+STABLEFX CONTRACTS (Arc MAINNET):
 - FxEscrow: 0x867650F5eAe8df91445971f14d89fd84F0C9a9f8
 - Requires Permit2 for USDC approval
 - Permit2: 0x000000000022D473030F116dDEE9F6B43aC78BA3
@@ -2542,36 +2542,36 @@ developers.circle.com/stablefx
   {
     id: "arc-contracts-usdc",
     keywords: ["usdc contract", "usdc address", "contract address", "0x3600", "erc20 usdc", "native usdc", "decimals usdc"],
-    title: "USDC Contract Address on Arc Testnet",
+    title: "USDC Contract Address on Arc MAINNET",
     content: `
 SHORT_ANSWER:
-USDC contract on Arc Testnet: 0x3600000000000000000000000000000000000000
+USDC contract on Arc MAINNET: 0x3600000000000000000000000000000000000000
 Important: ERC-20 interface uses 6 decimals. Native USDC gas token uses 18 decimals. Never mix these.
 
 DETAILS:
 - USDC is the native gas token AND ERC-20 token on Arc
 - Use ERC-20 interface for transferFrom, approve, allowance
-- Get testnet USDC from: faucet.circle.com (select Arc Testnet)
-- Explorer: testnet.arcscan.app/address/0x3600000000000000000000000000000000000000
+- Get MAINNET USDC from: faucet.circle.com (select Arc MAINNET)
+- Explorer: explorer.arc.io/address/0x3600000000000000000000000000000000000000
 `,
   },
   {
     id: "arc-contracts-eurc",
     keywords: ["eurc", "euro stablecoin", "eurc address", "eurc contract", "euro usdc arc"],
-    title: "EURC Contract Address on Arc Testnet",
+    title: "EURC Contract Address on Arc MAINNET",
     content: `
 SHORT_ANSWER:
-EURC (Euro stablecoin by Circle) on Arc Testnet: 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a
-Uses 6 decimals. Get testnet EURC from faucet.circle.com.
+EURC (Euro stablecoin by Circle) on Arc MAINNET: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
+Uses 6 decimals. Get MAINNET EURC from faucet.circle.com.
 `,
   },
   {
     id: "arc-contracts-cctp",
     keywords: ["cctp", "cross chain transfer", "token messenger", "message transmitter", "cctp address", "cctp arc", "domain 26", "bridge usdc"],
-    title: "CCTP Contract Addresses on Arc Testnet",
+    title: "CCTP Contract Addresses on Arc MAINNET",
     content: `
 SHORT_ANSWER:
-Circle Cross-Chain Transfer Protocol (CCTP) contracts on Arc Testnet (Domain 26):
+Circle Cross-Chain Transfer Protocol (CCTP) contracts on Arc MAINNET (Domain 26):
 - TokenMessengerV2: 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA
 - MessageTransmitterV2: 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
 - TokenMinterV2: 0xb43db544E2c27092c107639Ad201b3dEfAbcF192
@@ -2588,7 +2588,7 @@ No wrapped tokens — fully native USDC on both sides.
   {
     id: "arc-contracts-usyc",
     keywords: ["usyc", "yield bearing", "tokenized fund", "money market", "usyc address", "treasury token"],
-    title: "USYC (Yield-Bearing Token) on Arc Testnet",
+    title: "USYC (Yield-Bearing Token) on Arc MAINNET",
     content: `
 SHORT_ANSWER:
 USYC is Circle's yield-bearing tokenized money market fund on Arc.
@@ -2603,22 +2603,22 @@ IMPORTANT: Only accessible to institutions outside the US. Minimum $100K USD. Re
   // CONNECT TO ARC
   {
     id: "arc-connect-network",
-    keywords: ["connect wallet", "add network", "metamask arc", "rpc url", "chain id arc", "network config", "testnet config", "add arc"],
-    title: "How to Connect to Arc Testnet (Network Config)",
+    keywords: ["connect wallet", "add network", "metamask arc", "rpc url", "chain id arc", "network config", "MAINNET config", "add arc"],
+    title: "How to Connect to Arc MAINNET (Network Config)",
     content: `
 SHORT_ANSWER:
-Arc Testnet network config for MetaMask or any EVM wallet:
-- Network Name: Arc Testnet
-- RPC URL: https://rpc.testnet.arc.network
-- Chain ID: 314573 (hex: 0x4cef52)
+Arc MAINNET network config for MetaMask or any EVM wallet:
+- Network Name: Arc MAINNET
+- RPC URL: https://rpc.mainnet.arc.io
+- Chain ID: 5042 (hex: 0x13b2)
 - Currency Symbol: USDC
-- Block Explorer: https://testnet.arcscan.app
+- Block Explorer: https://explorer.arc.io
 
 STEP BY STEP (MetaMask):
 1. Open MetaMask → Settings → Networks → Add Network
 2. Enter the config above
-3. Save and switch to Arc Testnet
-4. Get testnet USDC from faucet.circle.com
+3. Save and switch to Arc MAINNET
+4. Get MAINNET USDC from faucet.circle.com
 `,
   },
 
@@ -2679,12 +2679,12 @@ KEY CONCEPTS:
 - Unique Agent ID: Each agent gets a persistent onchain ID
 
 HOW TO REGISTER:
-1. Deploy or connect to the ERC-8004 registry contract on Arc Testnet
+1. Deploy or connect to the ERC-8004 registry contract on Arc MAINNET
 2. Call registerAgent() with metadata (name, description, capabilities)
 3. Your agent receives a unique Agent ID
 4. Build reputation through completed ERC-8183 jobs
 
-MicroAI's ERC-8004 Agent ID: 69168 (on Arc Testnet)
+MicroAI's ERC-8004 Agent ID: 69168 (on Arc MAINNET)
 Tutorial: docs.arc.io/arc/tutorials/register-your-first-ai-agent
 `,
   },
@@ -2709,7 +2709,7 @@ WHY IT MATTERS:
 - Instant: USDC settlement in under 1 second (Arc's deterministic finality)
 - Auditable: Full job history onchain
 
-MicroAI's ERC-8183 Job ID: 110278 (on Arc Testnet)
+MicroAI's ERC-8183 Job ID: 110278 (on Arc MAINNET)
 Tutorial: docs.arc.io/arc/tutorials/create-your-first-erc-8183-job
 GitHub example: github.com/circlefin/arc-escrow
 `,
@@ -2747,17 +2747,17 @@ Docs: docs.arc.io/arc/references/gas-and-fees
   {
     id: "arc-deploy-contracts",
     keywords: ["deploy contract", "hardhat arc", "foundry arc", "remix arc", "deploy solidity", "contract deployment", "deploy dapp"],
-    title: "Deploy Smart Contracts on Arc Testnet",
+    title: "Deploy Smart Contracts on Arc MAINNET",
     content: `
 SHORT_ANSWER:
-Arc is fully EVM-compatible. Use Hardhat, Foundry, or Remix with Arc Testnet config.
+Arc is fully EVM-compatible. Use Hardhat, Foundry, or Remix with Arc MAINNET config.
 
 HARDHAT CONFIG:
 \`\`\`javascript
 networks: {
-  arcTestnet: {
-    url: "https://rpc.testnet.arc.network",
-    chainId: 314573,
+  arcMAINNET: {
+    url: "https://rpc.mainnet.arc.io",
+    chainId: 5042,
     accounts: [process.env.PRIVATE_KEY],
   }
 }
@@ -2765,13 +2765,13 @@ networks: {
 
 FOUNDRY:
 \`\`\`bash
-forge create --rpc-url https://rpc.testnet.arc.network \\
+forge create --rpc-url https://rpc.mainnet.arc.io \\
   --private-key $PRIVATE_KEY \\
   src/MyContract.sol:MyContract
 \`\`\`
 
 REQUIREMENTS:
-1. Arc Testnet USDC in wallet (for gas) — get from faucet.circle.com
+1. Arc MAINNET USDC in wallet (for gas) — get from faucet.circle.com
 2. Private key of your deployer wallet
 3. Standard Solidity (0.8.x works perfectly)
 
@@ -2842,18 +2842,18 @@ Docs: docs.arc.io/arc/concepts/opt-in-privacy
     title: "About MicroAI — The Arc & Circle Intelligence Hub",
     content: `
 SHORT_ANSWER:
-MicroAI is a pay-per-use AI chatbot dApp on Arc Testnet. You pay $0.001 USDC per question answered.
+MicroAI is a pay-per-use AI chatbot dApp on Arc MAINNET. You pay $0.001 USDC per question answered.
 
 TECHNICAL DETAILS:
 - Built by: @auronxbt (BuildOrbit) — solo developer
-- Stack: Next.js 15, Groq AI, Arc Testnet, Circle USDC
+- Stack: Next.js 15, Groq AI, Arc MAINNET, Circle USDC
 - Live at: microai-tan.vercel.app
 - GitHub: github.com/sahmedonchain/microai
 - Agent ID (ERC-8004): 69168
 - Job ID (ERC-8183): 110278
 
 HOW IT WORKS:
-1. Connect EVM wallet (MetaMask) on Arc Testnet
+1. Connect EVM wallet (MetaMask) on Arc MAINNET
 2. Ask any Arc or Circle question
 3. Wallet auto-signs 0.001 USDC payment to receiver wallet
 4. AI responds instantly with verified knowledge

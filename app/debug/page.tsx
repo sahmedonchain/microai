@@ -3,9 +3,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/app/components/Navbar";
 
-const ARC_EXPLORER_API = "https://testnet.arcscan.app/api/v2";
+const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const ARC_CHAIN_ID = "314573";
+const ARC_CHAIN_ID = "5042";
 
 type TxStatus = "idle" | "fetching" | "analyzing" | "done" | "error";
 
@@ -66,7 +66,7 @@ export default function DebugPage() {
 
       if (data.errors || !data.hash) {
         setStatus("error");
-        setErrorMsg("Transaction not found on Arc Testnet. Check the hash and try again.");
+        setErrorMsg("Transaction not found on Arc MAINNET. Check the hash and try again.");
         return;
       }
 
@@ -77,7 +77,7 @@ export default function DebugPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `Analyze this Arc testnet transaction and debug it:
+          message: `Analyze this Arc MAINNET transaction and debug it:
 
 Transaction Hash: ${txData.hash}
 Status: ${txData.status}
@@ -153,13 +153,13 @@ If it failed, identify the root cause from: insufficient USDC balance, wrong cha
       <section style={{ padding: "48px 20px 32px", textAlign: "center", borderBottom: "1px solid rgba(16,185,129,0.06)" }}>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 20, border: "1px solid rgba(16,185,129,0.15)", background: "rgba(3,17,10,0.6)", marginBottom: 20 }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>ARC TESTNET · LIVE DEBUGGER</span>
+          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>ARC MAINNET · LIVE DEBUGGER</span>
         </div>
         <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(148,163,184,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
           Transaction Debugger
         </h1>
         <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
-          Paste any Arc testnet transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened — and how to fix it.
+          Paste any Arc MAINNET transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened — and how to fix it.
         </p>
       </section>
 
@@ -290,7 +290,7 @@ If it failed, identify the root cause from: insufficient USDC balance, wrong cha
               </div>
 
               <a
-                href={`https://testnet.arcscan.app/tx/${result.txData.hash}`}
+                href={`https://explorer.arc.io/tx/${result.txData.hash}`}
                 target="_blank"
                 rel="noreferrer"
                 style={{ display: "inline-block", marginTop: 14, fontSize: 10, color: "#34d399", fontFamily: "monospace", fontWeight: 700, textDecoration: "none", letterSpacing: "0.08em" }}
@@ -339,7 +339,7 @@ If it failed, identify the root cause from: insufficient USDC balance, wrong cha
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
               {[
                 { icon: "⚡", label: "Insufficient USDC", desc: "Wallet didn't have enough USDC for gas or payment" },
-                { icon: "🔗", label: "Wrong Chain", desc: "Transaction sent on wrong network, not Arc Testnet" },
+                { icon: "🔗", label: "Wrong Chain", desc: "Transaction sent on wrong network, not Arc MAINNET" },
                 { icon: "⛽", label: "Gas Limit Too Low", desc: "Gas ran out before transaction could complete" },
                 { icon: "↩️", label: "Contract Revert", desc: "Smart contract rejected the call with a reason" },
                 { icon: "📋", label: "Invalid Input", desc: "Wrong function selector or malformed calldata" },
@@ -377,7 +377,7 @@ If it failed, identify the root cause from: insufficient USDC balance, wrong cha
               { l: "ECOSYSTEM", h: "/ecosystem" },
               { l: "GRANTS", h: "/grants" },
               { l: "CHAT", h: "/chat" },
-              { l: "EXPLORER", h: "https://testnet.arcscan.app" },
+              { l: "EXPLORER", h: "https://explorer.arc.io" },
             ].map((link) => (
               <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#1e3a29", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "monospace", textDecoration: "none" }}>
                 {link.l}

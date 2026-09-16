@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "MicroAI — AI Chatbot for the Arc & Circle Intelligence Hub",
-  description: "Pay-per-use AI chatbot on Arc Testnet. Ask any Arc or Circle question for $0.001 USDC, settled onchain.",
+  description: "Pay-per-use AI chatbot on Arc MAINNET. Ask any Arc or Circle question for $0.001 USDC, settled onchain.",
 };
 
 export default function RootLayout({
