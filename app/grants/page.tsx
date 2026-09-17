@@ -2,6 +2,8 @@
 import { Navbar } from "@/app/components/Navbar";
 import React, { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { AnimatedNumber } from "@/app/components/AnimatedNumber";
 
 const grants = [
   // ===== GRANTS =====
@@ -32,7 +34,7 @@ const grants = [
     tags: ["Security", "HackerOne", "MAINNET"],
     url: "https://www.arc.io/blog/open-sourcing-arc-run-your-own-arc-node-and-bug-bounty-program",
     logo: "A",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   // ===== LIVE NOW =====
   {
@@ -47,7 +49,7 @@ const grants = [
     tags: ["Accelerator", "USDC", "Arc", "Online", "Circle Stack"],
     url: "https://community.arc.io/public/events/hackathon-programmable-money-74llz8htis",
     logo: "PM",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   {
     id: 4,
@@ -61,7 +63,7 @@ const grants = [
     tags: ["USDC", "Commerce", "Arc", "Circle", "Agentic"],
     url: "https://community.arc.io/public/events/hackathon-the-stablecoins-commerce-stack-challenge-ozc0ih6kba",
     logo: "S",
-    logoColor: "#34d399",
+    logoColor: "#00ff88",
   },
   // ===== UPCOMING =====
   {
@@ -181,13 +183,13 @@ const grants = [
 
 const FILTER_TYPES = ["ALL", "GRANT", "HACKATHON", "BOUNTY", "EVENT"];
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  "OPEN":     { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
+  "OPEN":     { bg: "rgba(0,255,136,0.08)", text: "#00ff88", dot: "#00ff88" },
   "LIVE NOW": { bg: "rgba(239,68,68,0.08)",  text: "#f87171", dot: "#f87171" },
   "UPCOMING": { bg: "rgba(99,102,241,0.08)", text: "#a5b4fc", dot: "#a5b4fc" },
-  "ENDED":    { bg: "rgba(71,85,105,0.15)",  text: "#64748b", dot: "#475569" },
+  "ENDED":    { bg: "rgba(71,85,105,0.15)",  text: "#888888", dot: "#666666" },
 };
 const TYPE_COLORS: Record<string, string> = {
-  GRANT:     "#34d399",
+  GRANT:     "#00ff88",
   BOUNTY:    "#f59e0b",
   HACKATHON: "#a78bfa",
   EVENT:     "#60a5fa",
@@ -202,9 +204,9 @@ export default function GrantsPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#010503",
-        color: "#e2e8f0",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        background: "#000000",
+        color: "#ffffff",
+        fontFamily: "var(--font-geist-sans), sans-serif",
       }}
     >
       <Navbar />
@@ -215,7 +217,7 @@ export default function GrantsPage() {
           position: "relative",
           padding: "48px 20px 36px",
           textAlign: "center",
-          borderBottom: "1px solid rgba(16,185,129,0.06)",
+          borderBottom: "1px solid rgba(0,255,136,0.06)",
         }}
       >
         <div
@@ -225,8 +227,8 @@ export default function GrantsPage() {
             gap: 8,
             padding: "5px 12px",
             borderRadius: 20,
-            border: "1px solid rgba(16,185,129,0.15)",
-            background: "rgba(3,17,10,0.6)",
+            border: "1px solid rgba(0,255,136,0.15)",
+            background: "rgba(0,0,0,0.6)",
             marginBottom: 20,
           }}
         >
@@ -235,7 +237,7 @@ export default function GrantsPage() {
               width: 6,
               height: 6,
               borderRadius: "50%",
-              background: "#34d399",
+              background: "#00ff88",
               display: "inline-block",
               animation: "pulse 2s infinite",
             }}
@@ -243,10 +245,10 @@ export default function GrantsPage() {
           <span
             style={{
               fontSize: 9,
-              color: "#34d399",
+              color: "#00ff88",
               fontWeight: 700,
               letterSpacing: "0.15em",
-              fontFamily: "monospace",
+              fontFamily: "var(--font-geist-mono), monospace",
             }}
           >
             LIVE OPPORTUNITIES
@@ -259,7 +261,7 @@ export default function GrantsPage() {
             fontWeight: 900,
             lineHeight: 1.1,
             margin: "0 0 14px",
-            background: "linear-gradient(180deg, #fff 0%, rgba(148,163,184,0.5) 100%)",
+            background: "linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.5) 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             letterSpacing: "-0.02em",
@@ -271,7 +273,7 @@ export default function GrantsPage() {
         <p
           style={{
             fontSize: "clamp(12px, 3vw, 14px)",
-            color: "#94a3b8",
+            color: "#888888",
             maxWidth: 480,
             margin: "0 auto 28px",
             lineHeight: 1.7,
@@ -290,8 +292,8 @@ export default function GrantsPage() {
           }}
         >
           {[
-            { label: "OPEN NOW", value: grants.filter((g) => g.status === "OPEN" || g.status === "LIVE NOW").length.toString() },
-            { label: "TOTAL LISTINGS", value: grants.length.toString() },
+            { label: "OPEN NOW", num: grants.filter((g) => g.status === "OPEN" || g.status === "LIVE NOW").length },
+            { label: "TOTAL LISTINGS", num: grants.length },
             { label: "MAX PRIZE", value: "$100K" },
           ].map((s) => (
             <div key={s.label} style={{ textAlign: "center" }}>
@@ -299,13 +301,13 @@ export default function GrantsPage() {
                 style={{
                   fontSize: "clamp(1.4rem, 5vw, 2rem)",
                   fontWeight: 900,
-                  color: "#34d399",
-                  fontFamily: "monospace",
+                  color: "#00ff88",
+                  fontFamily: "var(--font-geist-mono), monospace",
                 }}
               >
-                {s.value}
+                {s.num !== undefined ? <AnimatedNumber value={s.num} /> : s.value}
               </div>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em" }}>
+              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em" }}>
                 {s.label}
               </div>
             </div>
@@ -317,32 +319,33 @@ export default function GrantsPage() {
       <section style={{ padding: "24px 16px 0", maxWidth: 1000, margin: "0 auto" }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {FILTER_TYPES.map((f) => (
-            <button
+            <motion.button
               key={f}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setFilter(f)}
               style={{
                 padding: "6px 16px",
                 borderRadius: 8,
                 border:
                   filter === f
-                    ? "1px solid rgba(52,211,153,0.4)"
-                    : "1px solid rgba(16,185,129,0.1)",
+                    ? "1px solid rgba(0,255,136,0.4)"
+                    : "1px solid rgba(0,255,136,0.1)",
                 background:
                   filter === f
-                    ? "rgba(16,185,129,0.1)"
+                    ? "rgba(0,255,136,0.1)"
                     : "rgba(0,0,0,0.2)",
-                color: filter === f ? "#34d399" : "#64748b",
+                color: filter === f ? "#00ff88" : "#888888",
                 fontSize: 10,
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                fontFamily: "monospace",
+                fontFamily: "var(--font-geist-mono), monospace",
                 cursor: "pointer",
               }}
             >
               {f}
-            </button>
+            </motion.button>
           ))}
-          <div style={{ marginLeft: "auto", fontSize: 10, color: "#475569", alignSelf: "center", fontFamily: "monospace" }}>
+          <div style={{ marginLeft: "auto", fontSize: 10, color: "#666666", alignSelf: "center", fontFamily: "var(--font-geist-mono), monospace" }}>
             {filtered.length} RESULT{filtered.length !== 1 ? "S" : ""}
           </div>
         </div>
@@ -351,14 +354,19 @@ export default function GrantsPage() {
       {/* GRANT CARDS */}
       <section style={{ padding: "20px 16px 60px", maxWidth: 1000, margin: "0 auto" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {filtered.map((grant) => {
+          {filtered.map((grant, i) => {
             const sc = STATUS_COLORS[grant.status] ?? STATUS_COLORS["ENDED"];
             return (
-              <div
+              <motion.div
                 key={grant.id}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.3, delay: Math.min(i, 6) * 0.04 }}
+                whileHover={{ y: -3, borderColor: "rgba(0,255,136,0.25)" }}
                 style={{
-                  background: "rgba(3,17,10,0.2)",
-                  border: "1px solid rgba(16,185,129,0.08)",
+                  background: "rgba(0,0,0,0.2)",
+                  border: "1px solid rgba(0,255,136,0.08)",
                   borderRadius: 16,
                   padding: "20px 18px",
                   position: "relative",
@@ -374,7 +382,7 @@ export default function GrantsPage() {
                       right: 0,
                       height: 1,
                       background:
-                        "linear-gradient(90deg, transparent, rgba(52,211,153,0.25), transparent)",
+                        "linear-gradient(90deg, transparent, rgba(0,255,136,0.25), transparent)",
                     }}
                   />
                 )}
@@ -401,7 +409,7 @@ export default function GrantsPage() {
                       fontWeight: 900,
                       color: grant.logoColor,
                       flexShrink: 0,
-                      fontFamily: "monospace",
+                      fontFamily: "var(--font-geist-mono), monospace",
                     }}
                   >
                     {grant.logo}
@@ -421,12 +429,12 @@ export default function GrantsPage() {
                         style={{
                           fontSize: 8,
                           fontWeight: 800,
-                          color: TYPE_COLORS[grant.type] ?? "#94a3b8",
+                          color: TYPE_COLORS[grant.type] ?? "#888888",
                           background: `${TYPE_COLORS[grant.type]}15`,
                           border: `1px solid ${TYPE_COLORS[grant.type]}25`,
                           padding: "2px 8px",
                           borderRadius: 5,
-                          fontFamily: "monospace",
+                          fontFamily: "var(--font-geist-mono), monospace",
                           letterSpacing: "0.1em",
                         }}
                       >
@@ -441,7 +449,7 @@ export default function GrantsPage() {
                           background: sc.bg,
                           padding: "2px 8px",
                           borderRadius: 5,
-                          fontFamily: "monospace",
+                          fontFamily: "var(--font-geist-mono), monospace",
                           letterSpacing: "0.1em",
                           display: "inline-flex",
                           alignItems: "center",
@@ -465,8 +473,8 @@ export default function GrantsPage() {
                       <span
                         style={{
                           fontSize: 9,
-                          color: "#475569",
-                          fontFamily: "monospace",
+                          color: "#666666",
+                          fontFamily: "var(--font-geist-mono), monospace",
                         }}
                       >
                         {grant.org}
@@ -488,7 +496,7 @@ export default function GrantsPage() {
                     <p
                       style={{
                         fontSize: 12,
-                        color: "#64748b",
+                        color: "#888888",
                         lineHeight: 1.65,
                         margin: "0 0 12px",
                       }}
@@ -502,12 +510,12 @@ export default function GrantsPage() {
                           key={tag}
                           style={{
                             fontSize: 9,
-                            color: "#475569",
+                            color: "#666666",
                             background: "rgba(255,255,255,0.03)",
                             border: "1px solid rgba(255,255,255,0.06)",
                             padding: "2px 8px",
                             borderRadius: 5,
-                            fontFamily: "monospace",
+                            fontFamily: "var(--font-geist-mono), monospace",
                           }}
                         >
                           {tag}
@@ -527,21 +535,21 @@ export default function GrantsPage() {
                       <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                         <div>
                           <div
-                            style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}
+                            style={{ fontSize: 8, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 2 }}
                           >
                             REWARD
                           </div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#00ff88" }}>
                             {grant.reward}
                           </div>
                         </div>
                         <div>
                           <div
-                            style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}
+                            style={{ fontSize: 8, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 2 }}
                           >
                             DEADLINE
                           </div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#888888" }}>
                             {grant.deadline}
                           </div>
                         </div>
@@ -557,17 +565,17 @@ export default function GrantsPage() {
                           background:
                             grant.status === "ENDED"
                               ? "rgba(255,255,255,0.03)"
-                              : "rgba(16,185,129,0.1)",
+                              : "rgba(0,255,136,0.1)",
                           border:
                             grant.status === "ENDED"
                               ? "1px solid rgba(255,255,255,0.07)"
-                              : "1px solid rgba(52,211,153,0.25)",
-                          color: grant.status === "ENDED" ? "#475569" : "#34d399",
+                              : "1px solid rgba(0,255,136,0.25)",
+                          color: grant.status === "ENDED" ? "#666666" : "#00ff88",
                           fontSize: 10,
                           fontWeight: 700,
                           letterSpacing: "0.08em",
                           textDecoration: "none",
-                          fontFamily: "monospace",
+                          fontFamily: "var(--font-geist-mono), monospace",
                           whiteSpace: "nowrap",
                         }}
                       >
@@ -576,7 +584,7 @@ export default function GrantsPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -585,13 +593,13 @@ export default function GrantsPage() {
       {/* CTA */}
       <section
         style={{
-          borderTop: "1px solid rgba(16,185,129,0.06)",
+          borderTop: "1px solid rgba(0,255,136,0.06)",
           padding: "40px 16px",
           textAlign: "center",
-          background: "rgba(2,11,6,0.4)",
+          background: "rgba(0,0,0,0.4)",
         }}
       >
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>
+        <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
           NOT SURE WHERE TO START?
         </div>
         <h2
@@ -604,7 +612,7 @@ export default function GrantsPage() {
         >
           Ask MicroAI
         </h2>
-        <p style={{ fontSize: 13, color: "#64748b", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
+        <p style={{ fontSize: 13, color: "#888888", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
           Get personalized guidance on which grant or hackathon fits your project — straight from the Arc & Circle Intelligence Hub.
         </p>
         <Link
@@ -613,13 +621,13 @@ export default function GrantsPage() {
             display: "inline-block",
             padding: "12px 28px",
             borderRadius: 12,
-            background: "#10b981",
+            background: "#00ff88",
             color: "#000",
             fontSize: 13,
             fontWeight: 800,
             letterSpacing: "0.06em",
             textDecoration: "none",
-            boxShadow: "0 0 18px rgba(16,185,129,0.2)",
+            boxShadow: "0 0 18px rgba(0,255,136,0.2)",
           }}
         >
           LAUNCH CHAT TERMINAL →
@@ -629,8 +637,8 @@ export default function GrantsPage() {
       {/* FOOTER */}
       <footer
         style={{
-          borderTop: "1px solid rgba(16,185,129,0.08)",
-          background: "#010402",
+          borderTop: "1px solid rgba(0,255,136,0.08)",
+          background: "#000000",
           padding: "24px 16px",
         }}
       >
@@ -651,19 +659,19 @@ export default function GrantsPage() {
                 width: 24,
                 height: 24,
                 borderRadius: 7,
-                background: "rgba(16,185,129,0.08)",
-                border: "1px solid rgba(16,185,129,0.2)",
+                background: "rgba(0,255,136,0.08)",
+                border: "1px solid rgba(0,255,136,0.2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: 11,
                 fontWeight: 800,
-                color: "#34d399",
+                color: "#00ff88",
               }}
             >
               M
             </div>
-            <div style={{ fontSize: 10, color: "#475569" }}>MICROAI · THE ARC & CIRCLE HUB</div>
+            <div style={{ fontSize: 10, color: "#666666" }}>MICROAI · THE ARC & CIRCLE HUB</div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[
@@ -679,10 +687,10 @@ export default function GrantsPage() {
                 rel="noreferrer"
                 style={{
                   fontSize: 10,
-                  color: "#475569",
+                  color: "#666666",
                   fontWeight: 700,
                   letterSpacing: "0.1em",
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-geist-mono), monospace",
                   textDecoration: "none",
                 }}
               >
@@ -694,9 +702,8 @@ export default function GrantsPage() {
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html { scroll-behavior: smooth; }
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
+                html { scroll-behavior: smooth; }
+        html, body { background: #000000; margin: 0; overflow-x: hidden; scrollbar-width: none; }
         ::-webkit-scrollbar { display: none; }
         * { box-sizing: border-box; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }

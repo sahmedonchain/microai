@@ -15,6 +15,7 @@
     "@upstash/redis": "^1.38.4",
     "ai": "^6.0.191",
     "ethers": "^6.16.0",
+    "framer-motion": "^13.4.0",
     "fuse.js": "^7.4.2",
     "groq-sdk": "^1.2.1",
     "lucide-react": "^1.17.0",

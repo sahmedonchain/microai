@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
 const navLinks = [
   { label: "ECOSYSTEM", href: "/ecosystem" },
@@ -16,14 +17,17 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav
+    <motion.nav
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
       style={{
         position: "sticky",
         top: 0,
         zIndex: 50,
-        background: "rgba(3,18,10,0.97)",
+        background: "rgba(0,0,0,0.97)",
         backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(16,185,129,0.1)",
+        borderBottom: "1px solid rgba(0,255,136,0.1)",
       }}
     >
       <div
@@ -44,7 +48,7 @@ export function Navbar() {
               width: 32,
               height: 32,
               borderRadius: 10,
-              background: "linear-gradient(135deg, #34d399, #10b981)",
+              background: "linear-gradient(135deg, #00ff88, #00ff88)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -52,21 +56,21 @@ export function Navbar() {
               fontSize: 13,
               color: "#000",
               flexShrink: 0,
-              boxShadow: "0 0 12px rgba(16,185,129,0.3)",
+              boxShadow: "0 0 12px rgba(0,255,136,0.3)",
             }}
           >
             M
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>
-              MICRO<span style={{ color: "#34d399" }}>AI</span>
+              MICRO<span style={{ color: "#00ff88" }}>AI</span>
             </div>
             <div
               style={{
                 fontSize: 7,
-                color: "rgba(52,211,153,0.5)",
+                color: "rgba(0,255,136,0.5)",
                 letterSpacing: "0.2em",
-                fontFamily: "monospace",
+                fontFamily: "var(--font-geist-mono), monospace",
               }}
             >
               THE KNOWLEDGE HUB
@@ -93,7 +97,7 @@ export function Navbar() {
               href={link.href}
               style={{
                 textDecoration: "none",
-                color: pathname === link.href ? "#34d399" : "#64748b",
+                color: pathname === link.href ? "#00ff88" : "#888888",
               }}
             >
               {link.label}
@@ -108,9 +112,9 @@ export function Navbar() {
             style={{
               padding: "7px 14px",
               borderRadius: 10,
-              background: "rgba(16,185,129,0.1)",
-              border: "1px solid rgba(52,211,153,0.25)",
-              color: "#34d399",
+              background: "rgba(0,255,136,0.1)",
+              border: "1px solid rgba(0,255,136,0.25)",
+              color: "#00ff88",
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: "0.08em",
@@ -122,7 +126,8 @@ export function Navbar() {
           </Link>
 
           {/* Hamburger */}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => setMenuOpen(!menuOpen)}
             className="hamburger-btn"
             style={{
@@ -133,8 +138,8 @@ export function Navbar() {
               gap: 5,
               width: 36,
               height: 36,
-              background: "rgba(16,185,129,0.06)",
-              border: "1px solid rgba(16,185,129,0.15)",
+              background: "rgba(0,255,136,0.06)",
+              border: "1px solid rgba(0,255,136,0.15)",
               borderRadius: 9,
               cursor: "pointer",
               padding: 0,
@@ -146,7 +151,7 @@ export function Navbar() {
                 display: "block",
                 width: 16,
                 height: 1.5,
-                background: menuOpen ? "#34d399" : "#64748b",
+                background: menuOpen ? "#00ff88" : "#888888",
                 borderRadius: 2,
                 transition: "all 0.2s",
                 transform: menuOpen ? "rotate(45deg) translate(0px, 4.5px)" : "none",
@@ -157,7 +162,7 @@ export function Navbar() {
                 display: "block",
                 width: 16,
                 height: 1.5,
-                background: menuOpen ? "transparent" : "#64748b",
+                background: menuOpen ? "transparent" : "#888888",
                 borderRadius: 2,
                 transition: "all 0.2s",
                 opacity: menuOpen ? 0 : 1,
@@ -168,23 +173,29 @@ export function Navbar() {
                 display: "block",
                 width: 16,
                 height: 1.5,
-                background: menuOpen ? "#34d399" : "#64748b",
+                background: menuOpen ? "#00ff88" : "#888888",
                 borderRadius: 2,
                 transition: "all 0.2s",
                 transform: menuOpen ? "rotate(-45deg) translate(0px, -4.5px)" : "none",
               }}
             />
-          </button>
+          </motion.button>
         </div>
       </div>
 
       {/* Mobile dropdown */}
+      <AnimatePresence>
       {menuOpen && (
-        <div
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
           style={{
-            borderTop: "1px solid rgba(16,185,129,0.08)",
+            borderTop: "1px solid rgba(0,255,136,0.08)",
             padding: "8px 0 12px",
-            background: "rgba(3,18,10,0.99)",
+            background: "rgba(0,0,0,0.99)",
+            overflow: "hidden",
           }}
         >
           {navLinks.map((link) => (
@@ -200,10 +211,10 @@ export function Navbar() {
                 fontSize: 11,
                 fontWeight: 700,
                 letterSpacing: "0.1em",
-                fontFamily: "monospace",
-                color: pathname === link.href ? "#34d399" : "#94a3b8",
+                fontFamily: "var(--font-geist-mono), monospace",
+                color: pathname === link.href ? "#00ff88" : "#888888",
                 textDecoration: "none",
-                borderBottom: "1px solid rgba(16,185,129,0.04)",
+                borderBottom: "1px solid rgba(0,255,136,0.04)",
               }}
             >
               <span>{link.label}</span>
@@ -211,9 +222,9 @@ export function Navbar() {
                 <span
                   style={{
                     fontSize: 8,
-                    background: "rgba(16,185,129,0.1)",
-                    border: "1px solid rgba(52,211,153,0.2)",
-                    color: "#34d399",
+                    background: "rgba(124,58,237,0.15)",
+                    border: "1px solid rgba(124,58,237,0.3)",
+                    color: "#a78bfa",
                     padding: "2px 7px",
                     borderRadius: 4,
                     letterSpacing: "0.1em",
@@ -233,7 +244,7 @@ export function Navbar() {
                 textAlign: "center",
                 padding: "11px",
                 borderRadius: 10,
-                background: "#10b981",
+                background: "#00ff88",
                 color: "#000",
                 fontSize: 12,
                 fontWeight: 800,
@@ -244,8 +255,9 @@ export function Navbar() {
               LAUNCH CHAT TERMINAL →
             </Link>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       <style>{`
         .desktop-nav { display: none !important; }
@@ -255,6 +267,6 @@ export function Navbar() {
           .hamburger-btn { display: none !important; }
         }
       `}</style>
-    </nav>
+    </motion.nav>
   );
 }

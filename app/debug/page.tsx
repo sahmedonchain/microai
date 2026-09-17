@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Navbar } from "@/app/components/Navbar";
 
 type TxStatus = "idle" | "analyzing" | "done" | "error";
@@ -33,7 +34,7 @@ interface DebugResult {
 function severity_color(s: string) {
   if (s === "high") return "#f87171";
   if (s === "medium") return "#f59e0b";
-  return "#34d399";
+  return "#00ff88";
 }
 
 export default function DebugPage() {
@@ -92,23 +93,23 @@ export default function DebugPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#010503",
-        color: "#e2e8f0",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        background: "#000000",
+        color: "#ffffff",
+        fontFamily: "var(--font-geist-sans), sans-serif",
       }}
     >
       <Navbar />
 
       {/* HERO */}
-      <section style={{ padding: "48px 20px 32px", textAlign: "center", borderBottom: "1px solid rgba(16,185,129,0.06)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 20, border: "1px solid rgba(16,185,129,0.15)", background: "rgba(3,17,10,0.6)", marginBottom: 20 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>ARC MAINNET · LIVE DEBUGGER</span>
+      <section style={{ padding: "48px 20px 32px", textAlign: "center", borderBottom: "1px solid rgba(0,255,136,0.06)" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 20, border: "1px solid rgba(0,255,136,0.15)", background: "rgba(0,0,0,0.6)", marginBottom: 20 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88", display: "inline-block", animation: "pulse 2s infinite" }} />
+          <span style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace" }}>ARC MAINNET · LIVE DEBUGGER</span>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(148,163,184,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
           Transaction Debugger
         </h1>
-        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#888888", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
           Paste any Arc MAINNET transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened — and how to fix it.
         </p>
       </section>
@@ -117,8 +118,8 @@ export default function DebugPage() {
       <section style={{ padding: "32px 16px 60px", maxWidth: 760, margin: "0 auto" }}>
 
         {/* Input */}
-        <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 16, padding: "20px", marginBottom: 20 }}>
-          <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+        <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(0,255,136,0.1)", borderRadius: 16, padding: "20px", marginBottom: 20 }}>
+          <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
             PASTE TRANSACTION HASH
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -132,38 +133,39 @@ export default function DebugPage() {
                 flex: 1,
                 minWidth: 0,
                 background: "rgba(0,0,0,0.4)",
-                border: "1px solid rgba(16,185,129,0.15)",
+                border: "1px solid rgba(0,255,136,0.15)",
                 borderRadius: 10,
                 padding: "12px 14px",
                 fontSize: 12,
                 color: "#fff",
                 outline: "none",
-                fontFamily: "monospace",
+                fontFamily: "var(--font-geist-mono), monospace",
               }}
             />
-            <button
+            <motion.button
+              whileTap={{ scale: 0.97 }}
               onClick={analyze}
               disabled={status === "analyzing"}
               style={{
                 padding: "12px 24px",
                 borderRadius: 10,
                 border: "none",
-                background: status === "analyzing" ? "rgba(16,185,129,0.1)" : "linear-gradient(135deg,#10b981,#059669)",
-                color: status === "analyzing" ? "#34d399" : "#000",
+                background: status === "analyzing" ? "rgba(0,255,136,0.1)" : "linear-gradient(135deg,#00ff88,#00cc6a)",
+                color: status === "analyzing" ? "#00ff88" : "#000",
                 fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: "0.06em",
                 cursor: status === "analyzing" ? "not-allowed" : "pointer",
                 whiteSpace: "nowrap",
-                fontFamily: "monospace",
+                fontFamily: "var(--font-geist-mono), monospace",
               }}
             >
               {status === "analyzing" ? "ANALYZING..." : "DEBUG →"}
-            </button>
+            </motion.button>
           </div>
 
           {errorMsg && (
-            <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)", fontSize: 11, color: "#f87171", fontFamily: "monospace" }}>
+            <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)", fontSize: 11, color: "#f87171", fontFamily: "var(--font-geist-mono), monospace" }}>
               {errorMsg}
             </div>
           )}
@@ -172,10 +174,10 @@ export default function DebugPage() {
             <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ display: "flex", gap: 4 }}>
                 {[0, 1, 2].map((i) => (
-                  <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", animation: "bounce 1.2s infinite", animationDelay: `${i * 0.2}s` }} />
+                  <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#00ff88", animation: "bounce 1.2s infinite", animationDelay: `${i * 0.2}s` }} />
                 ))}
               </div>
-              <span style={{ fontSize: 10, color: "#475569", fontFamily: "monospace" }}>
+              <span style={{ fontSize: 10, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>
                 Fetching transaction and analyzing...
               </span>
             </div>
@@ -184,42 +186,46 @@ export default function DebugPage() {
 
         {/* Result */}
         {result && status === "done" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
             <div style={{
               padding: "14px 18px",
               borderRadius: 12,
-              background: result.txData.result === "success" ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)",
-              border: `1px solid ${result.txData.result === "success" ? "rgba(52,211,153,0.2)" : "rgba(239,68,68,0.2)"}`,
+              background: result.txData.result === "success" ? "rgba(0,255,136,0.06)" : "rgba(239,68,68,0.06)",
+              border: `1px solid ${result.txData.result === "success" ? "rgba(0,255,136,0.2)" : "rgba(239,68,68,0.2)"}`,
               display: "flex",
               alignItems: "center",
               gap: 12,
             }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: result.txData.result === "success" ? "#34d399" : "#f87171", flexShrink: 0 }} />
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: result.txData.result === "success" ? "#00ff88" : "#f87171", flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: result.txData.result === "success" ? "#34d399" : "#f87171" }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: result.txData.result === "success" ? "#00ff88" : "#f87171" }}>
                   {result.txData.result === "success" ? "Transaction Successful" : "Transaction Failed"}
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{result.summary}</div>
+                <div style={{ fontSize: 11, color: "#888888", marginTop: 2 }}>{result.summary}</div>
               </div>
             </div>
 
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
-              <div style={{ fontSize: 9, color: severity_color(result.severity), fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 8 }}>
+            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.25)", border: "1px solid rgba(0,255,136,0.08)" }}>
+              <div style={{ fontSize: 9, color: severity_color(result.severity), fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 8 }}>
                 ROOT CAUSE · {result.severity.toUpperCase()} SEVERITY
               </div>
-              <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>{result.rootCause}</p>
+              <p style={{ fontSize: 13, color: "#888888", lineHeight: 1.7, margin: 0 }}>{result.rootCause}</p>
             </div>
 
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
-              <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 8 }}>
+            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)" }}>
+              <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 8 }}>
                 HOW TO FIX
               </div>
-              <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>{result.solution}</p>
+              <p style={{ fontSize: 13, color: "#888888", lineHeight: 1.7, margin: 0 }}>{result.solution}</p>
             </div>
 
             <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
+              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
                 TRANSACTION DETAILS
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -233,8 +239,8 @@ export default function DebugPage() {
                   { label: "FEE (USDC)", value: result.txData.fee?.value ? (parseInt(result.txData.fee.value) / 1e6).toFixed(6) : "—" },
                 ].map((row) => (
                   <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>{row.label}</span>
-                    <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", textAlign: "right", wordBreak: "break-all" }}>{row.value}</span>
+                    <span style={{ fontSize: 9, color: "#555555", fontFamily: "var(--font-geist-mono), monospace", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>{row.label}</span>
+                    <span style={{ fontSize: 11, color: "#888888", fontFamily: "var(--font-geist-mono), monospace", textAlign: "right", wordBreak: "break-all" }}>{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -243,17 +249,17 @@ export default function DebugPage() {
                 href={`https://explorer.arc.io/tx/${result.txData.hash}`}
                 target="_blank"
                 rel="noreferrer"
-                style={{ display: "inline-block", marginTop: 14, fontSize: 10, color: "#34d399", fontFamily: "monospace", fontWeight: 700, textDecoration: "none", letterSpacing: "0.08em" }}
+                style={{ display: "inline-block", marginTop: 14, fontSize: 10, color: "#00ff88", fontFamily: "var(--font-geist-mono), monospace", fontWeight: 700, textDecoration: "none", letterSpacing: "0.08em" }}
               >
                 VIEW ON ARC EXPLORER ↗
               </a>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {history.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>
+            <div style={{ fontSize: 9, color: "#555555", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>
               RECENT HASHES
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -266,9 +272,9 @@ export default function DebugPage() {
                     borderRadius: 8,
                     background: "rgba(0,0,0,0.2)",
                     border: "1px solid rgba(255,255,255,0.04)",
-                    color: "#475569",
+                    color: "#666666",
                     fontSize: 11,
-                    fontFamily: "monospace",
+                    fontFamily: "var(--font-geist-mono), monospace",
                     cursor: "pointer",
                     textAlign: "left",
                     letterSpacing: "0.02em",
@@ -283,7 +289,7 @@ export default function DebugPage() {
 
         {status === "idle" && !result && (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
+            <div style={{ fontSize: 9, color: "#555555", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
               WHAT THIS DEBUGGER DETECTS
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
@@ -294,12 +300,19 @@ export default function DebugPage() {
                 { icon: "↩️", label: "Contract Revert", desc: "Smart contract rejected the call with a reason" },
                 { icon: "📋", label: "Invalid Input", desc: "Wrong function selector or malformed calldata" },
                 { icon: "🔢", label: "Nonce Issues", desc: "Transaction nonce conflict or out-of-order submission" },
-              ].map((tip) => (
-                <div key={tip.label} style={{ padding: "14px", borderRadius: 12, background: "rgba(3,17,10,0.15)", border: "1px solid rgba(16,185,129,0.06)" }}>
+              ].map((tip, i) => (
+                <motion.div
+                  key={tip.label}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                  whileHover={{ y: -3, borderColor: "rgba(0,255,136,0.2)" }}
+                  style={{ padding: "14px", borderRadius: 12, background: "rgba(0,0,0,0.15)", border: "1px solid rgba(0,255,136,0.06)" }}
+                >
                   <div style={{ fontSize: 16, marginBottom: 6 }}>{tip.icon}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>{tip.label}</div>
-                  <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5 }}>{tip.desc}</div>
-                </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#ffffff", marginBottom: 4 }}>{tip.label}</div>
+                  <div style={{ fontSize: 11, color: "#666666", lineHeight: 1.5 }}>{tip.desc}</div>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -307,21 +320,21 @@ export default function DebugPage() {
       </section>
 
       {/* CTA */}
-      <section style={{ borderTop: "1px solid rgba(16,185,129,0.06)", padding: "36px 16px", textAlign: "center", background: "rgba(2,11,6,0.4)" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>NEED MORE HELP?</div>
+      <section style={{ borderTop: "1px solid rgba(0,255,136,0.06)", padding: "36px 16px", textAlign: "center", background: "rgba(0,0,0,0.4)" }}>
+        <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>NEED MORE HELP?</div>
         <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.8rem)", fontWeight: 900, color: "#fff", margin: "0 0 10px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#64748b", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
+        <p style={{ fontSize: 13, color: "#888888", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
           Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
         </p>
-        <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#10b981", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none" }}>
+        <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#00ff88", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none" }}>
           LAUNCH CHAT TERMINAL →
         </Link>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: "1px solid rgba(16,185,129,0.08)", background: "#010402", padding: "22px 16px" }}>
+      <footer style={{ borderTop: "1px solid rgba(0,255,136,0.08)", background: "#000000", padding: "22px 16px" }}>
         <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 9, color: "#1e3a29", fontFamily: "monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
+          <div style={{ fontSize: 9, color: "#333333", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
           <div style={{ display: "flex", gap: 16 }}>
             {[
               { l: "ECOSYSTEM", h: "/ecosystem" },
@@ -329,7 +342,7 @@ export default function DebugPage() {
               { l: "CHAT", h: "/chat" },
               { l: "EXPLORER", h: "https://explorer.arc.io" },
             ].map((link) => (
-              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#1e3a29", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "monospace", textDecoration: "none" }}>
+              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#333333", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>
                 {link.l}
               </Link>
             ))}
@@ -338,13 +351,13 @@ export default function DebugPage() {
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
+                html, body { background: #000000; margin: 0; overflow-x: hidden; scrollbar-width: none; }
         ::-webkit-scrollbar { display: none; }
         * { box-sizing: border-box; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        input::placeholder { color: #334155; }
+        input:focus { border-color: rgba(0,255,136,0.5) !important; box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+        input::placeholder { color: #555555; }
       `}</style>
     </div>
   );

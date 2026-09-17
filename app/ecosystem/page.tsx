@@ -2,6 +2,8 @@
 import { Navbar } from "@/app/components/Navbar";
 import React, { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { AnimatedNumber } from "@/app/components/AnimatedNumber";
 
 type Project = {
   name: string;
@@ -37,7 +39,7 @@ const projects: Project[] = [
     tags: ["AI", "Pay-per-use", "USDC", "Arc MAINNET"],
     url: "https://microai-tan.vercel.app",
     logo: "M",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
     featured: true,
   },
   {
@@ -110,7 +112,7 @@ const projects: Project[] = [
     tags: ["Hardware Wallet", "Security", "Cold Storage"],
     url: "https://ledger.com",
     logo: "L",
-    logoColor: "#94a3b8",
+    logoColor: "#888888",
   },
   {
     name: "Exodus",
@@ -119,7 +121,7 @@ const projects: Project[] = [
     tags: ["Multi-asset", "Desktop", "Mobile"],
     url: "https://exodus.com",
     logo: "E",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   {
     name: "Uniswap Labs",
@@ -191,7 +193,7 @@ const projects: Project[] = [
     tags: ["Optimistic", "Fast Bridge", "USDC"],
     url: "https://across.to",
     logo: "AC",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   {
     name: "Alchemy",
@@ -308,7 +310,7 @@ const projects: Project[] = [
     tags: ["MXN", "LATAM", "Peso"],
     url: "https://bitso.com",
     logo: "MX",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   {
     name: "BRLA (Avenia)",
@@ -317,7 +319,7 @@ const projects: Project[] = [
     tags: ["BRL", "Brazil", "Real"],
     url: "https://avenia.com.br",
     logo: "BR",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   {
     name: "Blockdaemon",
@@ -380,7 +382,7 @@ const projects: Project[] = [
     tags: ["Credit", "Institutional", "Undercollateralized"],
     url: "https://maple.finance",
     logo: "MP",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   {
     name: "BlackRock",
@@ -389,7 +391,7 @@ const projects: Project[] = [
     tags: ["RWA", "Asset Management", "Tokenization"],
     url: "https://blackrock.com",
     logo: "BK",
-    logoColor: "#64748b",
+    logoColor: "#888888",
   },
   {
     name: "Goldman Sachs",
@@ -398,7 +400,7 @@ const projects: Project[] = [
     tags: ["Capital Markets", "Settlement", "TradFi"],
     url: "https://goldmansachs.com",
     logo: "GS",
-    logoColor: "#64748b",
+    logoColor: "#888888",
   },
   {
     name: "Coinbase",
@@ -416,7 +418,7 @@ const projects: Project[] = [
     tags: ["Consumer", "USDC", "EURC", "FX", "Card"],
     url: "https://community.arc.io/public/clubs/arc-ecosystem/blog/arc-x-pulsar-consumer-stablecoin-money-movement-on-arc",
     logo: "PL",
-    logoColor: "#10b981",
+    logoColor: "#00ff88",
   },
   {
     name: "Canteen",
@@ -444,12 +446,12 @@ const CATEGORY_COLORS: Record<string, string> = {
   "DEX & LIQUIDITY": "#ec4899",
   "BRIDGES": "#9333ea",
   "DEV TOOLS": "#3b82f6",
-  "PAYMENTS": "#10b981",
+  "PAYMENTS": "#00ff88",
   "STABLECOINS": "#2563eb",
-  "INFRASTRUCTURE": "#64748b",
+  "INFRASTRUCTURE": "#888888",
   "LENDING": "#b6509e",
-  "INSTITUTIONS": "#94a3b8",
-  "COMMUNITY BUILDS": "#34d399",
+  "INSTITUTIONS": "#888888",
+  "COMMUNITY BUILDS": "#00ff88",
 };
 
 export default function EcosystemPage() {
@@ -470,30 +472,30 @@ export default function EcosystemPage() {
   const rest = filtered.filter((p) => !p.featured);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#010503", color: "#e2e8f0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#000000", color: "#ffffff", fontFamily: "var(--font-geist-sans), sans-serif" }}>
       <Navbar />
 
       {/* HERO */}
-      <section style={{ padding: "48px 20px 36px", textAlign: "center", borderBottom: "1px solid rgba(16,185,129,0.06)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(16,185,129,0.15)", background: "rgba(3,17,10,0.6)", marginBottom: 20 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>LIVE ECOSYSTEM MAP</span>
+      <section style={{ padding: "48px 20px 36px", textAlign: "center", borderBottom: "1px solid rgba(0,255,136,0.06)" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(0,255,136,0.15)", background: "rgba(0,0,0,0.6)", marginBottom: 20 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88", display: "inline-block", animation: "pulse 2s infinite" }} />
+          <span style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace" }}>LIVE ECOSYSTEM MAP</span>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 3.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg, #fff 0%, rgba(148,163,184,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 3.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
           Arc & Circle<br />Ecosystem Directory
         </h1>
-        <p style={{ fontSize: "clamp(12px, 3vw, 14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "clamp(12px, 3vw, 14px)", color: "#888888", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
           Every project, protocol, and builder in the Arc + Circle ecosystem — from community dApps to institutional partners.
         </p>
         <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
           {[
-            { label: "PROJECTS", value: projects.length.toString() },
-            { label: "CATEGORIES", value: (categories.length - 1).toString() },
-            { label: "COMMUNITY BUILDS", value: projects.filter(p => p.category === "COMMUNITY BUILDS").length.toString() },
+            { label: "PROJECTS", value: projects.length },
+            { label: "CATEGORIES", value: categories.length - 1 },
+            { label: "COMMUNITY BUILDS", value: projects.filter(p => p.category === "COMMUNITY BUILDS").length },
           ].map((s) => (
             <div key={s.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "clamp(1.4rem, 5vw, 2rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>{s.value}</div>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
+              <div style={{ fontSize: "clamp(1.4rem, 5vw, 2rem)", fontWeight: 900, color: "#00ff88", fontFamily: "var(--font-geist-mono), monospace" }}><AnimatedNumber value={s.value} /></div>
+              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -502,46 +504,47 @@ export default function EcosystemPage() {
       {/* SEARCH + FILTERS */}
       <section style={{ padding: "24px 16px 0", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ position: "relative", marginBottom: 16 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#475569", fontFamily: "monospace" }}>⌕</span>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>⌕</span>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search projects, tags, categories..."
-            style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 10, padding: "10px 14px 10px 32px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "monospace", boxSizing: "border-box" }}
+            style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(0,255,136,0.12)", borderRadius: 10, padding: "10px 14px 10px 32px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "var(--font-geist-mono), monospace", boxSizing: "border-box" }}
           />
         </div>
 
         <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
           {categories.map((cat) => {
-            const color = CATEGORY_COLORS[cat] ?? "#34d399";
+            const color = CATEGORY_COLORS[cat] ?? "#00ff88";
             const active = filter === cat;
             return (
-              <button
+              <motion.button
                 key={cat}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setFilter(cat)}
                 style={{
                   padding: "6px 14px",
                   borderRadius: 8,
-                  border: active ? `1px solid ${color}60` : "1px solid rgba(16,185,129,0.08)",
+                  border: active ? `1px solid ${color}60` : "1px solid rgba(0,255,136,0.08)",
                   background: active ? `${color}15` : "rgba(0,0,0,0.2)",
-                  color: active ? color : "#64748b",
+                  color: active ? color : "#888888",
                   fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: "0.1em",
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-geist-mono), monospace",
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   flexShrink: 0,
                 }}
               >
                 {cat}
-              </button>
+              </motion.button>
             );
           })}
         </div>
 
-        <div style={{ marginTop: 12, fontSize: 10, color: "#475569", fontFamily: "monospace" }}>
+        <div style={{ marginTop: 12, fontSize: 10, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>
           {filtered.length} PROJECT{filtered.length !== 1 ? "S" : ""}
           {search && ` FOR "${search.toUpperCase()}"`}
         </div>
@@ -550,7 +553,7 @@ export default function EcosystemPage() {
       {/* FEATURED */}
       {featured.length > 0 && (
         <section style={{ padding: "20px 16px 0", maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
             COMMUNITY SPOTLIGHT
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
@@ -564,7 +567,7 @@ export default function EcosystemPage() {
       {/* MAIN GRID */}
       <section style={{ padding: "20px 16px 60px", maxWidth: 1100, margin: "0 auto" }}>
         {featured.length > 0 && rest.length > 0 && (
-          <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
             ALL PROJECTS
           </div>
         )}
@@ -574,63 +577,69 @@ export default function EcosystemPage() {
           ))}
         </div>
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#475569", fontFamily: "monospace", fontSize: 12 }}>
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#666666", fontFamily: "var(--font-geist-mono), monospace", fontSize: 12 }}>
             NO RESULTS FOR "{search.toUpperCase()}"
           </div>
         )}
       </section>
 
       {/* CTA */}
-      <section style={{ borderTop: "1px solid rgba(16,185,129,0.06)", padding: "40px 16px", textAlign: "center", background: "rgba(2,11,6,0.4)" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>WANT TO KNOW MORE ABOUT ANY PROJECT?</div>
+      <section style={{ borderTop: "1px solid rgba(0,255,136,0.06)", padding: "40px 16px", textAlign: "center", background: "rgba(0,0,0,0.4)" }}>
+        <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>WANT TO KNOW MORE ABOUT ANY PROJECT?</div>
         <h2 style={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 900, color: "#fff", margin: "0 0 12px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#64748b", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
+        <p style={{ fontSize: 13, color: "#888888", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
           Get instant answers about any Arc or Circle ecosystem project for just $0.001 USDC.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#10b981", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none", boxShadow: "0 0 18px rgba(16,185,129,0.2)" }}>
+          <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#00ff88", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none", boxShadow: "0 0 18px rgba(0,255,136,0.2)" }}>
             LAUNCH CHAT TERMINAL →
           </Link>
-          <Link href="/grants" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.05)", color: "#34d399", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textDecoration: "none" }}>
+          <Link href="/grants" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, border: "1px solid rgba(0,255,136,0.2)", background: "rgba(0,255,136,0.05)", color: "#00ff88", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textDecoration: "none" }}>
             VIEW GRANTS →
           </Link>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: "1px solid rgba(16,185,129,0.08)", background: "#010402", padding: "24px 16px" }}>
+      <footer style={{ borderTop: "1px solid rgba(0,255,136,0.08)", background: "#000000", padding: "24px 16px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#34d399" }}>M</div>
-            <div style={{ fontSize: 10, color: "#475569" }}>MICROAI · THE ARC & CIRCLE HUB</div>
+            <div style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#00ff88" }}>M</div>
+            <div style={{ fontSize: 10, color: "#666666" }}>MICROAI · THE ARC & CIRCLE HUB</div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[{ l: "ARC", h: "https://arc.io" }, { l: "CIRCLE", h: "https://circle.com" }, { l: "GITHUB", h: "https://github.com/sahmedonchain/microai" }, { l: "EXPLORER", h: "https://explorer.arc.io" }].map((link) => (
-              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#475569", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "monospace", textDecoration: "none" }}>{link.l}</a>
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#666666", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>{link.l}</a>
             ))}
           </div>
         </div>
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html { scroll-behavior: smooth; }
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
+                html { scroll-behavior: smooth; }
+        html, body { background: #000000; margin: 0; overflow-x: hidden; scrollbar-width: none; }
         ::-webkit-scrollbar { display: none; }
         * { box-sizing: border-box; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        input::placeholder { color: #475569; }
+        input:focus { border-color: rgba(0,255,136,0.5) !important; box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
+        input::placeholder { color: #666666; }
       `}</style>
     </div>
   );
 }
 
 function ProjectCard({ project: p, highlight }: { project: Project; highlight?: boolean }) {
-  const catColor = CATEGORY_COLORS[p.category] ?? "#34d399";
+  const catColor = CATEGORY_COLORS[p.category] ?? "#00ff88";
   return (
-    <div style={{
-      background: highlight ? "rgba(3,22,13,0.4)" : "rgba(3,17,10,0.2)",
-      border: highlight ? "1px solid rgba(52,211,153,0.15)" : "1px solid rgba(16,185,129,0.07)",
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.3 }}
+      whileHover={{ y: -4, borderColor: "rgba(0,255,136,0.3)" }}
+      style={{
+      background: highlight ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.2)",
+      border: highlight ? "1px solid rgba(0,255,136,0.15)" : "1px solid rgba(0,255,136,0.07)",
       borderRadius: 14,
       padding: "18px",
       display: "flex",
@@ -640,28 +649,28 @@ function ProjectCard({ project: p, highlight }: { project: Project; highlight?: 
       overflow: "hidden",
     }}>
       {highlight && (
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.3), transparent)" }} />
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(0,255,136,0.3), transparent)" }} />
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${p.logoColor}18`, border: `1px solid ${p.logoColor}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: p.logoColor, flexShrink: 0, fontFamily: "monospace" }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${p.logoColor}18`, border: `1px solid ${p.logoColor}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: p.logoColor, flexShrink: 0, fontFamily: "var(--font-geist-mono), monospace" }}>
           {p.logo}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>{p.name}</div>
-          <span style={{ fontSize: 8, fontWeight: 700, color: catColor, background: `${catColor}15`, border: `1px solid ${catColor}25`, padding: "1px 7px", borderRadius: 4, fontFamily: "monospace", letterSpacing: "0.08em" }}>
+          <span style={{ fontSize: 8, fontWeight: 700, color: catColor, background: `${catColor}15`, border: `1px solid ${catColor}25`, padding: "1px 7px", borderRadius: 4, fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em" }}>
             {p.category}
           </span>
         </div>
       </div>
-      <p style={{ fontSize: 11, color: "#64748b", lineHeight: 1.65, margin: 0, flex: 1 }}>{p.desc}</p>
+      <p style={{ fontSize: 11, color: "#888888", lineHeight: 1.65, margin: 0, flex: 1 }}>{p.desc}</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {p.tags.map((t) => (
-          <span key={t} style={{ fontSize: 9, color: "#475569", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4, fontFamily: "monospace" }}>{t}</span>
+          <span key={t} style={{ fontSize: 9, color: "#666666", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4, fontFamily: "var(--font-geist-mono), monospace" }}>{t}</span>
         ))}
       </div>
-      <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: catColor, fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.08em", textDecoration: "none" }}>
+      <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: catColor, fontWeight: 700, fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em", textDecoration: "none" }}>
         VISIT →
       </a>
-    </div>
+    </motion.div>
   );
 }
