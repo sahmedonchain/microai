@@ -4,6 +4,7 @@ import Groq from "groq-sdk";
 import { ethers } from "ethers";
 import { searchKnowledge } from "@/lib/search";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { PRICE_PER_QUERY as PRICE_PER_QUERY_UNITS } from "@/lib/pricing";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -13,7 +14,7 @@ const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const RECEIVER = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
 
 // Fixed price, 6-decimal USDC units — never accepted from the client.
-const PRICE_PER_QUERY = BigInt(1000); // 0.001 USDC
+const PRICE_PER_QUERY = BigInt(PRICE_PER_QUERY_UNITS); // 0.001 USDC
 
 class InsufficientAllowanceError extends Error {}
 

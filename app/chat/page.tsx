@@ -4,6 +4,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { WalletModal } from "@/app/components/WalletModal";
+import { MIN_QUERIES, MAX_QUERIES } from "@/lib/pricing";
 
 const ARC_CHAIN_ID = "0x13b2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
@@ -58,6 +59,8 @@ export default function Chat() {
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [bundle, setBundle] = useState<BundleState | null>(null);
   const [approving, setApproving] = useState(false);
+  const [customQueries, setCustomQueries] = useState("");
+  const [customError, setCustomError] = useState("");
   const [sessionAddress, setSessionAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -218,10 +221,11 @@ export default function Chat() {
     } catch { /* silent */ }
   };
 
-  // Approve bundle — user signs ONCE
-  const approveBundle = async (bundleIndex: number) => {
+  // Approve bundle — user signs ONCE. `selected.amount` must always come from
+  // a value the server itself computed (see the custom-amount flow below) —
+  // never an arbitrary client-side total.
+  const approveBundle = async (selected: { queries: number; amount: number; label: string }) => {
     if (!wallet || !provider) return;
-    const selected = BUNDLES[bundleIndex];
     setApproving(true);
     setTxStep(`Approving ${selected.label}...`);
 
@@ -265,6 +269,37 @@ export default function Chat() {
     } finally {
       setApproving(false);
       setTxStep("");
+    }
+  };
+
+  // Custom query count — the amount to approve is always fetched from the
+  // server's quote endpoint (queries × fixed price), never computed and
+  // trusted purely client-side.
+  const buyCustomBundle = async () => {
+    setCustomError("");
+    const queries = Number(customQueries);
+
+    if (!Number.isInteger(queries) || queries < MIN_QUERIES || queries > MAX_QUERIES) {
+      setCustomError(`Enter a whole number between ${MIN_QUERIES} and ${MAX_QUERIES}.`);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/bundle/quote?queries=${queries}`);
+      const quote = await res.json();
+      if (!res.ok) {
+        setCustomError(quote.error || "Could not get a quote for that amount.");
+        return;
+      }
+
+      await approveBundle({
+        queries: quote.queries,
+        amount: quote.amount,
+        label: `${quote.queries} queries`,
+      });
+      setCustomQueries("");
+    } catch {
+      setCustomError("Could not reach the server. Please try again.");
     }
   };
 
@@ -368,7 +403,7 @@ export default function Chat() {
               {BUNDLES.map((b, i) => (
                 <button
                   key={i}
-                  onClick={() => approveBundle(i)}
+                  onClick={() => approveBundle(b)}
                   disabled={approving}
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -388,6 +423,42 @@ export default function Chat() {
                   </div>
                 </button>
               ))}
+
+              {/* Custom amount — server computes and validates the total, never the client */}
+              <div style={{ padding: "14px 16px", borderRadius: 12, border: "1px solid rgba(52,211,153,0.1)", background: "rgba(255,255,255,0.02)" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0", marginBottom: 8 }}>Custom amount</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    type="number"
+                    min={MIN_QUERIES}
+                    max={MAX_QUERIES}
+                    step={1}
+                    value={customQueries}
+                    onChange={e => setCustomQueries(e.target.value)}
+                    disabled={approving}
+                    placeholder={`${MIN_QUERIES}-${MAX_QUERIES} queries`}
+                    style={{ flex: 1, minWidth: 0, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "monospace" }}
+                  />
+                  <button
+                    onClick={buyCustomBundle}
+                    disabled={approving || !customQueries}
+                    style={{
+                      padding: "8px 16px", borderRadius: 8, border: "none",
+                      background: approving || !customQueries ? "rgba(16,185,129,0.1)" : "linear-gradient(135deg,#10b981,#059669)",
+                      color: approving || !customQueries ? "#34d399" : "#000",
+                      fontSize: 10, fontWeight: 800, letterSpacing: "0.06em",
+                      cursor: approving || !customQueries ? "not-allowed" : "pointer",
+                      fontFamily: "monospace", whiteSpace: "nowrap",
+                    }}
+                  >
+                    APPROVE →
+                  </button>
+                </div>
+                <div style={{ fontSize: 9, color: "#475569", marginTop: 6, fontFamily: "monospace" }}>$0.001 USDC per query</div>
+                {customError && (
+                  <div style={{ fontSize: 10, color: "#f87171", marginTop: 6, fontFamily: "monospace" }}>{customError}</div>
+                )}
+              </div>
             </div>
 
             {txStep && (
@@ -455,10 +526,6 @@ export default function Chat() {
               <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: "rgba(2,10,5,0.98)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 10, overflow: "hidden", minWidth: 130, zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
                 <button onClick={() => setShowNetMenu(false)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", background: "rgba(16,185,129,0.08)", border: "none", color: "#34d399", fontSize: 10, fontWeight: 700, fontFamily: "monospace", cursor: "pointer", textAlign: "left" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399" }} />MAINNET<span style={{ marginLeft: "auto", fontSize: 8 }}>✓</span>
-                </button>
-                <div style={{ height: 1, background: "rgba(16,185,129,0.06)" }} />
-                <button onClick={() => { alert("Mainnet coming soon."); setShowNetMenu(false); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#475569", fontSize: 10, fontWeight: 700, fontFamily: "monospace", cursor: "not-allowed", textAlign: "left" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#475569" }} />MAINNET<span style={{ marginLeft: "auto", fontSize: 7, background: "rgba(71,85,105,0.15)", padding: "1px 5px", borderRadius: 3 }}>SOON</span>
                 </button>
               </div>
             )}
