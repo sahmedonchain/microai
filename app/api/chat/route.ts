@@ -101,7 +101,7 @@ export async function POST(req: Request) {
     // on-chain purchase in /api/credits/purchase.
     const remaining = await spendCredit(walletAddress);
     if (remaining === null) {
-      return NextResponse.json({ error: "no_credit" }, { status: 402 });
+      return NextResponse.json({ error: "no_credits" }, { status: 402 });
     }
 
     // Credit is already spent at this point — from here on we always
@@ -149,12 +149,12 @@ export async function POST(req: Request) {
         completion.choices[0]?.message?.content ||
         "Could not generate response.";
 
-      return NextResponse.json({ reply, credit: remaining });
+      return NextResponse.json({ reply, credits: remaining });
     } catch (err) {
       console.error("AI generation error (credit already spent):", err);
       return NextResponse.json({
         reply: "Your credit was used, but the response could not be generated. Please contact support.",
-        credit: remaining,
+        credits: remaining,
       });
     }
   } catch (error) {

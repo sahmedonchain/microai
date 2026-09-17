@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     }
 
     const newTotal = await addCredit(walletAddress, queries);
-    return NextResponse.json({ ok: true, credit: newTotal, txHash });
+    return NextResponse.json({ ok: true, credits: newTotal, txHash });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Server error occurred." }, { status: 500 });

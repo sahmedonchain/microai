@@ -171,7 +171,7 @@ export default function Chat() {
     try {
       const res = await fetch("/api/credits/balance");
       const data = await res.json();
-      setCredit(data.authenticated ? data.credit : 0);
+      setCredit(data.authenticated ? data.credits : 0);
     } catch {
       setCredit(0);
     }
@@ -270,7 +270,7 @@ export default function Chat() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Purchase failed.");
 
-      setCredit(data.credit);
+      setCredit(data.credits);
       setShowBuyModal(false);
       setCustomQueries("");
       await getBalance(wallet, provider);
@@ -325,7 +325,7 @@ export default function Chat() {
 
       const data = await res.json();
 
-      if (res.status === 402 || data.error === "no_credit") {
+      if (res.status === 402 || data.error === "no_credits") {
         setCredit(0);
         setShowBuyModal(true);
         setMessages(prev => [...prev, { role: "assistant", text: "You're out of credit. Buy more queries to keep going." }]);
@@ -336,7 +336,7 @@ export default function Chat() {
       }
 
       setMessages(prev => [...prev, { role: "assistant", text: data.reply || "Could not generate a response." }]);
-      if (typeof data.credit === "number") setCredit(data.credit);
+      if (typeof data.credits === "number") setCredit(data.credits);
 
     } catch (err: unknown) {
       const error = err as { message?: string };
@@ -418,7 +418,14 @@ export default function Chat() {
                   BUY →
                 </button>
               </div>
-              <div style={{ fontSize: 9, color: "#475569", marginTop: 6, fontFamily: "monospace" }}>$0.001 USDC per query</div>
+              <div style={{ fontSize: 9, color: "#475569", marginTop: 6, fontFamily: "monospace" }}>
+                {(() => {
+                  const q = Number(customQueries);
+                  return Number.isInteger(q) && q >= MIN_QUERIES && q <= MAX_QUERIES
+                    ? `= $${(q * PRICE_PER_QUERY / 1e6).toFixed(3)} USDC`
+                    : "$0.001 USDC per query";
+                })()}
+              </div>
             </div>
 
             {txStep && (

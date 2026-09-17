@@ -9,9 +9,9 @@ export async function GET() {
   const session = token ? verifySessionToken(token) : null;
 
   if (!session) {
-    return NextResponse.json({ authenticated: false, credit: 0 });
+    return NextResponse.json({ authenticated: false, credits: 0 });
   }
 
-  const credit = await getCredit(session.sub);
-  return NextResponse.json({ authenticated: true, address: session.sub, credit });
+  const credits = await getCredit(session.sub);
+  return NextResponse.json({ authenticated: true, address: session.sub, credits });
 }
