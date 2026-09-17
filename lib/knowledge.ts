@@ -22,7 +22,7 @@ The key difference: USDC replaces ETH as the gas token. You must have USDC to pa
 
 GUIDE:
 Step 1: Change your RPC to https://rpc.mainnet.arc.io
-Step 2: Change chain ID to 5042002
+Step 2: Change chain ID to 5042
 Step 3: Make sure your deployer wallet has MAINNET USDC (for gas)
 Step 4: Deploy exactly as you would on Ethereum
 
@@ -64,7 +64,7 @@ Step 2: In hardhat.config.ts, add:
 networks: {
   arcMAINNET: {
     url: "https://rpc.mainnet.arc.io",
-    chainId: 5042002,
+    chainId: 5042,
     accounts: [process.env.PRIVATE_KEY],
   }
 }
@@ -204,7 +204,7 @@ Open MetaMask → Settings → Networks → Add network manually → enter the d
 NETWORK DETAILS:
 - Network name: Arc MAINNET
 - New RPC URL: https://rpc.mainnet.arc.io
-- Chain ID: 5042002
+- Chain ID: 5042
 - Currency symbol: USDC
 - Block Explorer URL: https://explorer.arc.io
 
@@ -223,7 +223,7 @@ await window.ethereum.request({
   params: [{
     chainId: "0x13b2",
     chainName: "Arc MAINNET",
-    nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
+    nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
     rpcUrls: ["https://rpc.mainnet.arc.io"],
     blockExplorerUrls: ["https://explorer.arc.io"],
   }],
@@ -242,12 +242,12 @@ docs.arc.io/arc/references/connect-to-arc.md
     title: "What is Arc MAINNET's RPC URL and network details?",
     content: `
 SHORT_ANSWER:
-RPC URL: https://rpc.mainnet.arc.io | Chain ID: 5042002 (hex: 0x13b2) | Explorer: https://explorer.arc.io
+RPC URL: https://rpc.mainnet.arc.io | Chain ID: 5042 (hex: 0x13b2) | Explorer: https://explorer.arc.io
 
 COMPLETE NETWORK DETAILS:
 - Network name: Arc MAINNET
 - RPC URL: https://rpc.mainnet.arc.io
-- Chain ID: 5042002 (hex: 0x13b2)
+- Chain ID: 5042 (hex: 0x13b2)
 - Currency symbol: USDC
 - Block Explorer: https://explorer.arc.io
 - Faucet: https://faucet.circle.com
@@ -326,7 +326,7 @@ const config: HardhatUserConfig = {
   networks: {
     arcMAINNET: {
       url: "https://rpc.mainnet.arc.io",
-      chainId: 5042002,
+      chainId: 5042,
       accounts: [process.env.PRIVATE_KEY!],
     },
   },
@@ -393,7 +393,7 @@ Step 5: Deploy
 forge create src/MyContract.sol:MyContract \
   --rpc-url https://rpc.mainnet.arc.io \
   --private-key $PRIVATE_KEY \
-  --chain-id 5042002
+  --chain-id 5042
 
 Step 6: Run tests
 forge test --rpc-url https://rpc.mainnet.arc.io
@@ -433,7 +433,7 @@ etherscan: {
   apiKey: { arcMAINNET: "placeholder" },
   customChains: [{
     network: "arcMAINNET",
-    chainId: 5042002,
+    chainId: 5042,
     urls: {
       apiURL: "https://explorer.arc.io/api",
       browserURL: "https://explorer.arc.io",
@@ -570,7 +570,7 @@ docs.arc.io/arc/references/contract-addresses.md
     title: "How do I deploy an ERC-20 contract on Arc?",
     content: `
 SHORT_ANSWER:
-Arc is EVM-compatible — deploy standard ERC-20 contracts using Hardhat or Foundry with Arc's RPC URL and Chain ID 5042002.
+Arc is EVM-compatible — deploy standard ERC-20 contracts using Hardhat or Foundry with Arc's RPC URL and Chain ID 5042.
 
 COMPLETE GUIDE:
 
@@ -1140,13 +1140,13 @@ CODE:
 import { defineChain } from "viem";
 
 export const arcMAINNET = defineChain({
-  id: 5042002,
+  id: 5042,
   name: "Arc MAINNET",
   network: "arc-MAINNET",
   nativeCurrency: {
     name: "USDC",
     symbol: "USDC",
-    decimals: 6,
+    decimals: 18,
   },
   rpcUrls: {
     default: { http: ["https://rpc.mainnet.arc.io"] },
@@ -1221,7 +1221,7 @@ Use wallet_switchEthereumChain. If Arc isn't added yet, catch error code 4902 an
 
 COMPLETE CODE:
 const switchToArc = async () => {
-  const ARC_CHAIN_ID = "0x13b2"; // 5042002 in hex
+  const ARC_CHAIN_ID = "0x13b2"; // 5042 in hex
 
   try {
     await window.ethereum.request({
@@ -1236,7 +1236,7 @@ const switchToArc = async () => {
         params: [{
           chainId: ARC_CHAIN_ID,
           chainName: "Arc MAINNET",
-          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
+          nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
           rpcUrls: ["https://rpc.mainnet.arc.io"],
           blockExplorerUrls: ["https://explorer.arc.io"],
         }],
@@ -1380,7 +1380,7 @@ Fix: Check ABI parameters match contract expectations, ensure USDC allowance app
 
 DEBUGGING STEPS:
 Step 1: Check USDC balance at explorer.arc.io
-Step 2: Verify you're on Arc MAINNET (Chain ID: 5042002)
+Step 2: Verify you're on Arc MAINNET (Chain ID: 5042)
 Step 3: Check maxFeePerGas is at least 20 Gwei
 Step 4: Use eth_estimateGas to check gas limit
 Step 5: Check Arc Discord for network issues
@@ -1580,7 +1580,7 @@ Participate meaningfully on Arc MAINNET — deploy contracts, use dApps, join Ar
 RECOMMENDED ACTIVITIES (from community guides):
 
 1. MAINNET TRANSACTIONS
-- Add Arc MAINNET to MetaMask (Chain ID: 5042002)
+- Add Arc MAINNET to MetaMask (Chain ID: 5042)
 - Get MAINNET USDC from faucet.circle.com
 - Send transactions regularly
 - Do cross-chain swaps
@@ -2043,7 +2043,7 @@ Step 2: Click the network selector in top-left corner
 Step 3: Click "Add Custom Network"
 Step 4: Fill in:
    - Chain Name: Arc MAINNET
-   - Chain ID: 5042002
+   - Chain ID: 5042
    - RPC URL: https://rpc.mainnet.arc.io
    - Currency Symbol: USDC
    - Block Explorer: https://explorer.arc.io
@@ -2074,7 +2074,7 @@ Step 4: Tap "Add custom network"
 Step 5: Enter:
    - Network name: Arc MAINNET
    - RPC URL: https://rpc.mainnet.arc.io
-   - Chain ID: 5042002
+   - Chain ID: 5042
    - Currency symbol: USDC
    - Block explorer: https://explorer.arc.io
 Step 6: Tap "Save"

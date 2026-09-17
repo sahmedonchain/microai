@@ -20,7 +20,7 @@ const ARC_CHAIN_ID = "0x13b2";
 const ARC_CHAIN_PARAMS = {
   chainId: ARC_CHAIN_ID,
   chainName: "Arc MAINNET",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   rpcUrls: ["https://rpc.mainnet.arc.io"],
   blockExplorerUrls: ["https://explorer.arc.io"],
 };

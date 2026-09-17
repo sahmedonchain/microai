@@ -34,7 +34,7 @@ export async function GET(req: Request) {
       name: data.full_name,
     });
   } catch (err: unknown) {
-    const error = err as { message?: string };
-    return NextResponse.json({ error: error?.message || "Failed" }, { status: 500 });
+    console.error("GitHub status error:", err);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
 }

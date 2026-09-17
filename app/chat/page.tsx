@@ -12,9 +12,6 @@ const STORAGE_KEY = "microai_chat_history";
 const BUNDLE_KEY = "microai_bundle";
 const EXPLORER = "https://explorer.arc.io/tx/";
 
-// USDC amount per query in 6-decimal units
-const COST_PER_QUERY = 1000; // 0.001 USDC
-
 const BUNDLES = [
   { queries: 5,  amount: 5000,  label: "5 queries",  price: "$0.005 USDC" },
   { queries: 10, amount: 10000, label: "10 queries", price: "$0.010 USDC" },
@@ -39,6 +36,8 @@ interface BundleState {
   approved: boolean;
 }
 
+class BundleExhaustedError extends Error {}
+
 const SUGGESTIONS = [
   { title: "What is Arc Blockchain?", desc: "L1 stablecoin commerce chain" },
   { title: "How does Circle USDC work?", desc: "Cross-chain transfers & APIs" },
@@ -59,6 +58,7 @@ export default function Chat() {
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [bundle, setBundle] = useState<BundleState | null>(null);
   const [approving, setApproving] = useState(false);
+  const [sessionAddress, setSessionAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -144,17 +144,63 @@ export default function Chat() {
     } catch { /* silent */ }
   }, []);
 
+  // Establishes (or re-establishes) the signed session for this wallet.
+  // Requires exactly one signature — no per-query wallet popups.
+  const establishSession = useCallback(async (address: string, prov: EthereumProvider): Promise<boolean> => {
+    try {
+      const nonceRes = await fetch(`/api/session/nonce?address=${address}`);
+      if (!nonceRes.ok) return false;
+      const { message } = await nonceRes.json();
+
+      const signature = await prov.request({
+        method: "personal_sign",
+        params: [message, address],
+      }) as string;
+
+      const sessionRes = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address, signature }),
+      });
+      if (!sessionRes.ok) return false;
+
+      const data = await sessionRes.json();
+      setSessionAddress((data.address as string).toLowerCase());
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const handleWalletConnect = useCallback(async (address: string, connectedProvider: EthereumProvider) => {
     setWallet(address);
     setProvider(connectedProvider);
     setShowWalletModal(false);
     await getBalance(address, connectedProvider);
+
+    try {
+      const res = await fetch("/api/session");
+      const data = await res.json();
+      if (data.authenticated && data.address?.toLowerCase() === address.toLowerCase()) {
+        setSessionAddress(data.address.toLowerCase());
+      } else {
+        if (data.authenticated) {
+          // Stale session for a different address — drop it.
+          await fetch("/api/session", { method: "DELETE" });
+        }
+        setSessionAddress(null);
+      }
+    } catch {
+      setSessionAddress(null);
+    }
   }, [getBalance]);
 
   const disconnect = () => {
     setWallet(null); setBalance(null); setProvider(null); setTxStep("");
     setBundle(null);
+    setSessionAddress(null);
     try { localStorage.removeItem(BUNDLE_KEY); } catch { /* silent */ }
+    fetch("/api/session", { method: "DELETE" }).catch(() => { /* silent */ });
   };
 
   const clearHistory = () => {
@@ -195,6 +241,13 @@ export default function Chat() {
         params: [{ from: wallet, to: USDC_CONTRACT, data: approveData, gas: "0x186A0" }],
       });
 
+      // One extra signature at bundle-purchase time only — never per query.
+      if (!sessionAddress || sessionAddress !== wallet.toLowerCase()) {
+        setTxStep("Sign to authorize per-query charges...");
+        const ok = await establishSession(wallet, provider);
+        if (!ok) throw new Error("Could not authorize session. Please try again.");
+      }
+
       const newBundle: BundleState = {
         remaining: selected.queries,
         total: selected.queries,
@@ -205,14 +258,48 @@ export default function Chat() {
       setTxStep("");
       await getBalance(wallet, provider);
     } catch (err: unknown) {
-      const error = err as { code?: number };
+      const error = err as { code?: number; message?: string };
       if (error?.code !== 4001) {
-        alert("Approval failed. Please try again.");
+        alert(error?.message || "Approval failed. Please try again.");
       }
     } finally {
       setApproving(false);
       setTxStep("");
     }
+  };
+
+  // POSTs to /api/chat, which handles payment + generation server-side.
+  // Address and amount are never sent by the client — the server derives the
+  // address from the signed session cookie and charges a fixed price.
+  const requestChat = async (msg: string, prov: EthereumProvider): Promise<{ reply?: string; txHash?: string }> => {
+    const body = JSON.stringify({
+      message: msg,
+      history: messages.slice(-8).map(m => ({ role: m.role, content: m.text })),
+    });
+    const doFetch = () => fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+
+    let res = await doFetch();
+
+    if (res.status === 401 && wallet) {
+      // Session expired — re-authorize with one signature, then retry once.
+      const ok = await establishSession(wallet, prov);
+      if (!ok) throw new Error("Session expired. Please reconnect your wallet.");
+      res = await doFetch();
+    }
+
+    const data = await res.json();
+
+    if (res.status === 402 || data.error === "insufficient_allowance") {
+      throw new BundleExhaustedError();
+    }
+    if (!res.ok) {
+      throw new Error(data.error || "Payment failed");
+    }
+    return data;
   };
 
   const sendMessage = async (text?: string) => {
@@ -232,48 +319,25 @@ export default function Chat() {
     setTxStep("Processing payment...");
 
     try {
-      // Backend handles transferFrom — no wallet popup
-      const payRes = await fetch("/api/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userAddress: wallet, amount: COST_PER_QUERY }),
-      });
-
-      const payData = await payRes.json();
-
-      if (!payData.success) {
-        // Allowance exhausted — ask to re-approve
-        if (payData.error?.includes("allowance")) {
-          setBundle(null);
-          localStorage.removeItem(BUNDLE_KEY);
-          setShowBundleModal(true);
-          setMessages(prev => [...prev, { role: "assistant", text: "Your bundle is used up. Please select a new bundle to continue." }]);
-          setLoading(false);
-          setTxStep("");
-          return;
-        }
-        throw new Error(payData.error || "Payment failed");
-      }
-
-      const txHash = payData.txHash;
+      const data = await requestChat(msg, provider);
       setTxStep("Generating response...");
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, history: messages.slice(-8).map(m => ({ role: m.role, content: m.text })) }),
-      });
-      const aiData = await res.json();
+      setMessages(prev => [...prev, { role: "assistant", text: data.reply || "Could not generate a response.", txHash: data.txHash }]);
 
-      setMessages(prev => [...prev, { role: "assistant", text: aiData.reply || "Could not generate a response.", txHash }]);
-
-      // Decrement bundle
+      // Decrement bundle (server independently verifies real allowance on every call)
       setBundle(prev => prev ? { ...prev, remaining: prev.remaining - 1 } : null);
       await getBalance(wallet, provider);
 
     } catch (err: unknown) {
-      const error = err as { message?: string };
-      setMessages(prev => [...prev, { role: "assistant", text: `Error: ${error?.message || "Something went wrong. Try again."}` }]);
+      if (err instanceof BundleExhaustedError) {
+        setBundle(null);
+        try { localStorage.removeItem(BUNDLE_KEY); } catch { /* silent */ }
+        setShowBundleModal(true);
+        setMessages(prev => [...prev, { role: "assistant", text: "Your bundle is used up. Please select a new bundle to continue." }]);
+      } else {
+        const error = err as { message?: string };
+        setMessages(prev => [...prev, { role: "assistant", text: `Error: ${error?.message || "Something went wrong. Try again."}` }]);
+      }
     } finally {
       setLoading(false);
       setTxStep("");

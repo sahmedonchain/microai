@@ -3,11 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Navbar } from "@/app/components/Navbar";
 
-const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
-const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const ARC_CHAIN_ID = "5042";
-
-type TxStatus = "idle" | "fetching" | "analyzing" | "done" | "error";
+type TxStatus = "idle" | "analyzing" | "done" | "error";
 
 interface TxData {
   hash: string;
@@ -56,85 +52,39 @@ export default function DebugPage() {
       return;
     }
 
-    setStatus("fetching");
+    setStatus("analyzing");
     setErrorMsg("");
     setResult(null);
 
     try {
-      const res = await fetch(`${ARC_EXPLORER_API}/transactions/${hash}`);
+      // Free, no-session endpoint: only ever accepts a tx hash, fetches the
+      // real Explorer data and runs the AI analysis entirely server-side.
+      const res = await fetch("/api/debug-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txHash: hash }),
+      });
+
       const data = await res.json();
 
-      if (data.errors || !data.hash) {
+      if (!res.ok) {
         setStatus("error");
-        setErrorMsg("Transaction not found on Arc MAINNET. Check the hash and try again.");
+        setErrorMsg(data.error || "Failed to analyze transaction.");
         return;
       }
 
-      const txData: TxData = data;
-      setStatus("analyzing");
-
-      const aiRes = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: `Analyze this Arc MAINNET transaction and debug it:
-
-Transaction Hash: ${txData.hash}
-Status: ${txData.status}
-Result: ${txData.result || "unknown"}
-From: ${txData.from?.hash}
-To: ${txData.to?.hash || "contract creation"}
-Value: ${txData.value}
-Gas Used: ${txData.gas_used}
-Gas Limit: ${txData.gas_limit}
-Error: ${txData.error || "none"}
-Revert Reason: ${txData.revert_reason || "none"}
-Input Data: ${txData.raw_input ? txData.raw_input.slice(0, 100) : "none"}
-Fee: ${txData.fee?.value || "unknown"}
-Timestamp: ${txData.timestamp || "unknown"}
-Block: ${txData.block_number || "pending"}
-
-USDC Contract on Arc: ${USDC_CONTRACT}
-Arc Chain ID: ${ARC_CHAIN_ID}
-
-Please respond ONLY with valid JSON in this exact format, no other text:
-{
-  "summary": "one sentence describing what happened",
-  "rootCause": "the specific technical reason this failed or succeeded",
-  "solution": "exact steps to fix this or what the user should do next",
-  "severity": "high or medium or low"
-}
-
-If the transaction succeeded, set severity to "low" and explain what it did.
-If it failed, identify the root cause from: insufficient USDC balance, wrong chain, gas limit too low, contract revert, invalid input, nonce issue, or other.`,
-          history: [],
-        }),
+      setResult({
+        summary: data.summary,
+        rootCause: data.rootCause,
+        solution: data.solution,
+        severity: data.severity,
+        txData: data.txData,
       });
-
-      const aiData = await aiRes.json();
-      let parsed;
-
-      try {
-        const clean = aiData.reply
-          .replace(/```json/g, "")
-          .replace(/```/g, "")
-          .trim();
-        parsed = JSON.parse(clean);
-      } catch {
-        parsed = {
-          summary: "Transaction analyzed",
-          rootCause: aiData.reply.slice(0, 200),
-          solution: "Check Arc Explorer for full details.",
-          severity: txData.result === "success" ? "low" : "high",
-        };
-      }
-
-      setResult({ ...parsed, txData });
       setHistory((prev) => [hash, ...prev.slice(0, 4)]);
       setStatus("done");
     } catch {
       setStatus("error");
-      setErrorMsg("Failed to fetch transaction. Arc Explorer may be temporarily unavailable.");
+      setErrorMsg("Failed to reach the analyzer. Please try again.");
     }
   };
 
@@ -193,22 +143,22 @@ If it failed, identify the root cause from: insufficient USDC balance, wrong cha
             />
             <button
               onClick={analyze}
-              disabled={status === "fetching" || status === "analyzing"}
+              disabled={status === "analyzing"}
               style={{
                 padding: "12px 24px",
                 borderRadius: 10,
                 border: "none",
-                background: status === "fetching" || status === "analyzing" ? "rgba(16,185,129,0.1)" : "linear-gradient(135deg,#10b981,#059669)",
-                color: status === "fetching" || status === "analyzing" ? "#34d399" : "#000",
+                background: status === "analyzing" ? "rgba(16,185,129,0.1)" : "linear-gradient(135deg,#10b981,#059669)",
+                color: status === "analyzing" ? "#34d399" : "#000",
                 fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: "0.06em",
-                cursor: status === "fetching" || status === "analyzing" ? "not-allowed" : "pointer",
+                cursor: status === "analyzing" ? "not-allowed" : "pointer",
                 whiteSpace: "nowrap",
                 fontFamily: "monospace",
               }}
             >
-              {status === "fetching" ? "FETCHING..." : status === "analyzing" ? "ANALYZING..." : "DEBUG →"}
+              {status === "analyzing" ? "ANALYZING..." : "DEBUG →"}
             </button>
           </div>
 
@@ -218,7 +168,7 @@ If it failed, identify the root cause from: insufficient USDC balance, wrong cha
             </div>
           )}
 
-          {(status === "fetching" || status === "analyzing") && (
+          {status === "analyzing" && (
             <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ display: "flex", gap: 4 }}>
                 {[0, 1, 2].map((i) => (
@@ -226,7 +176,7 @@ If it failed, identify the root cause from: insufficient USDC balance, wrong cha
                 ))}
               </div>
               <span style={{ fontSize: 10, color: "#475569", fontFamily: "monospace" }}>
-                {status === "fetching" ? "Fetching from Arc Explorer..." : "AI analyzing transaction..."}
+                Fetching transaction and analyzing...
               </span>
             </div>
           )}
