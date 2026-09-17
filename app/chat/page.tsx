@@ -406,8 +406,8 @@ export default function Chat() {
             <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1, background: "linear-gradient(90deg,transparent,rgba(0,255,136,0.4),transparent)" }} />
 
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 6 }}>Buy Query Credit</div>
-              <div style={{ fontSize: 11, color: "#666666", lineHeight: 1.6 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 6 }}>Buy Query Credit</div>
+              <div style={{ fontSize: 15, color: "#aaaaaa", lineHeight: 1.6 }}>
                 One payment, one wallet confirmation. Then ask as many questions as you bought — no more popups.
               </div>
             </div>
@@ -428,7 +428,7 @@ export default function Chat() {
                   }}
                 >
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>{q}</div>
-                  <div style={{ fontSize: 9, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>${(q * PRICE_PER_QUERY / 1e6).toFixed(3)} USDC</div>
+                  <div style={{ fontSize: 9, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace" }}>${(q * PRICE_PER_QUERY / 1e6).toFixed(3)} USDC</div>
                 </button>
               ))}
             </div>
@@ -463,7 +463,7 @@ export default function Chat() {
                   BUY →
                 </button>
               </div>
-              <div style={{ fontSize: 9, color: "#666666", marginTop: 6, fontFamily: "var(--font-geist-mono), monospace" }}>
+              <div style={{ fontSize: 9, color: "#aaaaaa", marginTop: 6, fontFamily: "var(--font-geist-mono), monospace" }}>
                 {(() => {
                   const q = Number(customQueries);
                   return Number.isInteger(q) && q >= MIN_QUERIES && q <= MAX_QUERIES
@@ -485,7 +485,7 @@ export default function Chat() {
             )}
 
             {!buying && (
-              <button onClick={() => setShowBuyModal(false)} style={{ width: "100%", padding: "8px", background: "none", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, color: "#555555", fontSize: 10, cursor: "pointer", fontFamily: "var(--font-geist-mono), monospace" }}>
+              <button onClick={() => setShowBuyModal(false)} style={{ width: "100%", padding: "8px", background: "none", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, color: "#999999", fontSize: 10, cursor: "pointer", fontFamily: "var(--font-geist-mono), monospace" }}>
                 CANCEL
               </button>
             )}
@@ -548,7 +548,7 @@ export default function Chat() {
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#00ff88", animation: "pulse 2s infinite", flexShrink: 0 }} />
               <span style={{ fontSize: 9, fontFamily: "var(--font-geist-mono), monospace", color: "#5cffb0" }}>{wallet.slice(0, 5)}...{wallet.slice(-3)}</span>
               {balance !== null && <span style={{ fontSize: 9, fontFamily: "var(--font-geist-mono), monospace", color: "#00ff88", fontWeight: 700 }}>{balance}</span>}
-              <button onClick={disconnect} style={{ background: "none", border: "none", color: "#666666", fontSize: 13, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+              <button onClick={disconnect} style={{ background: "none", border: "none", color: "#aaaaaa", fontSize: 13, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
             </div>
           ) : (
             <button onClick={() => setShowWalletModal(true)} style={{ padding: "6px 14px", borderRadius: 8, background: "linear-gradient(135deg,#00ff88,#00cc6a)", color: "#000", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", border: "none", cursor: "pointer", boxShadow: "0 0 12px rgba(0,255,136,0.25)", whiteSpace: "nowrap" }}>
@@ -565,8 +565,8 @@ export default function Chat() {
           {messages.length === 0 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60dvh", textAlign: "center" }}>
               <div style={{ width: 52, height: 52, borderRadius: 18, background: "linear-gradient(135deg,#00ff88,#00ff88)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 20, color: "#000", boxShadow: "0 0 28px rgba(0,255,136,0.3)", marginBottom: 20 }}>M</div>
-              <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.5rem)", fontWeight: 900, color: "#fff", margin: "0 0 8px", letterSpacing: "-0.01em" }}>Arc & Circle Intelligence Hub</h2>
-              <p style={{ fontSize: 12, color: "#666666", maxWidth: 320, lineHeight: 1.65, margin: "0 0 8px" }}>
+              <h2 style={{ fontSize: "clamp(2rem, 3vw + 1.5rem, 3.25rem)", fontWeight: 900, color: "#fff", margin: "0 0 8px", letterSpacing: "-0.01em" }}>Arc & Circle Intelligence Hub</h2>
+              <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 320, lineHeight: 1.65, margin: "0 0 8px" }}>
                 Buy query credit once, then ask <span style={{ color: "#00ff88", fontWeight: 700 }}>as many questions as you like</span> — no wallet popup per query.
               </p>
 
@@ -596,8 +596,8 @@ export default function Chat() {
                     whileTap={{ scale: 0.97 }}
                     onClick={() => wallet ? sendMessage(s.title) : setShowWalletModal(true)}
                     style={{ padding: "14px", borderRadius: 12, border: "1px solid rgba(0,255,136,0.1)", background: "rgba(0,0,0,0.25)", cursor: "pointer", textAlign: "left" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", marginBottom: 4, lineHeight: 1.3 }}>{s.title}</div>
-                    <div style={{ fontSize: 10, color: "#666666" }}>{s.desc}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 4, lineHeight: 1.3 }}>{s.title}</div>
+                    <div style={{ fontSize: 15, color: "#aaaaaa" }}>{s.desc}</div>
                   </motion.button>
                 ))}
               </div>
@@ -628,9 +628,9 @@ export default function Chat() {
                   </div>
                 )}
                 {msg.role === "user" ? (
-                  <div style={{ padding: "10px 14px", borderRadius: "12px 12px 3px 12px", background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.15)", color: "#baffdb", fontSize: 13, lineHeight: 1.6 }}>{msg.text}</div>
+                  <div style={{ padding: "10px 14px", borderRadius: "12px 12px 3px 12px", background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.15)", color: "#ffffff", fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", lineHeight: 1.6 }}>{msg.text}</div>
                 ) : (
-                  <div style={{ fontSize: 13, lineHeight: 1.7, color: "#888888" }} className="md">
+                  <div style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", lineHeight: 1.7, color: "#e5e5e5" }} className="md">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
                   </div>
                 )}
@@ -659,10 +659,10 @@ export default function Chat() {
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           {messages.length > 0 && (
             <div style={{ display: "flex", gap: 8, marginBottom: 8, justifyContent: "flex-end" }}>
-              <button onClick={copyLastAnswer} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(0,255,136,0.1)", background: "rgba(0,0,0,0.2)", color: copied ? "#00ff88" : "#666666", fontSize: 9, fontWeight: 700, fontFamily: "var(--font-geist-mono), monospace", cursor: "pointer" }}>
+              <button onClick={copyLastAnswer} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(0,255,136,0.1)", background: "rgba(0,0,0,0.2)", color: copied ? "#00ff88" : "#aaaaaa", fontSize: 9, fontWeight: 700, fontFamily: "var(--font-geist-mono), monospace", cursor: "pointer" }}>
                 {copied ? "✓ COPIED" : "COPY LAST ANSWER"}
               </button>
-              <button onClick={clearHistory} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.1)", background: "rgba(0,0,0,0.2)", color: "#666666", fontSize: 9, fontWeight: 700, fontFamily: "var(--font-geist-mono), monospace", cursor: "pointer" }}>
+              <button onClick={clearHistory} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid rgba(239,68,68,0.1)", background: "rgba(0,0,0,0.2)", color: "#aaaaaa", fontSize: 9, fontWeight: 700, fontFamily: "var(--font-geist-mono), monospace", cursor: "pointer" }}>
                 CLEAR CHAT
               </button>
             </div>
@@ -672,7 +672,7 @@ export default function Chat() {
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
               placeholder={!wallet ? "Connect wallet to start" : !credit ? "Buy query credit to ask questions..." : "Ask anything about Arc or Circle..."}
               disabled={!wallet || loading} rows={1}
-              style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 13, color: "#fff", fontFamily: "inherit", lineHeight: 1.6, maxHeight: 100, scrollbarWidth: "none" }}
+              style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#fff", fontFamily: "inherit", lineHeight: 1.6, maxHeight: 100, scrollbarWidth: "none" }}
               onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 100) + "px"; }}
             />
             <motion.button
@@ -680,12 +680,12 @@ export default function Chat() {
               onClick={() => wallet ? sendMessage() : setShowWalletModal(true)}
               disabled={loading || (!!wallet && !credit)}
               style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: (wallet && credit && input.trim()) ? "linear-gradient(135deg,#00ff88,#00cc6a)" : "rgba(0,255,136,0.06)", boxShadow: (wallet && credit && input.trim()) ? "0 0 10px rgba(0,255,136,0.3)" : "none" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(wallet && credit && input.trim()) ? "#000" : "#555555"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(wallet && credit && input.trim()) ? "#000" : "#999999"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
             </motion.button>
           </div>
-          <div style={{ textAlign: "center", marginTop: 6, fontSize: 8, fontFamily: "var(--font-geist-mono), monospace", color: "#333333", letterSpacing: "0.15em" }}>
+          <div style={{ textAlign: "center", marginTop: 6, fontSize: 8, fontFamily: "var(--font-geist-mono), monospace", color: "#888888", letterSpacing: "0.15em" }}>
             {txStep
               ? <span style={{ color: "#f59e0b", animation: "pulse 1.5s infinite" }}>{txStep.toUpperCase()}</span>
               : credit && credit > 0
@@ -706,7 +706,7 @@ export default function Chat() {
         .md p { margin: 6px 0; line-height: 1.7; }
         .md ul { list-style: disc; padding-left: 18px; margin: 8px 0; }
         .md ol { list-style: decimal; padding-left: 18px; margin: 8px 0; }
-        .md li { color: #888888; margin-bottom: 4px; }
+        .md li { color: #e5e5e5; margin-bottom: 4px; }
         .md h1 { color: #fff; font-size: 15px; font-weight: 800; margin: 14px 0 6px; }
         .md h2 { color: #fff; font-size: 13px; font-weight: 700; margin: 12px 0 4px; }
         .md h3 { color: #00ff88; font-size: 12px; font-weight: 700; margin: 10px 0 4px; }

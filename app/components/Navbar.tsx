@@ -97,7 +97,7 @@ export function Navbar() {
               href={link.href}
               style={{
                 textDecoration: "none",
-                color: pathname === link.href ? "#00ff88" : "#888888",
+                color: pathname === link.href ? "#00ff88" : "#aaaaaa",
               }}
             >
               {link.label}
@@ -151,7 +151,7 @@ export function Navbar() {
                 display: "block",
                 width: 16,
                 height: 1.5,
-                background: menuOpen ? "#00ff88" : "#888888",
+                background: menuOpen ? "#00ff88" : "#aaaaaa",
                 borderRadius: 2,
                 transition: "all 0.2s",
                 transform: menuOpen ? "rotate(45deg) translate(0px, 4.5px)" : "none",
@@ -162,7 +162,7 @@ export function Navbar() {
                 display: "block",
                 width: 16,
                 height: 1.5,
-                background: menuOpen ? "transparent" : "#888888",
+                background: menuOpen ? "transparent" : "#aaaaaa",
                 borderRadius: 2,
                 transition: "all 0.2s",
                 opacity: menuOpen ? 0 : 1,
@@ -173,7 +173,7 @@ export function Navbar() {
                 display: "block",
                 width: 16,
                 height: 1.5,
-                background: menuOpen ? "#00ff88" : "#888888",
+                background: menuOpen ? "#00ff88" : "#aaaaaa",
                 borderRadius: 2,
                 transition: "all 0.2s",
                 transform: menuOpen ? "rotate(-45deg) translate(0px, -4.5px)" : "none",
@@ -212,7 +212,7 @@ export function Navbar() {
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 fontFamily: "var(--font-geist-mono), monospace",
-                color: pathname === link.href ? "#00ff88" : "#888888",
+                color: pathname === link.href ? "#00ff88" : "#aaaaaa",
                 textDecoration: "none",
                 borderBottom: "1px solid rgba(0,255,136,0.04)",
               }}

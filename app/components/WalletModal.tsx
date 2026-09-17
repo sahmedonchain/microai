@@ -130,10 +130,10 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>Connect Wallet</div>
-            <div style={{ fontSize: 10, color: "#555555", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em", marginTop: 2 }}>ARC MAINNET · USDC GAS</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>Connect Wallet</div>
+            <div style={{ fontSize: 10, color: "#999999", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em", marginTop: 2 }}>ARC MAINNET · USDC GAS</div>
           </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#666666", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#aaaaaa", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
 
         {/* Wallet list */}
@@ -163,20 +163,20 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
 
               {/* Name */}
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{wallet.name}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>{wallet.name}</div>
                 <div style={{ fontSize: 9, fontFamily: "var(--font-geist-mono), monospace", marginTop: 1 }}>
                   {connecting === wallet.id
                     ? <span style={{ color: wallet.color }}>Connecting...</span>
                     : wallet.detected
                     ? <span style={{ color: "#00ff88" }}>Detected</span>
-                    : <span style={{ color: "#666666" }}>Not installed — click to install</span>
+                    : <span style={{ color: "#aaaaaa" }}>Not installed — click to install</span>
                   }
                 </div>
               </div>
 
               {/* Arrow */}
               {!connecting && (
-                <span style={{ fontSize: 12, color: "#555555" }}>{wallet.detected ? "→" : "↗"}</span>
+                <span style={{ fontSize: 12, color: "#999999" }}>{wallet.detected ? "→" : "↗"}</span>
               )}
             </motion.button>
           ))}
@@ -191,7 +191,7 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
 
         {/* Info */}
         <div style={{ marginTop: 16, padding: "10px 12px", borderRadius: 10, background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.08)" }}>
-          <div style={{ fontSize: 9, color: "#555555", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em", marginBottom: 4 }}>NEED MAINNET USDC?</div>
+          <div style={{ fontSize: 9, color: "#999999", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em", marginBottom: 4 }}>NEED MAINNET USDC?</div>
           <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#00ff88", textDecoration: "none", fontWeight: 600 }}>
             Get free USDC at faucet.circle.com ↗
           </a>

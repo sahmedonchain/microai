@@ -186,7 +186,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> =
   "OPEN":     { bg: "rgba(0,255,136,0.08)", text: "#00ff88", dot: "#00ff88" },
   "LIVE NOW": { bg: "rgba(239,68,68,0.08)",  text: "#f87171", dot: "#f87171" },
   "UPCOMING": { bg: "rgba(99,102,241,0.08)", text: "#a5b4fc", dot: "#a5b4fc" },
-  "ENDED":    { bg: "rgba(71,85,105,0.15)",  text: "#888888", dot: "#666666" },
+  "ENDED":    { bg: "rgba(71,85,105,0.15)",  text: "#aaaaaa", dot: "#aaaaaa" },
 };
 const TYPE_COLORS: Record<string, string> = {
   GRANT:     "#00ff88",
@@ -257,7 +257,7 @@ export default function GrantsPage() {
 
         <h1
           style={{
-            fontSize: "clamp(1.6rem, 6vw, 3.5rem)",
+            fontSize: "clamp(2.5rem, 5vw + 2rem, 5.5rem)",
             fontWeight: 900,
             lineHeight: 1.1,
             margin: "0 0 14px",
@@ -272,8 +272,8 @@ export default function GrantsPage() {
 
         <p
           style={{
-            fontSize: "clamp(12px, 3vw, 14px)",
-            color: "#888888",
+            fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)",
+            color: "#e5e5e5",
             maxWidth: 480,
             margin: "0 auto 28px",
             lineHeight: 1.7,
@@ -307,7 +307,7 @@ export default function GrantsPage() {
               >
                 {s.num !== undefined ? <AnimatedNumber value={s.num} /> : s.value}
               </div>
-              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em" }}>
+              <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.15em" }}>
                 {s.label}
               </div>
             </div>
@@ -334,7 +334,7 @@ export default function GrantsPage() {
                   filter === f
                     ? "rgba(0,255,136,0.1)"
                     : "rgba(0,0,0,0.2)",
-                color: filter === f ? "#00ff88" : "#888888",
+                color: filter === f ? "#00ff88" : "#aaaaaa",
                 fontSize: 10,
                 fontWeight: 700,
                 letterSpacing: "0.1em",
@@ -345,7 +345,7 @@ export default function GrantsPage() {
               {f}
             </motion.button>
           ))}
-          <div style={{ marginLeft: "auto", fontSize: 10, color: "#666666", alignSelf: "center", fontFamily: "var(--font-geist-mono), monospace" }}>
+          <div style={{ marginLeft: "auto", fontSize: 10, color: "#aaaaaa", alignSelf: "center", fontFamily: "var(--font-geist-mono), monospace" }}>
             {filtered.length} RESULT{filtered.length !== 1 ? "S" : ""}
           </div>
         </div>
@@ -429,7 +429,7 @@ export default function GrantsPage() {
                         style={{
                           fontSize: 8,
                           fontWeight: 800,
-                          color: TYPE_COLORS[grant.type] ?? "#888888",
+                          color: TYPE_COLORS[grant.type] ?? "#aaaaaa",
                           background: `${TYPE_COLORS[grant.type]}15`,
                           border: `1px solid ${TYPE_COLORS[grant.type]}25`,
                           padding: "2px 8px",
@@ -473,7 +473,7 @@ export default function GrantsPage() {
                       <span
                         style={{
                           fontSize: 9,
-                          color: "#666666",
+                          color: "#aaaaaa",
                           fontFamily: "var(--font-geist-mono), monospace",
                         }}
                       >
@@ -483,7 +483,7 @@ export default function GrantsPage() {
 
                     <div
                       style={{
-                        fontSize: "clamp(13px, 3.5vw, 15px)",
+                        fontSize: "clamp(15px, 3.5vw, 18px)",
                         fontWeight: 800,
                         color: "#fff",
                         marginBottom: 8,
@@ -495,8 +495,8 @@ export default function GrantsPage() {
 
                     <p
                       style={{
-                        fontSize: 12,
-                        color: "#888888",
+                        fontSize: 15,
+                        color: "#aaaaaa",
                         lineHeight: 1.65,
                         margin: "0 0 12px",
                       }}
@@ -510,7 +510,7 @@ export default function GrantsPage() {
                           key={tag}
                           style={{
                             fontSize: 9,
-                            color: "#666666",
+                            color: "#aaaaaa",
                             background: "rgba(255,255,255,0.03)",
                             border: "1px solid rgba(255,255,255,0.06)",
                             padding: "2px 8px",
@@ -535,7 +535,7 @@ export default function GrantsPage() {
                       <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                         <div>
                           <div
-                            style={{ fontSize: 8, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 2 }}
+                            style={{ fontSize: 8, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 2 }}
                           >
                             REWARD
                           </div>
@@ -545,11 +545,11 @@ export default function GrantsPage() {
                         </div>
                         <div>
                           <div
-                            style={{ fontSize: 8, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 2 }}
+                            style={{ fontSize: 8, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 2 }}
                           >
                             DEADLINE
                           </div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "#888888" }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#aaaaaa" }}>
                             {grant.deadline}
                           </div>
                         </div>
@@ -570,7 +570,7 @@ export default function GrantsPage() {
                             grant.status === "ENDED"
                               ? "1px solid rgba(255,255,255,0.07)"
                               : "1px solid rgba(0,255,136,0.25)",
-                          color: grant.status === "ENDED" ? "#666666" : "#00ff88",
+                          color: grant.status === "ENDED" ? "#aaaaaa" : "#00ff88",
                           fontSize: 10,
                           fontWeight: 700,
                           letterSpacing: "0.08em",
@@ -604,7 +604,7 @@ export default function GrantsPage() {
         </div>
         <h2
           style={{
-            fontSize: "clamp(1.2rem, 4vw, 2rem)",
+            fontSize: "clamp(2rem, 3vw + 1.5rem, 3.25rem)",
             fontWeight: 900,
             color: "#fff",
             margin: "0 0 12px",
@@ -612,7 +612,7 @@ export default function GrantsPage() {
         >
           Ask MicroAI
         </h2>
-        <p style={{ fontSize: 13, color: "#888888", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
           Get personalized guidance on which grant or hackathon fits your project — straight from the Arc & Circle Intelligence Hub.
         </p>
         <Link
@@ -671,7 +671,7 @@ export default function GrantsPage() {
             >
               M
             </div>
-            <div style={{ fontSize: 10, color: "#666666" }}>MICROAI · THE ARC & CIRCLE HUB</div>
+            <div style={{ fontSize: 10, color: "#aaaaaa" }}>MICROAI · THE ARC & CIRCLE HUB</div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[
@@ -687,7 +687,7 @@ export default function GrantsPage() {
                 rel="noreferrer"
                 style={{
                   fontSize: 10,
-                  color: "#666666",
+                  color: "#aaaaaa",
                   fontWeight: 700,
                   letterSpacing: "0.1em",
                   fontFamily: "var(--font-geist-mono), monospace",

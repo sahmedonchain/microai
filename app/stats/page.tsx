@@ -171,10 +171,10 @@ export default function StatsPage() {
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88", display: "inline-block", animation: "pulse 2s infinite" }} />
           <span style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace" }}>LIVE FROM ARC RPC</span>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "clamp(2.5rem, 5vw + 2rem, 5.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
           Arc Network Stats
         </h1>
-        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#888888", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
           Real-time data pulled directly from Arc Mainnet RPC. No static numbers — this refreshes every 10 seconds.
         </p>
       </section>
@@ -195,15 +195,15 @@ export default function StatsPage() {
               whileHover={{ y: -3, borderColor: "rgba(0,255,136,0.25)" }}
               style={{ padding: "20px", borderRadius: 14, background: "rgba(0,0,0,0.25)", border: "1px solid rgba(0,255,136,0.08)" }}
             >
-              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>{s.label}</div>
+              <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>{s.label}</div>
               <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#00ff88", fontFamily: "var(--font-geist-mono), monospace" }}>
-                {s.num !== undefined ? <AnimatedNumber value={s.num} /> : s.value}<span style={{ fontSize: 11, color: "#666666" }}>{s.suffix}</span>
+                {s.num !== undefined ? <AnimatedNumber value={s.num} /> : s.value}<span style={{ fontSize: 11, color: "#aaaaaa" }}>{s.suffix}</span>
               </div>
             </motion.div>
           ))}
         </div>
         {lastUpdated && (
-          <div style={{ textAlign: "right", marginTop: 10, fontSize: 9, color: "#555555", fontFamily: "var(--font-geist-mono), monospace" }}>
+          <div style={{ textAlign: "right", marginTop: 10, fontSize: 9, color: "#999999", fontFamily: "var(--font-geist-mono), monospace" }}>
             LAST UPDATED {lastUpdated.toLocaleTimeString()} · AUTO-REFRESH 10S
           </div>
         )}
@@ -216,18 +216,18 @@ export default function StatsPage() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
           <motion.div whileHover={{ y: -3, borderColor: "rgba(0,255,136,0.3)" }} style={{ padding: "20px", borderRadius: 14, background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)" }}>
-            <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>TOTAL USDC RECEIVED</div>
+            <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>TOTAL USDC RECEIVED</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#00ff88", fontFamily: "var(--font-geist-mono), monospace", textShadow: "0 0 20px rgba(0,255,136,0.3)" }}>
               {revenue === null ? "..." : <AnimatedNumber value={parseFloat(revenue)} format={(n) => `$${n.toFixed(4)}`} />}
             </div>
-            <div style={{ fontSize: 9, color: "#555555", marginTop: 6, fontFamily: "var(--font-geist-mono), monospace" }}>FROM AI QUERIES</div>
+            <div style={{ fontSize: 9, color: "#999999", marginTop: 6, fontFamily: "var(--font-geist-mono), monospace" }}>FROM AI QUERIES</div>
           </motion.div>
           <motion.div whileHover={{ y: -3, borderColor: "rgba(0,255,136,0.3)" }} style={{ padding: "20px", borderRadius: 14, background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)" }}>
-            <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>TOTAL TRANSACTIONS</div>
+            <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>TOTAL TRANSACTIONS</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#00ff88", fontFamily: "var(--font-geist-mono), monospace", textShadow: "0 0 20px rgba(0,255,136,0.3)" }}>
               {txCount === null ? "..." : <AnimatedNumber value={txCount} />}
             </div>
-            <div style={{ fontSize: 9, color: "#555555", marginTop: 6, fontFamily: "var(--font-geist-mono), monospace" }}>ON RECEIVER WALLET</div>
+            <div style={{ fontSize: 9, color: "#999999", marginTop: 6, fontFamily: "var(--font-geist-mono), monospace" }}>ON RECEIVER WALLET</div>
           </motion.div>
         </div>
         <a
@@ -247,11 +247,11 @@ export default function StatsPage() {
         </div>
         <div style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(0,255,136,0.1)", borderRadius: 16, overflow: "hidden" }}>
           {liveFeed === null ? (
-            <div style={{ padding: 20, fontSize: 11, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", textAlign: "center" }}>
+            <div style={{ padding: 20, fontSize: 11, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", textAlign: "center" }}>
               Loading feed...
             </div>
           ) : liveFeed.length === 0 ? (
-            <div style={{ padding: 20, fontSize: 11, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", textAlign: "center" }}>
+            <div style={{ padding: 20, fontSize: 11, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", textAlign: "center" }}>
               No transactions yet.
             </div>
           ) : (
@@ -277,9 +277,9 @@ export default function StatsPage() {
                     {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
                   </a>
                 ) : (
-                  <span style={{ fontSize: 11, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>—</span>
+                  <span style={{ fontSize: 11, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace" }}>—</span>
                 )}
-                <span style={{ fontSize: 10, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", flex: 1, textAlign: "center" }}>
+                <span style={{ fontSize: 10, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", flex: 1, textAlign: "center" }}>
                   {timeAgo(tx.timestamp)}
                 </span>
                 <span style={{ fontSize: 11, color: "#5cffb0", fontFamily: "var(--font-geist-mono), monospace", fontWeight: 700, flexShrink: 0 }}>
@@ -353,7 +353,7 @@ export default function StatsPage() {
                 { label: "NATIVE GAS", value: walletData.native, color: "#00ff88" },
               ].map((b) => (
                 <div key={b.label} style={{ padding: "14px", borderRadius: 10, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div style={{ fontSize: 8, color: "#555555", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 6 }}>{b.label}</div>
+                  <div style={{ fontSize: 8, color: "#999999", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 6 }}>{b.label}</div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: b.color, fontFamily: "var(--font-geist-mono), monospace" }}>{b.value}</div>
                 </div>
               ))}
@@ -361,7 +361,7 @@ export default function StatsPage() {
           )}
 
           {!walletData && !walletError && (
-            <div style={{ marginTop: 12, fontSize: 10, color: "#555555", fontFamily: "var(--font-geist-mono), monospace" }}>
+            <div style={{ marginTop: 12, fontSize: 10, color: "#999999", fontFamily: "var(--font-geist-mono), monospace" }}>
               Paste any Arc MAINNET wallet address to see live USDC, EURC, and native gas balance.
             </div>
           )}
@@ -371,8 +371,8 @@ export default function StatsPage() {
       {/* CTA */}
       <section style={{ borderTop: "1px solid rgba(0,255,136,0.06)", padding: "36px 16px", textAlign: "center", background: "rgba(0,0,0,0.4)" }}>
         <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>NEED MORE HELP?</div>
-        <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.8rem)", fontWeight: 900, color: "#fff", margin: "0 0 10px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#888888", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
+        <h2 style={{ fontSize: "clamp(2rem, 3vw + 1.5rem, 3.25rem)", fontWeight: 900, color: "#fff", margin: "0 0 10px" }}>Ask MicroAI</h2>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
           Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
         </p>
         <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#00ff88", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none" }}>
@@ -383,7 +383,7 @@ export default function StatsPage() {
       {/* FOOTER */}
       <footer style={{ borderTop: "1px solid rgba(0,255,136,0.08)", background: "#000000", padding: "22px 16px" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 9, color: "#333333", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
+          <div style={{ fontSize: 9, color: "#888888", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
           <div style={{ display: "flex", gap: 16 }}>
             {[
               { l: "ECOSYSTEM", h: "/ecosystem" },
@@ -391,7 +391,7 @@ export default function StatsPage() {
               { l: "DEBUGGER", h: "/debug" },
               { l: "EXPLORER", h: "https://explorer.arc.io" },
             ].map((link) => (
-              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#333333", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>
+              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#888888", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>
                 {link.l}
               </Link>
             ))}
@@ -405,7 +405,7 @@ export default function StatsPage() {
         * { box-sizing: border-box; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         input:focus { border-color: rgba(0,255,136,0.5) !important; box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
-        input::placeholder { color: #555555; }
+        input::placeholder { color: #999999; }
       `}</style>
     </div>
   );

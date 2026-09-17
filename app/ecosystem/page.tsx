@@ -112,7 +112,7 @@ const projects: Project[] = [
     tags: ["Hardware Wallet", "Security", "Cold Storage"],
     url: "https://ledger.com",
     logo: "L",
-    logoColor: "#888888",
+    logoColor: "#aaaaaa",
   },
   {
     name: "Exodus",
@@ -391,7 +391,7 @@ const projects: Project[] = [
     tags: ["RWA", "Asset Management", "Tokenization"],
     url: "https://blackrock.com",
     logo: "BK",
-    logoColor: "#888888",
+    logoColor: "#aaaaaa",
   },
   {
     name: "Goldman Sachs",
@@ -400,7 +400,7 @@ const projects: Project[] = [
     tags: ["Capital Markets", "Settlement", "TradFi"],
     url: "https://goldmansachs.com",
     logo: "GS",
-    logoColor: "#888888",
+    logoColor: "#aaaaaa",
   },
   {
     name: "Coinbase",
@@ -448,9 +448,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   "DEV TOOLS": "#3b82f6",
   "PAYMENTS": "#00ff88",
   "STABLECOINS": "#2563eb",
-  "INFRASTRUCTURE": "#888888",
+  "INFRASTRUCTURE": "#aaaaaa",
   "LENDING": "#b6509e",
-  "INSTITUTIONS": "#888888",
+  "INSTITUTIONS": "#aaaaaa",
   "COMMUNITY BUILDS": "#00ff88",
 };
 
@@ -481,10 +481,10 @@ export default function EcosystemPage() {
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88", display: "inline-block", animation: "pulse 2s infinite" }} />
           <span style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace" }}>LIVE ECOSYSTEM MAP</span>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 3.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "clamp(2.5rem, 5vw + 2rem, 5.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
           Arc & Circle<br />Ecosystem Directory
         </h1>
-        <p style={{ fontSize: "clamp(12px, 3vw, 14px)", color: "#888888", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
           Every project, protocol, and builder in the Arc + Circle ecosystem — from community dApps to institutional partners.
         </p>
         <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
@@ -495,7 +495,7 @@ export default function EcosystemPage() {
           ].map((s) => (
             <div key={s.label} style={{ textAlign: "center" }}>
               <div style={{ fontSize: "clamp(1.4rem, 5vw, 2rem)", fontWeight: 900, color: "#00ff88", fontFamily: "var(--font-geist-mono), monospace" }}><AnimatedNumber value={s.value} /></div>
-              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
+              <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -504,7 +504,7 @@ export default function EcosystemPage() {
       {/* SEARCH + FILTERS */}
       <section style={{ padding: "24px 16px 0", maxWidth: 1100, margin: "0 auto" }}>
         <div style={{ position: "relative", marginBottom: 16 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>⌕</span>
+          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace" }}>⌕</span>
           <input
             type="text"
             value={search}
@@ -528,7 +528,7 @@ export default function EcosystemPage() {
                   borderRadius: 8,
                   border: active ? `1px solid ${color}60` : "1px solid rgba(0,255,136,0.08)",
                   background: active ? `${color}15` : "rgba(0,0,0,0.2)",
-                  color: active ? color : "#888888",
+                  color: active ? color : "#aaaaaa",
                   fontSize: 9,
                   fontWeight: 700,
                   letterSpacing: "0.1em",
@@ -544,7 +544,7 @@ export default function EcosystemPage() {
           })}
         </div>
 
-        <div style={{ marginTop: 12, fontSize: 10, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>
+        <div style={{ marginTop: 12, fontSize: 10, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace" }}>
           {filtered.length} PROJECT{filtered.length !== 1 ? "S" : ""}
           {search && ` FOR "${search.toUpperCase()}"`}
         </div>
@@ -567,7 +567,7 @@ export default function EcosystemPage() {
       {/* MAIN GRID */}
       <section style={{ padding: "20px 16px 60px", maxWidth: 1100, margin: "0 auto" }}>
         {featured.length > 0 && rest.length > 0 && (
-          <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
+          <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
             ALL PROJECTS
           </div>
         )}
@@ -577,7 +577,7 @@ export default function EcosystemPage() {
           ))}
         </div>
         {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#666666", fontFamily: "var(--font-geist-mono), monospace", fontSize: 12 }}>
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", fontSize: 12 }}>
             NO RESULTS FOR "{search.toUpperCase()}"
           </div>
         )}
@@ -586,8 +586,8 @@ export default function EcosystemPage() {
       {/* CTA */}
       <section style={{ borderTop: "1px solid rgba(0,255,136,0.06)", padding: "40px 16px", textAlign: "center", background: "rgba(0,0,0,0.4)" }}>
         <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>WANT TO KNOW MORE ABOUT ANY PROJECT?</div>
-        <h2 style={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 900, color: "#fff", margin: "0 0 12px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#888888", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
+        <h2 style={{ fontSize: "clamp(2rem, 3vw + 1.5rem, 3.25rem)", fontWeight: 900, color: "#fff", margin: "0 0 12px" }}>Ask MicroAI</h2>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
           Get instant answers about any Arc or Circle ecosystem project for just $0.001 USDC.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -605,11 +605,11 @@ export default function EcosystemPage() {
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(0,255,136,0.08)", border: "1px solid rgba(0,255,136,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#00ff88" }}>M</div>
-            <div style={{ fontSize: 10, color: "#666666" }}>MICROAI · THE ARC & CIRCLE HUB</div>
+            <div style={{ fontSize: 10, color: "#aaaaaa" }}>MICROAI · THE ARC & CIRCLE HUB</div>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {[{ l: "ARC", h: "https://arc.io" }, { l: "CIRCLE", h: "https://circle.com" }, { l: "GITHUB", h: "https://github.com/sahmedonchain/microai" }, { l: "EXPLORER", h: "https://explorer.arc.io" }].map((link) => (
-              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#666666", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>{link.l}</a>
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>{link.l}</a>
             ))}
           </div>
         </div>
@@ -622,7 +622,7 @@ export default function EcosystemPage() {
         * { box-sizing: border-box; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         input:focus { border-color: rgba(0,255,136,0.5) !important; box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
-        input::placeholder { color: #666666; }
+        input::placeholder { color: #aaaaaa; }
       `}</style>
     </div>
   );
@@ -656,16 +656,16 @@ function ProjectCard({ project: p, highlight }: { project: Project; highlight?: 
           {p.logo}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>{p.name}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>{p.name}</div>
           <span style={{ fontSize: 8, fontWeight: 700, color: catColor, background: `${catColor}15`, border: `1px solid ${catColor}25`, padding: "1px 7px", borderRadius: 4, fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em" }}>
             {p.category}
           </span>
         </div>
       </div>
-      <p style={{ fontSize: 11, color: "#888888", lineHeight: 1.65, margin: 0, flex: 1 }}>{p.desc}</p>
+      <p style={{ fontSize: 15, color: "#aaaaaa", lineHeight: 1.65, margin: 0, flex: 1 }}>{p.desc}</p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {p.tags.map((t) => (
-          <span key={t} style={{ fontSize: 9, color: "#666666", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4, fontFamily: "var(--font-geist-mono), monospace" }}>{t}</span>
+          <span key={t} style={{ fontSize: 9, color: "#aaaaaa", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4, fontFamily: "var(--font-geist-mono), monospace" }}>{t}</span>
         ))}
       </div>
       <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: catColor, fontWeight: 700, fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em", textDecoration: "none" }}>

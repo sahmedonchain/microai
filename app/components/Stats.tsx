@@ -46,8 +46,8 @@ export default function Stats() {
           <span className="w-2 h-2 bg-[#00ff88] rounded-full animate-pulse"></span>
           Live On-Chain Data from Arc MAINNET
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Real Usage. Real Transactions.</h2>
-        <p className="text-[#888888] text-sm md:text-base">Every number below is pulled directly from Arc blockchain.</p>
+        <h2 className="text-3xl md:text-5xl font-bold text-white mb-3">Real Usage. Real Transactions.</h2>
+        <p className="text-[#e5e5e5] text-base md:text-lg">Every number below is pulled directly from Arc blockchain.</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {statItems.map((item, i) => (
@@ -65,7 +65,7 @@ export default function Stats() {
               {loading || item.num === undefined ? "..." : <AnimatedNumber value={item.num} />}
               <span className="text-sm text-[#7c3aed]">{item.suffix}</span>
             </div>
-            <div className="text-xs text-[#666666]">{item.label}</div>
+            <div className="text-xs text-[#aaaaaa]">{item.label}</div>
           </motion.div>
         ))}
       </div>

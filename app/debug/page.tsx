@@ -106,10 +106,10 @@ export default function DebugPage() {
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88", display: "inline-block", animation: "pulse 2s infinite" }} />
           <span style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace" }}>ARC MAINNET · LIVE DEBUGGER</span>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "clamp(2.5rem, 5vw + 2rem, 5.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
           Transaction Debugger
         </h1>
-        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#888888", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
           Paste any Arc MAINNET transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened — and how to fix it.
         </p>
       </section>
@@ -177,7 +177,7 @@ export default function DebugPage() {
                   <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#00ff88", animation: "bounce 1.2s infinite", animationDelay: `${i * 0.2}s` }} />
                 ))}
               </div>
-              <span style={{ fontSize: 10, color: "#666666", fontFamily: "var(--font-geist-mono), monospace" }}>
+              <span style={{ fontSize: 10, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace" }}>
                 Fetching transaction and analyzing...
               </span>
             </div>
@@ -203,10 +203,10 @@ export default function DebugPage() {
             }}>
               <div style={{ width: 10, height: 10, borderRadius: "50%", background: result.txData.result === "success" ? "#00ff88" : "#f87171", flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: result.txData.result === "success" ? "#00ff88" : "#f87171" }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: result.txData.result === "success" ? "#00ff88" : "#f87171" }}>
                   {result.txData.result === "success" ? "Transaction Successful" : "Transaction Failed"}
                 </div>
-                <div style={{ fontSize: 11, color: "#888888", marginTop: 2 }}>{result.summary}</div>
+                <div style={{ fontSize: 15, color: "#aaaaaa", marginTop: 2 }}>{result.summary}</div>
               </div>
             </div>
 
@@ -214,18 +214,18 @@ export default function DebugPage() {
               <div style={{ fontSize: 9, color: severity_color(result.severity), fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 8 }}>
                 ROOT CAUSE · {result.severity.toUpperCase()} SEVERITY
               </div>
-              <p style={{ fontSize: 13, color: "#888888", lineHeight: 1.7, margin: 0 }}>{result.rootCause}</p>
+              <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", lineHeight: 1.7, margin: 0 }}>{result.rootCause}</p>
             </div>
 
             <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,255,136,0.04)", border: "1px solid rgba(0,255,136,0.1)" }}>
               <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 8 }}>
                 HOW TO FIX
               </div>
-              <p style={{ fontSize: 13, color: "#888888", lineHeight: 1.7, margin: 0 }}>{result.solution}</p>
+              <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", lineHeight: 1.7, margin: 0 }}>{result.solution}</p>
             </div>
 
             <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
+              <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
                 TRANSACTION DETAILS
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -239,8 +239,8 @@ export default function DebugPage() {
                   { label: "FEE (USDC)", value: result.txData.fee?.value ? (parseInt(result.txData.fee.value) / 1e6).toFixed(6) : "—" },
                 ].map((row) => (
                   <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 9, color: "#555555", fontFamily: "var(--font-geist-mono), monospace", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>{row.label}</span>
-                    <span style={{ fontSize: 11, color: "#888888", fontFamily: "var(--font-geist-mono), monospace", textAlign: "right", wordBreak: "break-all" }}>{row.value}</span>
+                    <span style={{ fontSize: 9, color: "#999999", fontFamily: "var(--font-geist-mono), monospace", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>{row.label}</span>
+                    <span style={{ fontSize: 11, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", textAlign: "right", wordBreak: "break-all" }}>{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -259,7 +259,7 @@ export default function DebugPage() {
 
         {history.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <div style={{ fontSize: 9, color: "#555555", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>
+            <div style={{ fontSize: 9, color: "#999999", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>
               RECENT HASHES
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -272,7 +272,7 @@ export default function DebugPage() {
                     borderRadius: 8,
                     background: "rgba(0,0,0,0.2)",
                     border: "1px solid rgba(255,255,255,0.04)",
-                    color: "#666666",
+                    color: "#aaaaaa",
                     fontSize: 11,
                     fontFamily: "var(--font-geist-mono), monospace",
                     cursor: "pointer",
@@ -289,7 +289,7 @@ export default function DebugPage() {
 
         {status === "idle" && !result && (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 9, color: "#555555", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
+            <div style={{ fontSize: 9, color: "#999999", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>
               WHAT THIS DEBUGGER DETECTS
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
@@ -310,8 +310,8 @@ export default function DebugPage() {
                   style={{ padding: "14px", borderRadius: 12, background: "rgba(0,0,0,0.15)", border: "1px solid rgba(0,255,136,0.06)" }}
                 >
                   <div style={{ fontSize: 16, marginBottom: 6 }}>{tip.icon}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#ffffff", marginBottom: 4 }}>{tip.label}</div>
-                  <div style={{ fontSize: 11, color: "#666666", lineHeight: 1.5 }}>{tip.desc}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#ffffff", marginBottom: 4 }}>{tip.label}</div>
+                  <div style={{ fontSize: 15, color: "#aaaaaa", lineHeight: 1.5 }}>{tip.desc}</div>
                 </motion.div>
               ))}
             </div>
@@ -322,8 +322,8 @@ export default function DebugPage() {
       {/* CTA */}
       <section style={{ borderTop: "1px solid rgba(0,255,136,0.06)", padding: "36px 16px", textAlign: "center", background: "rgba(0,0,0,0.4)" }}>
         <div style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "var(--font-geist-mono), monospace", marginBottom: 12 }}>NEED MORE HELP?</div>
-        <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.8rem)", fontWeight: 900, color: "#fff", margin: "0 0 10px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#888888", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
+        <h2 style={{ fontSize: "clamp(2rem, 3vw + 1.5rem, 3.25rem)", fontWeight: 900, color: "#fff", margin: "0 0 10px" }}>Ask MicroAI</h2>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
           Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
         </p>
         <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#00ff88", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none" }}>
@@ -334,7 +334,7 @@ export default function DebugPage() {
       {/* FOOTER */}
       <footer style={{ borderTop: "1px solid rgba(0,255,136,0.08)", background: "#000000", padding: "22px 16px" }}>
         <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 9, color: "#333333", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
+          <div style={{ fontSize: 9, color: "#888888", fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
           <div style={{ display: "flex", gap: 16 }}>
             {[
               { l: "ECOSYSTEM", h: "/ecosystem" },
@@ -342,7 +342,7 @@ export default function DebugPage() {
               { l: "CHAT", h: "/chat" },
               { l: "EXPLORER", h: "https://explorer.arc.io" },
             ].map((link) => (
-              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#333333", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>
+              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#888888", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>
                 {link.l}
               </Link>
             ))}
@@ -357,7 +357,7 @@ export default function DebugPage() {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
         input:focus { border-color: rgba(0,255,136,0.5) !important; box-shadow: 0 0 0 3px rgba(0,255,136,0.1); }
-        input::placeholder { color: #555555; }
+        input::placeholder { color: #999999; }
       `}</style>
     </div>
   );

@@ -118,12 +118,12 @@ export default function Home() {
           <span style={{ fontSize: 9, color: '#00ff88', fontWeight: 700, letterSpacing: '0.18em', fontFamily: "var(--font-geist-mono), monospace" }}>NOW LIVE ON MAINNET</span>
         </motion.div>
 
-        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 5rem)', fontWeight: 900, lineHeight: 1.05, margin: '0 0 20px', letterSpacing: '-0.03em' }}>
+        <h1 style={{ fontSize: 'clamp(2.5rem, 5vw + 2rem, 5.5rem)', fontWeight: 900, lineHeight: 1.05, margin: '0 0 20px', letterSpacing: '-0.03em' }}>
           <motion.span variants={fadeUp} transition={{ duration: 0.5 }} style={{ display: 'block', background: 'linear-gradient(180deg, #ffffff 30%, rgba(255,255,255,0.7) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>The Arc & Circle</motion.span>
           <motion.span variants={fadeUp} transition={{ duration: 0.5 }} style={{ display: 'block', background: 'linear-gradient(180deg, rgba(0,255,136,0.9) 0%, rgba(0,255,136,0.4) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Intelligence Hub</motion.span>
         </h1>
 
-        <motion.p variants={fadeUp} transition={{ duration: 0.5 }} style={{ fontSize: 'clamp(13px, 2.5vw, 16px)', color: '#888888', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.7 }}>
+        <motion.p variants={fadeUp} transition={{ duration: 0.5 }} style={{ fontSize: 'clamp(1rem, 0.9rem + 0.5vw, 1.125rem)', color: '#e5e5e5', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.7 }}>
           One AI engine trained on Arc and Circle documentation. Ask any question, get an instant verified answer — for just{' '}
           <span style={{ color: '#00ff88', fontWeight: 700, background: 'rgba(0,255,136,0.08)', padding: '1px 6px', borderRadius: 5 }}>$0.001 USDC</span>
           {' '}per query, settled on-chain.
@@ -138,7 +138,7 @@ export default function Home() {
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'clamp(13px,3vw,16px)', fontWeight: 900, color: '#fff', fontFamily: "var(--font-geist-mono), monospace", letterSpacing: '-0.01em' }}>{s.val}</div>
-              <div style={{ fontSize: 9, color: '#555555', fontWeight: 700, letterSpacing: '0.12em', marginTop: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 9, color: '#999999', fontWeight: 700, letterSpacing: '0.12em', marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </motion.div>
@@ -166,9 +166,9 @@ export default function Home() {
               <div style={{ display: 'flex', gap: 5 }}>
                 {['#ef4444','#f59e0b','#00ff88'].map(c => <div key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.6 }} />)}
               </div>
-              <span style={{ fontSize: 9, color: '#555555', fontFamily: "var(--font-geist-mono), monospace", letterSpacing: '0.1em' }}>MICROAI — LIVE DEMO</span>
+              <span style={{ fontSize: 9, color: '#999999', fontFamily: "var(--font-geist-mono), monospace", letterSpacing: '0.1em' }}>MICROAI — LIVE DEMO</span>
             </div>
-            <span style={{ fontSize: 8, color: '#555555', fontFamily: "var(--font-geist-mono), monospace" }}>ARC MAINNET</span>
+            <span style={{ fontSize: 8, color: '#999999', fontFamily: "var(--font-geist-mono), monospace" }}>ARC MAINNET</span>
           </div>
 
           <div style={{ padding: '16px' }}>
@@ -179,8 +179,8 @@ export default function Home() {
               {presets.map(item => (
                 <button key={item.key} onClick={() => { setChatInput(item.q); setChatResponse(item.r); }}
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 14px', borderRadius: 10, border: chatInput === item.q ? '1px solid rgba(0,255,136,0.35)' : '1px solid rgba(0,255,136,0.06)', background: chatInput === item.q ? 'rgba(0,255,136,0.07)' : 'rgba(0,0,0,0.15)', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'all 0.15s' }}>
-                  <span style={{ fontSize: 12, color: chatInput === item.q ? '#00ff88' : '#888888', fontWeight: 600 }}>{item.label}</span>
-                  <span style={{ fontSize: 9, color: '#555555', fontFamily: "var(--font-geist-mono), monospace", flexShrink: 0 }}>Try →</span>
+                  <span style={{ fontSize: 15, color: chatInput === item.q ? '#00ff88' : '#e5e5e5', fontWeight: 600 }}>{item.label}</span>
+                  <span style={{ fontSize: 9, color: '#999999', fontFamily: "var(--font-geist-mono), monospace", flexShrink: 0 }}>Try →</span>
                 </button>
               ))}
             </div>
@@ -194,11 +194,11 @@ export default function Home() {
               <div style={{ padding: '12px 14px', fontFamily: "var(--font-geist-mono), monospace" }}>
                 {chatInput && (
                   <>
-                    <div style={{ fontSize: 9, color: '#555555', marginBottom: 6 }}>&gt; {chatInput}</div>
+                    <div style={{ fontSize: 9, color: '#999999', marginBottom: 6 }}>&gt; {chatInput}</div>
                     <div style={{ height: 1, background: 'rgba(0,255,136,0.05)', marginBottom: 8 }} />
                   </>
                 )}
-                <div style={{ fontSize: 11, color: '#5cffb0', lineHeight: 1.65 }}>{chatResponse}</div>
+                <div style={{ fontSize: 15, color: '#5cffb0', lineHeight: 1.65 }}>{chatResponse}</div>
               </div>
               <div style={{ padding: '10px', background: 'rgba(0,0,0,0.8)', borderTop: '1px solid rgba(0,255,136,0.05)', display: 'flex', gap: 8 }}>
                 <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Type a question..."
@@ -215,9 +215,9 @@ export default function Home() {
       {/* 3 COLUMNS: WHO IS IT FOR */}
       <section id="hub-sectors" style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,60px) 16px', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ fontSize: 9, color: '#555555', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>BUILT FOR EVERYONE IN THE ECOSYSTEM</div>
-          <h2 style={{ fontSize: 'clamp(1.4rem, 5vw, 2.8rem)', fontWeight: 900, color: '#fff', margin: '0 0 12px', letterSpacing: '-0.02em' }}>One Hub. Every Role.</h2>
-          <p style={{ fontSize: 13, color: '#666666', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>Whether you deploy contracts or onboard communities, MicroAI speaks your language.</p>
+          <div style={{ fontSize: 9, color: '#999999', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>BUILT FOR EVERYONE IN THE ECOSYSTEM</div>
+          <h2 style={{ fontSize: 'clamp(2rem, 3vw + 1.5rem, 3.25rem)', fontWeight: 900, color: '#fff', margin: '0 0 12px', letterSpacing: '-0.02em' }}>One Hub. Every Role.</h2>
+          <p style={{ fontSize: 'clamp(1rem, 0.9rem + 0.5vw, 1.125rem)', color: '#e5e5e5', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>Whether you deploy contracts or onboard communities, MicroAI speaks your language.</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12 }}>
           {[
@@ -236,10 +236,10 @@ export default function Home() {
               style={{ padding: '20px', borderRadius: 14, background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(0,255,136,0.07)' }}
             >
               <div style={{ fontSize: 18, marginBottom: 12, color: sector.color, opacity: 0.7 }}>{sector.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.01em' }}>{sector.title}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.01em' }}>{sector.title}</div>
               <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {sector.points.map((p, i) => (
-                  <li key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#666666', alignItems: 'flex-start' }}>
+                  <li key={i} style={{ display: 'flex', gap: 8, fontSize: 15, color: '#aaaaaa', alignItems: 'flex-start' }}>
                     <span style={{ color: sector.color, flexShrink: 0, opacity: 0.6, marginTop: 1 }}>—</span><span>{p}</span>
                   </li>
                 ))}
@@ -256,8 +256,8 @@ export default function Home() {
       <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,56px) 16px', background: 'rgba(0,0,0,0.5)', borderTop: '1px solid rgba(0,255,136,0.05)', borderBottom: '1px solid rgba(0,255,136,0.05)' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 9, color: '#555555', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>HOW IT WORKS</div>
-            <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 2.2rem)', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Pay once. Get the answer.</h2>
+            <div style={{ fontSize: 9, color: '#999999', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>HOW IT WORKS</div>
+            <h2 style={{ fontSize: 'clamp(2rem, 3vw + 1.5rem, 3.25rem)', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Pay once. Get the answer.</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 4 }}>
             {[
@@ -269,12 +269,12 @@ export default function Home() {
               <div key={s.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
                 <div style={{ flex: 1, padding: '18px 16px', borderRadius: 12, background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(0,255,136,0.06)' }}>
                   <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(0,255,136,0.3)', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 8 }}>{s.n}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{s.name}</div>
-                  <p style={{ fontSize: 11, color: '#666666', lineHeight: 1.6, margin: 0 }}>{s.desc}</p>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{s.name}</div>
+                  <p style={{ fontSize: 15, color: '#aaaaaa', lineHeight: 1.6, margin: 0 }}>{s.desc}</p>
                 </div>
                 {i < arr.length - 1 && (
                   <div style={{ display: 'flex', alignItems: 'center', padding: '0 2px', marginTop: 28, flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, color: '#333333' }}>›</span>
+                    <span style={{ fontSize: 10, color: '#888888' }}>›</span>
                   </div>
                 )}
               </div>
@@ -291,8 +291,8 @@ export default function Home() {
       {/* FEATURES */}
       <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,56px) 16px', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 9, color: '#555555', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>WHAT'S INSIDE</div>
-          <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 2.2rem)', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Trained on Real Docs</h2>
+          <div style={{ fontSize: 9, color: '#999999', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>WHAT'S INSIDE</div>
+          <h2 style={{ fontSize: 'clamp(2rem, 3vw + 1.5rem, 3.25rem)', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Trained on Real Docs</h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
           {[
@@ -313,8 +313,8 @@ export default function Home() {
               style={{ padding: '18px', borderRadius: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,255,136,0.06)' }}
             >
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(0,255,136,0.3)', marginBottom: 12 }} />
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', marginBottom: 7 }}>{f.title}</div>
-              <p style={{ fontSize: 11, color: '#666666', lineHeight: 1.65, margin: 0 }}>{f.desc}</p>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#ffffff', marginBottom: 7 }}>{f.title}</div>
+              <p style={{ fontSize: 15, color: '#aaaaaa', lineHeight: 1.65, margin: 0 }}>{f.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -323,8 +323,8 @@ export default function Home() {
       {/* PRICING */}
       <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,56px) 16px', textAlign: 'center', background: 'rgba(0,0,0,0.3)', borderTop: '1px solid rgba(0,255,136,0.05)' }}>
         <div style={{ maxWidth: 360, margin: '0 auto' }}>
-          <div style={{ fontSize: 9, color: '#555555', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>PRICING</div>
-          <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 2rem)', fontWeight: 900, color: '#fff', margin: '0 0 24px', letterSpacing: '-0.02em' }}>No subscription.<br />Pay per answer.</h2>
+          <div style={{ fontSize: 9, color: '#999999', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 10 }}>PRICING</div>
+          <h2 style={{ fontSize: 'clamp(2rem, 3vw + 1.5rem, 3.25rem)', fontWeight: 900, color: '#fff', margin: '0 0 24px', letterSpacing: '-0.02em' }}>No subscription.<br />Pay per answer.</h2>
           <div style={{ background: 'rgba(0,0,0,0.8)', border: '1px solid rgba(0,255,136,0.12)', borderRadius: 20, padding: '28px 22px', position: 'relative' }}>
             <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(0,255,136,0.3), transparent)' }} />
             <div style={{ fontSize: 'clamp(2.8rem,10vw,4rem)', fontWeight: 900, color: '#fff', fontFamily: "var(--font-geist-mono), monospace", letterSpacing: '-0.03em', lineHeight: 1 }}>$0.001</div>
@@ -337,7 +337,7 @@ export default function Home() {
                 'Every answer logged on Arc Explorer',
                 'Full ecosystem access included',
               ].map(item => (
-                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: '#888888' }}>
+                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, color: '#aaaaaa' }}>
                   <span style={{ color: '#00ff88', flexShrink: 0, fontSize: 10 }}>✓</span> {item}
                 </li>
               ))}
@@ -353,8 +353,8 @@ export default function Home() {
       {proofFeed.length > 0 && (
         <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(24px,4vw,40px) 16px', maxWidth: 720, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 18 }}>
-            <div style={{ fontSize: 9, color: '#555555', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 8 }}>PROOF OF WORK</div>
-            <h3 style={{ fontSize: 'clamp(1rem,3vw,1.3rem)', fontWeight: 800, color: '#fff', margin: 0 }}>Recent Queries</h3>
+            <div style={{ fontSize: 9, color: '#999999', fontWeight: 700, letterSpacing: '0.25em', fontFamily: "var(--font-geist-mono), monospace", marginBottom: 8 }}>PROOF OF WORK</div>
+            <h3 style={{ fontSize: 'clamp(2rem, 3vw + 1.5rem, 3.25rem)', fontWeight: 800, color: '#fff', margin: 0 }}>Recent Queries</h3>
           </div>
           <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(0,255,136,0.1)', borderRadius: 14, overflow: 'hidden' }}>
             {proofFeed.map((tx, i) => (
@@ -369,8 +369,8 @@ export default function Home() {
                   borderBottom: i < proofFeed.length - 1 ? '1px solid rgba(0,255,136,0.06)' : 'none',
                 }}
               >
-                <span style={{ fontSize: 10, color: '#666666', fontFamily: "var(--font-geist-mono), monospace" }}>{timeAgo(tx.timestamp)}</span>
-                <span style={{ fontSize: 11, color: '#888888', fontFamily: "var(--font-geist-mono), monospace" }}>{truncateAddress(tx.from)}</span>
+                <span style={{ fontSize: 10, color: '#aaaaaa', fontFamily: "var(--font-geist-mono), monospace" }}>{timeAgo(tx.timestamp)}</span>
+                <span style={{ fontSize: 11, color: '#aaaaaa', fontFamily: "var(--font-geist-mono), monospace" }}>{truncateAddress(tx.from)}</span>
                 <span style={{ fontSize: 10, color: '#00ff88', fontWeight: 700, fontFamily: "var(--font-geist-mono), monospace" }}>✓ Answered</span>
               </motion.div>
             ))}
@@ -383,11 +383,11 @@ export default function Home() {
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(0,255,136,0.07)', border: '1px solid rgba(0,255,136,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#00ff88' }}>M</div>
-            <div style={{ fontSize: 9, color: '#333333', fontFamily: "var(--font-geist-mono), monospace", letterSpacing: '0.1em' }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
+            <div style={{ fontSize: 9, color: '#888888', fontFamily: "var(--font-geist-mono), monospace", letterSpacing: '0.1em' }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
             {[{ l: 'ARC', h: 'https://arc.io' }, { l: 'CIRCLE', h: 'https://circle.com' }, { l: 'GITHUB', h: 'https://github.com/sahmedonchain/microai' }, { l: 'EXPLORER', h: 'https://explorer.arc.io' }].map(link => (
-              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: '#333333', fontWeight: 700, letterSpacing: '0.12em', fontFamily: "var(--font-geist-mono), monospace", textDecoration: 'none' }}>{link.l}</a>
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: '#888888', fontWeight: 700, letterSpacing: '0.12em', fontFamily: "var(--font-geist-mono), monospace", textDecoration: 'none' }}>{link.l}</a>
             ))}
           </div>
         </div>

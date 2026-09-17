@@ -51,8 +51,8 @@ function getStatus(days: number | null): "ACTIVE" | "SLOW" | "INACTIVE" {
 const STATUS_CONFIG = {
   ACTIVE:   { color: "#00ff88", bg: "rgba(0,255,136,0.08)", label: "ACTIVE" },
   SLOW:     { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", label: "SLOW" },
-  INACTIVE: { color: "#666666", bg: "rgba(71,85,105,0.1)",  label: "INACTIVE" },
-  LOADING:  { color: "#555555", bg: "rgba(51,65,85,0.1)",   label: "LOADING" },
+  INACTIVE: { color: "#aaaaaa", bg: "rgba(71,85,105,0.1)",  label: "INACTIVE" },
+  LOADING:  { color: "#999999", bg: "rgba(51,65,85,0.1)",   label: "LOADING" },
   ERROR:    { color: "#f87171", bg: "rgba(239,68,68,0.06)", label: "ERROR" },
 };
 
@@ -115,10 +115,10 @@ export default function BuildStatusPage() {
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00ff88", display: "inline-block", animation: "pulse 2s infinite" }} />
           <span style={{ fontSize: 9, color: "#00ff88", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "var(--font-geist-mono), monospace" }}>LIVE FROM GITHUB API</span>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
+        <h1 style={{ fontSize: "clamp(2.5rem, 5vw + 2rem, 5.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
           Build Status Tracker
         </h1>
-        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#888888", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
+        <p style={{ fontSize: "clamp(1rem, 0.9rem + 0.5vw, 1.125rem)", color: "#e5e5e5", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
           Who's actually shipping in the Arc ecosystem? Live GitHub activity for every project — updated in real time.
         </p>
 
@@ -127,17 +127,17 @@ export default function BuildStatusPage() {
           {[
             { label: "ACTIVE (7d)", value: activeCount, color: "#00ff88" },
             { label: "SLOW (30d)", value: slowCount, color: "#f59e0b" },
-            { label: "TOTAL TRACKED", value: REPOS.length, color: "#888888" },
+            { label: "TOTAL TRACKED", value: REPOS.length, color: "#aaaaaa" },
           ].map(s => (
             <div key={s.label} style={{ textAlign: "center" }}>
               <div style={{ fontSize: "clamp(1.4rem,5vw,2rem)", fontWeight: 900, color: s.color, fontFamily: "var(--font-geist-mono), monospace" }}><AnimatedNumber value={s.value} /></div>
-              <div style={{ fontSize: 9, color: "#666666", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
+              <div style={{ fontSize: 9, color: "#aaaaaa", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
             </div>
           ))}
         </div>
 
         {lastUpdated && (
-          <div style={{ marginTop: 16, fontSize: 9, color: "#555555", fontFamily: "var(--font-geist-mono), monospace" }}>
+          <div style={{ marginTop: 16, fontSize: 9, color: "#999999", fontFamily: "var(--font-geist-mono), monospace" }}>
             LAST UPDATED {lastUpdated.toLocaleTimeString()}
             <button onClick={fetchStatuses} style={{ marginLeft: 12, background: "none", border: "1px solid rgba(0,255,136,0.15)", borderRadius: 5, color: "#00ff88", fontSize: 9, fontFamily: "var(--font-geist-mono), monospace", cursor: "pointer", padding: "2px 8px" }}>
               REFRESH
@@ -155,7 +155,7 @@ export default function BuildStatusPage() {
                 padding: "5px 12px", borderRadius: 7,
                 border: filter === cat ? "1px solid rgba(0,255,136,0.3)" : "1px solid rgba(0,255,136,0.08)",
                 background: filter === cat ? "rgba(0,255,136,0.08)" : "rgba(0,0,0,0.2)",
-                color: filter === cat ? "#00ff88" : "#888888",
+                color: filter === cat ? "#00ff88" : "#aaaaaa",
                 fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", fontFamily: "var(--font-geist-mono), monospace", cursor: "pointer",
               }}
             >
@@ -170,7 +170,7 @@ export default function BuildStatusPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map((repo, i) => {
             const sc = STATUS_CONFIG[repo.status];
-            const catColor = CATEGORY_COLORS[repo.category] ?? "#888888";
+            const catColor = CATEGORY_COLORS[repo.category] ?? "#aaaaaa";
             return (
               <motion.div
                 key={repo.repo}
@@ -185,7 +185,7 @@ export default function BuildStatusPage() {
 
                 {/* Name + category */}
                 <div style={{ flex: 1, minWidth: 120 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{repo.name}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>{repo.name}</div>
                   <span style={{ fontSize: 8, color: catColor, background: `${catColor}15`, border: `1px solid ${catColor}25`, padding: "1px 6px", borderRadius: 4, fontFamily: "var(--font-geist-mono), monospace", letterSpacing: "0.08em" }}>
                     {repo.category}
                   </span>
@@ -197,7 +197,7 @@ export default function BuildStatusPage() {
                 </div>
 
                 {/* Days ago */}
-                <div style={{ fontSize: 11, color: "#666666", fontFamily: "var(--font-geist-mono), monospace", minWidth: 80, textAlign: "right" }}>
+                <div style={{ fontSize: 11, color: "#aaaaaa", fontFamily: "var(--font-geist-mono), monospace", minWidth: 80, textAlign: "right" }}>
                   {repo.status === "LOADING" ? "—" :
                    repo.status === "ERROR" ? "API error" :
                    repo.daysAgo === 0 ? "today" :
@@ -207,14 +207,14 @@ export default function BuildStatusPage() {
 
                 {/* Stars */}
                 {repo.stars !== null && (
-                  <div style={{ fontSize: 11, color: "#555555", fontFamily: "var(--font-geist-mono), monospace", minWidth: 50, textAlign: "right" }}>
+                  <div style={{ fontSize: 11, color: "#999999", fontFamily: "var(--font-geist-mono), monospace", minWidth: 50, textAlign: "right" }}>
                     ★ {repo.stars >= 1000 ? `${(repo.stars / 1000).toFixed(1)}k` : repo.stars}
                   </div>
                 )}
 
                 {/* Links */}
                 <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  <a href={repo.url} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: "#555555", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none", fontWeight: 700, letterSpacing: "0.08em" }}>
+                  <a href={repo.url} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: "#999999", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none", fontWeight: 700, letterSpacing: "0.08em" }}>
                     GITHUB ↗
                   </a>
                   <a href={repo.projectUrl} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: "#00ff88", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none", fontWeight: 700, letterSpacing: "0.08em" }}>
@@ -230,10 +230,10 @@ export default function BuildStatusPage() {
       {/* FOOTER */}
       <footer style={{ borderTop: "1px solid rgba(0,255,136,0.08)", background: "#000000", padding: "22px 16px" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 9, color: "#333333", fontFamily: "var(--font-geist-mono), monospace" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
+          <div style={{ fontSize: 9, color: "#888888", fontFamily: "var(--font-geist-mono), monospace" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
           <div style={{ display: "flex", gap: 16 }}>
             {[{ l: "ECOSYSTEM", h: "/ecosystem" }, { l: "GRANTS", h: "/grants" }, { l: "DEBUGGER", h: "/debug" }, { l: "STATS", h: "/stats" }].map(link => (
-              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#333333", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>{link.l}</Link>
+              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#888888", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "var(--font-geist-mono), monospace", textDecoration: "none" }}>{link.l}</Link>
             ))}
           </div>
         </div>
