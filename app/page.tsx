@@ -2,12 +2,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Navbar } from '@/app/components/Navbar';
+import { timeAgo, truncateAddress } from '@/lib/format';
+
+interface RecentTransaction {
+  hash: string;
+  from: string;
+  amount: string;
+  timestamp: string | null;
+}
 
 export default function Home() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [chatInput, setChatInput] = useState('');
   const [chatResponse, setChatResponse] = useState('Ask me anything about Arc Chain deployment or Circle USDC integrations...');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [proofFeed, setProofFeed] = useState<RecentTransaction[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -42,6 +51,27 @@ export default function Home() {
     };
     animate();
     return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', setSize); };
+  }, []);
+
+  // "Proof of work" feed — real recent payments to the receiver wallet.
+  // Fails silently: if the API errors or returns nothing, the section just
+  // doesn't render rather than showing an error to visitors.
+  useEffect(() => {
+    let cancelled = false;
+    const fetchProof = async () => {
+      try {
+        const res = await fetch('/api/stats');
+        if (!res.ok) throw new Error('failed');
+        const data = await res.json();
+        const txs = Array.isArray(data.recentTransactions) ? data.recentTransactions.slice(0, 5) : [];
+        if (!cancelled) setProofFeed(txs);
+      } catch {
+        if (!cancelled) setProofFeed([]);
+      }
+    };
+    fetchProof();
+    const interval = setInterval(fetchProof, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   const presets = [
@@ -287,6 +317,32 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* PROOF OF WORK */}
+      {proofFeed.length > 0 && (
+        <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(24px,4vw,40px) 16px', maxWidth: 720, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 18 }}>
+            <div style={{ fontSize: 9, color: '#334155', fontWeight: 700, letterSpacing: '0.25em', fontFamily: 'monospace', marginBottom: 8 }}>PROOF OF WORK</div>
+            <h3 style={{ fontSize: 'clamp(1rem,3vw,1.3rem)', fontWeight: 800, color: '#fff', margin: 0 }}>Recent Queries</h3>
+          </div>
+          <div style={{ background: 'rgba(3,17,10,0.2)', border: '1px solid rgba(16,185,129,0.1)', borderRadius: 14, overflow: 'hidden' }}>
+            {proofFeed.map((tx, i) => (
+              <div
+                key={tx.hash || i}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+                  padding: '11px 16px',
+                  borderBottom: i < proofFeed.length - 1 ? '1px solid rgba(16,185,129,0.06)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace' }}>{timeAgo(tx.timestamp)}</span>
+                <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{truncateAddress(tx.from)}</span>
+                <span style={{ fontSize: 10, color: '#34d399', fontWeight: 700, fontFamily: 'monospace' }}>✓ Answered</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* FOOTER */}
       <footer style={{ position: 'relative', zIndex: 10, borderTop: '1px solid rgba(16,185,129,0.07)', background: '#010402', padding: '22px 16px' }}>

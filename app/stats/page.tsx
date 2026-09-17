@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Navbar } from "@/app/components/Navbar";
+import { timeAgo } from "@/lib/format";
 
 const ARC_RPC = "https://rpc.mainnet.arc.io";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
@@ -20,6 +21,13 @@ interface WalletBalances {
   usdc: string;
   eurc: string;
   native: string;
+}
+
+interface RecentTransaction {
+  hash: string;
+  from: string;
+  amount: string;
+  timestamp: string | null;
 }
 
 async function rpcCall(method: string, params: unknown[] = []) {
@@ -52,6 +60,7 @@ export default function StatsPage() {
   const [revenue, setRevenue] = useState<string | null>(null);
   const [txCount, setTxCount] = useState<number | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [liveFeed, setLiveFeed] = useState<RecentTransaction[] | null>(null);
 
   const isValidAddress = (a: string) => /^0x[a-fA-F0-9]{40}$/.test(a.trim());
 
@@ -102,6 +111,24 @@ export default function StatsPage() {
     const interval = setInterval(fetchNetworkStats, 10000);
     return () => clearInterval(interval);
   }, [fetchNetworkStats, fetchRevenue, fetchTxCount]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLiveFeed = async () => {
+      try {
+        const res = await fetch("/api/stats");
+        const data = await res.json();
+        if (!cancelled) {
+          setLiveFeed(Array.isArray(data.recentTransactions) ? data.recentTransactions : []);
+        }
+      } catch {
+        /* silent — keep showing the last known feed */
+      }
+    };
+    fetchLiveFeed();
+    const interval = setInterval(fetchLiveFeed, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   const lookupWallet = async () => {
     const addr = walletInput.trim();
@@ -205,6 +232,54 @@ export default function StatsPage() {
         >
           VIEW WALLET ON ARC EXPLORER ↗
         </a>
+      </section>
+
+      {/* LIVE TRANSACTION FEED */}
+      <section style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+          LIVE TRANSACTION FEED · LAST 10 · AUTO-REFRESH 30S
+        </div>
+        <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 16, overflow: "hidden" }}>
+          {liveFeed === null ? (
+            <div style={{ padding: 20, fontSize: 11, color: "#475569", fontFamily: "monospace", textAlign: "center" }}>
+              Loading feed...
+            </div>
+          ) : liveFeed.length === 0 ? (
+            <div style={{ padding: 20, fontSize: 11, color: "#475569", fontFamily: "monospace", textAlign: "center" }}>
+              No transactions yet.
+            </div>
+          ) : (
+            liveFeed.map((tx, i) => (
+              <div
+                key={tx.hash || i}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
+                  padding: "12px 16px",
+                  borderBottom: i < liveFeed.length - 1 ? "1px solid rgba(16,185,129,0.06)" : "none",
+                }}
+              >
+                {tx.hash ? (
+                  <a
+                    href={`https://explorer.arc.io/tx/${tx.hash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: 11, color: "#34d399", fontFamily: "monospace", textDecoration: "none", flexShrink: 0 }}
+                  >
+                    {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
+                  </a>
+                ) : (
+                  <span style={{ fontSize: 11, color: "#475569", fontFamily: "monospace" }}>—</span>
+                )}
+                <span style={{ fontSize: 10, color: "#475569", fontFamily: "monospace", flex: 1, textAlign: "center" }}>
+                  {timeAgo(tx.timestamp)}
+                </span>
+                <span style={{ fontSize: 11, color: "#6ee7b7", fontFamily: "monospace", fontWeight: 700, flexShrink: 0 }}>
+                  ${tx.amount} USDC
+                </span>
+              </div>
+            ))
+          )}
+        </div>
       </section>
 
       {/* WALLET LOOKUP */}
