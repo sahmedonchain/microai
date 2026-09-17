@@ -177,31 +177,61 @@ export default function Chat() {
     }
   }, []);
 
+  // Checks for an existing valid session for `address` and, if found,
+  // immediately fetches and displays the real credit balance. Returns
+  // whether a valid session was found, so callers know whether they still
+  // need to establish a new one (which requires a signature).
+  const restoreSessionAndCredit = useCallback(async (address: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/session");
+      const data = await res.json();
+      if (data.authenticated && data.address?.toLowerCase() === address.toLowerCase()) {
+        await fetchCredit();
+        return true;
+      }
+      if (data.authenticated) {
+        await fetch("/api/session", { method: "DELETE" }); // stale session for a different address
+      }
+    } catch { /* fall through — caller decides what to do next */ }
+    return false;
+  }, [fetchCredit]);
+
   const handleWalletConnect = useCallback(async (address: string, connectedProvider: EthereumProvider) => {
     setWallet(address);
     setProvider(connectedProvider);
     setShowWalletModal(false);
     await getBalance(address, connectedProvider);
 
-    // Reuse an existing valid session for this wallet if there is one.
-    let sessionOk = false;
-    try {
-      const res = await fetch("/api/session");
-      const data = await res.json();
-      sessionOk = data.authenticated && data.address?.toLowerCase() === address.toLowerCase();
-      if (data.authenticated && !sessionOk) {
-        await fetch("/api/session", { method: "DELETE" }); // stale session for a different address
-      }
-    } catch { /* fall through to establishing a new one */ }
-
+    const sessionOk = await restoreSessionAndCredit(address);
     if (!sessionOk) {
-      sessionOk = await establishSession(address, connectedProvider);
+      const established = await establishSession(address, connectedProvider);
+      if (established) await fetchCredit();
     }
+  }, [getBalance, establishSession, fetchCredit, restoreSessionAndCredit]);
 
-    if (sessionOk) {
-      await fetchCredit();
-    }
-  }, [getBalance, establishSession, fetchCredit]);
+  // On page load/refresh, silently restore a previously-authorized wallet
+  // (eth_accounts never prompts, unlike eth_requestAccounts) and — if a
+  // session cookie is still valid for it — the user's real credit balance,
+  // without requiring them to reconnect or buy more credit first.
+  useEffect(() => {
+    const eth = (window as unknown as { ethereum?: EthereumProvider }).ethereum;
+    if (!eth) return;
+
+    (async () => {
+      try {
+        const accounts = (await eth.request({ method: "eth_accounts" })) as string[];
+        const address = accounts?.[0];
+        if (!address) return;
+
+        setWallet(address);
+        setProvider(eth);
+        await getBalance(address, eth);
+
+        const sessionOk = await restoreSessionAndCredit(address);
+        if (!sessionOk) setCredit(0);
+      } catch { /* silent — user can connect manually */ }
+    })();
+  }, [getBalance, restoreSessionAndCredit]);
 
   const disconnect = () => {
     setWallet(null); setBalance(null); setProvider(null); setTxStep("");
