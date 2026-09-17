@@ -4,14 +4,15 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { WalletModal } from "@/app/components/WalletModal";
+import { PRICE_PER_QUERY, MIN_QUERIES, MAX_QUERIES } from "@/lib/pricing";
 
 const ARC_CHAIN_ID = "0x13b2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const RECEIVER_ADDRESS = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
-const PRICE_PER_QUERY = 1000; // 0.001 USDC, 6-decimal units — display only, server enforces the real charge
 const STORAGE_KEY = "microai_chat_history";
-const EXPLORER = "https://explorer.arc.io/tx/";
 const TRANSFER_ABI = "0xa9059cbb"; // transfer(address,uint256)
+
+const PRESET_QUERIES = [5, 10, 20, 50];
 
 interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -20,7 +21,6 @@ interface EthereumProvider {
 interface Message {
   role: "user" | "assistant";
   text: string;
-  txHash?: string;
 }
 
 const SUGGESTIONS = [
@@ -64,6 +64,11 @@ export default function Chat() {
   const [txStep, setTxStep] = useState("");
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showNetMenu, setShowNetMenu] = useState(false);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [credit, setCredit] = useState<number | null>(null);
+  const [buying, setBuying] = useState(false);
+  const [customQueries, setCustomQueries] = useState("");
+  const [buyError, setBuyError] = useState("");
   const [copied, setCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -137,15 +142,71 @@ export default function Chat() {
     } catch { /* silent */ }
   }, []);
 
+  // Establishes (or re-establishes) the signed session for this wallet. This
+  // is what lets the server know which wallet's credit to check/spend —
+  // never trust an address passed in a request body.
+  const establishSession = useCallback(async (address: string, prov: EthereumProvider): Promise<boolean> => {
+    try {
+      const nonceRes = await fetch(`/api/session/nonce?address=${address}`);
+      if (!nonceRes.ok) return false;
+      const { message } = await nonceRes.json();
+
+      const signature = await prov.request({
+        method: "personal_sign",
+        params: [message, address],
+      }) as string;
+
+      const sessionRes = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address, signature }),
+      });
+      return sessionRes.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const fetchCredit = useCallback(async () => {
+    try {
+      const res = await fetch("/api/credits/balance");
+      const data = await res.json();
+      setCredit(data.authenticated ? data.credit : 0);
+    } catch {
+      setCredit(0);
+    }
+  }, []);
+
   const handleWalletConnect = useCallback(async (address: string, connectedProvider: EthereumProvider) => {
     setWallet(address);
     setProvider(connectedProvider);
     setShowWalletModal(false);
     await getBalance(address, connectedProvider);
-  }, [getBalance]);
+
+    // Reuse an existing valid session for this wallet if there is one.
+    let sessionOk = false;
+    try {
+      const res = await fetch("/api/session");
+      const data = await res.json();
+      sessionOk = data.authenticated && data.address?.toLowerCase() === address.toLowerCase();
+      if (data.authenticated && !sessionOk) {
+        await fetch("/api/session", { method: "DELETE" }); // stale session for a different address
+      }
+    } catch { /* fall through to establishing a new one */ }
+
+    if (!sessionOk) {
+      sessionOk = await establishSession(address, connectedProvider);
+    }
+
+    if (sessionOk) {
+      await fetchCredit();
+    }
+  }, [getBalance, establishSession, fetchCredit]);
 
   const disconnect = () => {
     setWallet(null); setBalance(null); setProvider(null); setTxStep("");
+    setCredit(null);
+    fetch("/api/session", { method: "DELETE" }).catch(() => { /* silent */ });
   };
 
   const clearHistory = () => {
@@ -163,25 +224,22 @@ export default function Chat() {
     } catch { /* silent */ }
   };
 
-  const sendMessage = async (text?: string) => {
-    const msg = text || input.trim();
-    if (!msg || loading || !wallet || !provider) return;
-
-    setInput("");
-    if (inputRef.current) inputRef.current.style.height = "auto";
-    setMessages(prev => [...prev, { role: "user", text: msg }]);
-    setLoading(true);
+  // Buys `queries` worth of credit with ONE direct USDC transfer, then has
+  // the server verify it on-chain and add credit to the session wallet.
+  const buyCredits = async (queries: number) => {
+    if (!wallet || !provider) return;
+    setBuying(true);
+    setBuyError("");
+    setTxStep(`Buying ${queries} ${queries === 1 ? "query" : "queries"}...`);
 
     try {
-      setTxStep("Confirm $0.001 USDC payment in MetaMask...");
-
       const chainId = await provider.request({ method: "eth_chainId" }) as string;
       if (chainId !== ARC_CHAIN_ID) {
         await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID }] });
       }
 
-      // Direct USDC transfer: user wallet -> RECEIVER_ADDRESS, exactly 0.001 USDC.
-      const amountHex = PRICE_PER_QUERY.toString(16).padStart(64, "0");
+      const amount = queries * PRICE_PER_QUERY;
+      const amountHex = amount.toString(16).padStart(64, "0");
       const recipientHex = RECEIVER_ADDRESS.slice(2).padStart(64, "0");
       const transferData = TRANSFER_ABI + recipientHex + amountHex;
 
@@ -194,34 +252,95 @@ export default function Chat() {
       const mined = await waitForReceipt(provider, txHash);
       if (!mined) throw new Error("Transaction did not confirm in time. Please try again.");
 
-      setTxStep("Generating response...");
+      setTxStep("Crediting your account...");
 
-      const res = await fetch("/api/chat", {
+      const doPurchase = () => fetch("/api/credits/purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: msg,
-          history: messages.slice(-8).map(m => ({ role: m.role, content: m.text })),
-          txHash,
-          walletAddress: wallet,
-        }),
+        body: JSON.stringify({ txHash, queries }),
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Payment verification failed");
+      let res = await doPurchase();
+      if (res.status === 401) {
+        const ok = await establishSession(wallet, provider);
+        if (!ok) throw new Error("Session expired. Please reconnect your wallet.");
+        res = await doPurchase();
       }
 
-      setMessages(prev => [...prev, { role: "assistant", text: data.reply || "Could not generate a response.", txHash: data.txHash || txHash }]);
-      await getBalance(wallet, provider);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Purchase failed.");
 
+      setCredit(data.credit);
+      setShowBuyModal(false);
+      setCustomQueries("");
+      await getBalance(wallet, provider);
     } catch (err: unknown) {
       const error = err as { code?: number; message?: string };
-      if (error?.code === 4001) {
-        setMessages(prev => [...prev, { role: "assistant", text: "Payment cancelled." }]);
-      } else {
-        setMessages(prev => [...prev, { role: "assistant", text: `Error: ${error?.message || "Something went wrong. Try again."}` }]);
+      if (error?.code !== 4001) {
+        setBuyError(error?.message || "Purchase failed. Please try again.");
       }
+    } finally {
+      setBuying(false);
+      setTxStep("");
+    }
+  };
+
+  const buyCustomCredits = () => {
+    const queries = Number(customQueries);
+    if (!Number.isInteger(queries) || queries < MIN_QUERIES || queries > MAX_QUERIES) {
+      setBuyError(`Enter a whole number between ${MIN_QUERIES} and ${MAX_QUERIES}.`);
+      return;
+    }
+    buyCredits(queries);
+  };
+
+  const sendMessage = async (text?: string) => {
+    const msg = text || input.trim();
+    if (!msg || loading || !wallet || !provider) return;
+
+    if (!credit || credit <= 0) {
+      setShowBuyModal(true);
+      return;
+    }
+
+    setInput("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    setMessages(prev => [...prev, { role: "user", text: msg }]);
+    setLoading(true);
+    setTxStep("Generating response...");
+
+    try {
+      const body = JSON.stringify({
+        message: msg,
+        history: messages.slice(-8).map(m => ({ role: m.role, content: m.text })),
+      });
+      const doFetch = () => fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body });
+
+      let res = await doFetch();
+      if (res.status === 401) {
+        const ok = await establishSession(wallet, provider);
+        if (!ok) throw new Error("Session expired. Please reconnect your wallet.");
+        res = await doFetch();
+      }
+
+      const data = await res.json();
+
+      if (res.status === 402 || data.error === "no_credit") {
+        setCredit(0);
+        setShowBuyModal(true);
+        setMessages(prev => [...prev, { role: "assistant", text: "You're out of credit. Buy more queries to keep going." }]);
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(data.error || "Something went wrong.");
+      }
+
+      setMessages(prev => [...prev, { role: "assistant", text: data.reply || "Could not generate a response." }]);
+      if (typeof data.credit === "number") setCredit(data.credit);
+
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setMessages(prev => [...prev, { role: "assistant", text: `Error: ${error?.message || "Something went wrong. Try again."}` }]);
     } finally {
       setLoading(false);
       setTxStep("");
@@ -234,6 +353,93 @@ export default function Chat() {
 
       {/* Wallet Modal */}
       {showWalletModal && <WalletModal onConnect={handleWalletConnect} onClose={() => setShowWalletModal(false)} />}
+
+      {/* Buy Credits Modal */}
+      {showBuyModal && (
+        <div onClick={() => !buying && setShowBuyModal(false)} style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#020e06", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 20, padding: "24px 20px", width: "100%", maxWidth: 380, position: "relative", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}>
+            <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1, background: "linear-gradient(90deg,transparent,rgba(52,211,153,0.4),transparent)" }} />
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 6 }}>Buy Query Credit</div>
+              <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.6 }}>
+                One payment, one wallet confirmation. Then ask as many questions as you bought — no more popups.
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 12 }}>
+              {PRESET_QUERIES.map((q) => (
+                <button
+                  key={q}
+                  onClick={() => buyCredits(q)}
+                  disabled={buying}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                    padding: "14px 10px", borderRadius: 12,
+                    border: "1px solid rgba(52,211,153,0.15)",
+                    background: "rgba(16,185,129,0.05)",
+                    cursor: buying ? "not-allowed" : "pointer",
+                    opacity: buying ? 0.5 : 1,
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>{q}</div>
+                  <div style={{ fontSize: 9, color: "#475569", fontFamily: "monospace" }}>${(q * PRICE_PER_QUERY / 1e6).toFixed(3)} USDC</div>
+                </button>
+              ))}
+            </div>
+
+            {/* Custom amount */}
+            <div style={{ padding: "14px 16px", borderRadius: 12, border: "1px solid rgba(52,211,153,0.1)", background: "rgba(255,255,255,0.02)", marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#e2e8f0", marginBottom: 8 }}>Custom amount</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="number"
+                  min={MIN_QUERIES}
+                  max={MAX_QUERIES}
+                  step={1}
+                  value={customQueries}
+                  onChange={e => setCustomQueries(e.target.value)}
+                  disabled={buying}
+                  placeholder={`${MIN_QUERIES}-${MAX_QUERIES} queries`}
+                  style={{ flex: 1, minWidth: 0, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 8, padding: "8px 10px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "monospace" }}
+                />
+                <button
+                  onClick={buyCustomCredits}
+                  disabled={buying || !customQueries}
+                  style={{
+                    padding: "8px 16px", borderRadius: 8, border: "none",
+                    background: buying || !customQueries ? "rgba(16,185,129,0.1)" : "linear-gradient(135deg,#10b981,#059669)",
+                    color: buying || !customQueries ? "#34d399" : "#000",
+                    fontSize: 10, fontWeight: 800, letterSpacing: "0.06em",
+                    cursor: buying || !customQueries ? "not-allowed" : "pointer",
+                    fontFamily: "monospace", whiteSpace: "nowrap",
+                  }}
+                >
+                  BUY →
+                </button>
+              </div>
+              <div style={{ fontSize: 9, color: "#475569", marginTop: 6, fontFamily: "monospace" }}>$0.001 USDC per query</div>
+            </div>
+
+            {txStep && (
+              <div style={{ fontSize: 10, color: "#f59e0b", fontFamily: "monospace", textAlign: "center", marginBottom: 8 }}>
+                {txStep}
+              </div>
+            )}
+            {buyError && (
+              <div style={{ fontSize: 10, color: "#f87171", fontFamily: "monospace", textAlign: "center", marginBottom: 8 }}>
+                {buyError}
+              </div>
+            )}
+
+            {!buying && (
+              <button onClick={() => setShowBuyModal(false)} style={{ width: "100%", padding: "8px", background: "none", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, color: "#334155", fontSize: 10, cursor: "pointer", fontFamily: "monospace" }}>
+                CANCEL
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* BG */}
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.35 }} />
@@ -253,6 +459,18 @@ export default function Chat() {
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          {/* Credit indicator */}
+          {wallet && credit !== null && (
+            <button
+              onClick={() => setShowBuyModal(true)}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 7, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.06)", cursor: "pointer" }}
+            >
+              <span style={{ fontSize: 8, color: "#34d399", fontFamily: "monospace", fontWeight: 700 }}>
+                {credit} {credit === 1 ? "QUERY" : "QUERIES"}
+              </span>
+            </button>
+          )}
+
           {/* Network selector */}
           <div ref={netMenuRef} style={{ position: "relative" }}>
             <button onClick={() => setShowNetMenu(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(52,211,153,0.18)", background: "rgba(1,8,3,0.8)", color: "#34d399", fontSize: 9, fontWeight: 700, fontFamily: "monospace", cursor: "pointer", letterSpacing: "0.08em" }}>
@@ -296,10 +514,25 @@ export default function Chat() {
               <div style={{ width: 52, height: 52, borderRadius: 18, background: "linear-gradient(135deg,#34d399,#10b981)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 20, color: "#000", boxShadow: "0 0 28px rgba(16,185,129,0.3)", marginBottom: 20 }}>M</div>
               <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.5rem)", fontWeight: 900, color: "#fff", margin: "0 0 8px", letterSpacing: "-0.01em" }}>Arc & Circle Intelligence Hub</h2>
               <p style={{ fontSize: 12, color: "#475569", maxWidth: 320, lineHeight: 1.65, margin: "0 0 8px" }}>
-                Pay <span style={{ color: "#34d399", fontWeight: 700 }}>0.001 USDC</span> per question, sent directly from your wallet.
+                Buy query credit once, then ask <span style={{ color: "#34d399", fontWeight: 700 }}>as many questions as you like</span> — no wallet popup per query.
               </p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, width: "100%", maxWidth: 480, marginTop: 8 }}>
+              {wallet && credit !== null && credit > 0 ? (
+                <div style={{ marginBottom: 20, padding: "8px 16px", borderRadius: 10, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.06)" }}>
+                  <span style={{ fontSize: 11, color: "#34d399", fontFamily: "monospace" }}>
+                    {credit} {credit === 1 ? "query" : "queries"} remaining · no wallet popups
+                  </span>
+                </div>
+              ) : wallet ? (
+                <button
+                  onClick={() => setShowBuyModal(true)}
+                  style={{ marginBottom: 20, padding: "8px 18px", borderRadius: 10, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.06)", color: "#34d399", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "monospace" }}
+                >
+                  BUY QUERY CREDIT →
+                </button>
+              ) : null}
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, width: "100%", maxWidth: 480 }}>
                 {SUGGESTIONS.map((s, i) => (
                   <button key={i} onClick={() => wallet ? sendMessage(s.title) : setShowWalletModal(true)}
                     style={{ padding: "14px", borderRadius: 12, border: "1px solid rgba(16,185,129,0.1)", background: "rgba(3,17,10,0.25)", cursor: "pointer", textAlign: "left" }}>
@@ -326,9 +559,6 @@ export default function Chat() {
                 {msg.role === "assistant" && (
                   <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 2 }}>
                     <span style={{ fontSize: 8, fontFamily: "monospace", fontWeight: 700, color: "rgba(52,211,153,0.5)", letterSpacing: "0.12em" }}>MICRO_AI</span>
-                    {msg.txHash && (
-                      <a href={EXPLORER + msg.txHash} target="_blank" rel="noopener noreferrer" style={{ fontSize: 8, fontFamily: "monospace", color: "#334155", textDecoration: "none" }}>· TX PROOF ↗</a>
-                    )}
                   </div>
                 )}
                 {msg.role === "user" ? (
@@ -373,16 +603,16 @@ export default function Chat() {
           <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "rgba(3,19,11,0.6)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 16, padding: "10px 12px" }}>
             <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              placeholder={!wallet ? "Connect wallet to start" : "Ask anything about Arc or Circle..."}
+              placeholder={!wallet ? "Connect wallet to start" : !credit ? "Buy query credit to ask questions..." : "Ask anything about Arc or Circle..."}
               disabled={!wallet || loading} rows={1}
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 13, color: "#fff", fontFamily: "inherit", lineHeight: 1.6, maxHeight: 100, scrollbarWidth: "none" }}
               onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 100) + "px"; }}
             />
             <button
               onClick={() => wallet ? sendMessage() : setShowWalletModal(true)}
-              disabled={loading || !wallet}
-              style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: (wallet && input.trim()) ? "linear-gradient(135deg,#10b981,#059669)" : "rgba(16,185,129,0.06)", boxShadow: (wallet && input.trim()) ? "0 0 10px rgba(16,185,129,0.3)" : "none" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(wallet && input.trim()) ? "#000" : "#334155"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              disabled={loading || (!!wallet && !credit)}
+              style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: (wallet && credit && input.trim()) ? "linear-gradient(135deg,#10b981,#059669)" : "rgba(16,185,129,0.06)", boxShadow: (wallet && credit && input.trim()) ? "0 0 10px rgba(16,185,129,0.3)" : "none" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(wallet && credit && input.trim()) ? "#000" : "#334155"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
             </button>
@@ -390,7 +620,9 @@ export default function Chat() {
           <div style={{ textAlign: "center", marginTop: 6, fontSize: 8, fontFamily: "monospace", color: "#1e3a29", letterSpacing: "0.15em" }}>
             {txStep
               ? <span style={{ color: "#f59e0b", animation: "pulse 1.5s infinite" }}>{txStep.toUpperCase()}</span>
-              : "ARC MAINNET · $0.001 USDC PER QUERY · CONFIRM IN WALLET"
+              : credit && credit > 0
+              ? <span style={{ color: "#34d399" }}>{credit} {credit === 1 ? "QUERY" : "QUERIES"} REMAINING · NO WALLET POPUP</span>
+              : "ARC MAINNET · $0.001 USDC PER QUERY · BUY CREDIT TO START"
             }
           </div>
         </div>

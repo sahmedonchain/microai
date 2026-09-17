@@ -1,90 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import Groq from "groq-sdk";
-import { ethers } from "ethers";
 import { searchKnowledge } from "@/lib/search";
-import { claimTxHash } from "@/lib/usedTx";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { spendCredit } from "@/lib/credits";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const ARC_RPC = "https://rpc.mainnet.arc.io";
-const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const RECEIVER = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
-
-// Fixed price, 6-decimal USDC units — never accepted from the client.
-const PRICE_PER_QUERY = BigInt(1000); // 0.001 USDC
-
-const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
-// keccak256("Transfer(address,address,uint256)")
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-const MAX_TX_AGE_MS = 5 * 60 * 1000;
-
-class PaymentVerificationError extends Error {}
-
-function topicToAddress(topic: string): string {
-  return "0x" + topic.slice(-40);
-}
-
-async function rpcCall(method: string, params: unknown[]) {
-  const res = await fetch(ARC_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    cache: "no-store",
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  return data.result;
-}
-
-// Verifies txHash is a real, recent, exact 0.001 USDC transfer from
-// walletAddress to RECEIVER, then atomically marks it spent. Validation
-// happens fully before the claim so a transient RPC hiccup never burns a
-// legitimate payment; the claim itself is what blocks replay.
-async function verifyPayment(txHash: string, walletAddress: string): Promise<void> {
-  const receipt = await rpcCall("eth_getTransactionReceipt", [txHash]);
-  if (!receipt) {
-    throw new PaymentVerificationError("Transaction not found on Arc MAINNET.");
-  }
-  if (receipt.status !== "0x1") {
-    throw new PaymentVerificationError("Transaction did not succeed.");
-  }
-
-  const logs = (receipt.logs || []) as { address?: string; topics?: string[]; data?: string }[];
-  const transferLog = logs.find(
-    (log) =>
-      log.address?.toLowerCase() === USDC_CONTRACT.toLowerCase() &&
-      log.topics?.[0]?.toLowerCase() === TRANSFER_TOPIC &&
-      log.topics?.length === 3
-  );
-  if (!transferLog || !transferLog.topics || !transferLog.data) {
-    throw new PaymentVerificationError("No USDC transfer found in transaction.");
-  }
-
-  const from = topicToAddress(transferLog.topics[1]);
-  const to = topicToAddress(transferLog.topics[2]);
-  const value = BigInt(transferLog.data);
-
-  if (to.toLowerCase() !== RECEIVER.toLowerCase()) {
-    throw new PaymentVerificationError("Transfer recipient does not match.");
-  }
-  if (value !== PRICE_PER_QUERY) {
-    throw new PaymentVerificationError("Transfer amount does not match.");
-  }
-  if (from.toLowerCase() !== walletAddress.toLowerCase()) {
-    throw new PaymentVerificationError("Transfer sender does not match connected wallet.");
-  }
-
-  const block = await rpcCall("eth_getBlockByNumber", [receipt.blockNumber, false]);
-  const blockTimeMs = parseInt(block.timestamp, 16) * 1000;
-  if (Date.now() - blockTimeMs > MAX_TX_AGE_MS) {
-    throw new PaymentVerificationError("Transaction is too old.");
-  }
-
-  const claimed = await claimTxHash(txHash);
-  if (!claimed) {
-    throw new PaymentVerificationError("Transaction has already been used.");
-  }
-}
 
 const SYSTEM_PROMPT = `
 You are MicroAI — the official Arc & Circle Intelligence Hub AI assistant.
@@ -161,29 +82,31 @@ function safeSearch(query: string, data: KnowledgeItem[]) {
 
 export async function POST(req: Request) {
   try {
-    const { message, history = [], txHash, walletAddress } = await req.json();
+    const store = await cookies();
+    const token = store.get(SESSION_COOKIE)?.value;
+    const session = token ? verifySessionToken(token) : null;
 
+    if (!session) {
+      return NextResponse.json({ error: "session_required" }, { status: 401 });
+    }
+    const walletAddress = session.sub;
+
+    const { message, history = [] } = await req.json();
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
-    if (typeof txHash !== "string" || !TX_HASH_RE.test(txHash)) {
-      return NextResponse.json({ error: "Invalid or missing transaction hash." }, { status: 401 });
-    }
-    if (typeof walletAddress !== "string" || !ethers.isAddress(walletAddress)) {
-      return NextResponse.json({ error: "Invalid or missing wallet address." }, { status: 401 });
+
+    // Prepaid credit is checked and spent atomically here — never a
+    // per-request txHash. Credit was only ever added via the verified
+    // on-chain purchase in /api/credits/purchase.
+    const remaining = await spendCredit(walletAddress);
+    if (remaining === null) {
+      return NextResponse.json({ error: "no_credit" }, { status: 402 });
     }
 
-    try {
-      await verifyPayment(txHash, walletAddress);
-    } catch (err) {
-      const message = err instanceof PaymentVerificationError ? err.message : "Payment verification failed.";
-      console.error("Payment verification error:", err);
-      return NextResponse.json({ error: message }, { status: 401 });
-    }
-
-    // The payment is verified and claimed at this point — from here on we
-    // always return txHash so the user keeps proof of payment even if the
-    // AI call fails.
+    // Credit is already spent at this point — from here on we always
+    // return the remaining credit so the UI stays in sync even if the AI
+    // call fails.
     try {
       // STEP 1: SEARCH KNOWLEDGE BASE
       const matched = searchKnowledge(message);
@@ -226,12 +149,12 @@ export async function POST(req: Request) {
         completion.choices[0]?.message?.content ||
         "Could not generate response.";
 
-      return NextResponse.json({ reply, txHash });
+      return NextResponse.json({ reply, credit: remaining });
     } catch (err) {
-      console.error("AI generation error (payment already verified):", err);
+      console.error("AI generation error (credit already spent):", err);
       return NextResponse.json({
-        reply: "Payment succeeded, but the response could not be generated. Please contact support with your transaction hash.",
-        txHash,
+        reply: "Your credit was used, but the response could not be generated. Please contact support.",
+        credit: remaining,
       });
     }
   } catch (error) {
