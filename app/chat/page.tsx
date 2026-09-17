@@ -7,18 +7,11 @@ import { WalletModal } from "@/app/components/WalletModal";
 
 const ARC_CHAIN_ID = "0x13b2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const OPERATOR_ADDRESS = process.env.NEXT_PUBLIC_OPERATOR_ADDRESS || "0xd5c544D8aE72B0135eCD0Fb4adD0B2C807498499";
+const RECEIVER_ADDRESS = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
+const PRICE_PER_QUERY = 1000; // 0.001 USDC, 6-decimal units — display only, server enforces the real charge
 const STORAGE_KEY = "microai_chat_history";
-const BUNDLE_KEY = "microai_bundle";
 const EXPLORER = "https://explorer.arc.io/tx/";
-
-const BUNDLES = [
-  { queries: 5,  amount: 5000,  label: "5 queries",  price: "$0.005 USDC" },
-  { queries: 10, amount: 10000, label: "10 queries", price: "$0.010 USDC" },
-  { queries: 20, amount: 20000, label: "20 queries", price: "$0.020 USDC" },
-];
-
-const APPROVE_ABI = "0x095ea7b3"; // approve(address,uint256)
+const TRANSFER_ABI = "0xa9059cbb"; // transfer(address,uint256)
 
 interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -30,20 +23,36 @@ interface Message {
   txHash?: string;
 }
 
-interface BundleState {
-  remaining: number;
-  total: number;
-  approved: boolean;
-}
-
-class BundleExhaustedError extends Error {}
-
 const SUGGESTIONS = [
   { title: "What is Arc Blockchain?", desc: "L1 stablecoin commerce chain" },
   { title: "How does Circle USDC work?", desc: "Cross-chain transfers & APIs" },
   { title: "Deploy on Arc MAINNET", desc: "Step-by-step contract guide" },
   { title: "ERC-8004 AI Agents", desc: "Register your AI agent on Arc" },
 ];
+
+// Polls for the transaction receipt via the wallet's own provider so we only
+// send the txHash to the server once it's actually mined.
+async function waitForReceipt(
+  provider: EthereumProvider,
+  txHash: string,
+  timeoutMs = 20000,
+  intervalMs = 1000
+): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const receipt = (await provider.request({
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+      })) as { status?: string } | null;
+      if (receipt) return receipt.status === "0x1";
+    } catch {
+      // transient RPC hiccup — keep polling
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return false;
+}
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -55,10 +64,6 @@ export default function Chat() {
   const [txStep, setTxStep] = useState("");
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showNetMenu, setShowNetMenu] = useState(false);
-  const [showBundleModal, setShowBundleModal] = useState(false);
-  const [bundle, setBundle] = useState<BundleState | null>(null);
-  const [approving, setApproving] = useState(false);
-  const [sessionAddress, setSessionAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -73,11 +78,6 @@ export default function Chat() {
         const parsed = JSON.parse(saved) as Message[];
         if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
       }
-      // Load bundle state
-      const savedBundle = localStorage.getItem(BUNDLE_KEY);
-      if (savedBundle) {
-        setBundle(JSON.parse(savedBundle));
-      }
     } catch { /* silent */ }
   }, []);
 
@@ -87,13 +87,6 @@ export default function Chat() {
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-30))); } catch { /* silent */ }
     }
   }, [messages]);
-
-  // Save bundle state
-  useEffect(() => {
-    if (bundle) {
-      try { localStorage.setItem(BUNDLE_KEY, JSON.stringify(bundle)); } catch { /* silent */ }
-    }
-  }, [bundle]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -144,63 +137,15 @@ export default function Chat() {
     } catch { /* silent */ }
   }, []);
 
-  // Establishes (or re-establishes) the signed session for this wallet.
-  // Requires exactly one signature — no per-query wallet popups.
-  const establishSession = useCallback(async (address: string, prov: EthereumProvider): Promise<boolean> => {
-    try {
-      const nonceRes = await fetch(`/api/session/nonce?address=${address}`);
-      if (!nonceRes.ok) return false;
-      const { message } = await nonceRes.json();
-
-      const signature = await prov.request({
-        method: "personal_sign",
-        params: [message, address],
-      }) as string;
-
-      const sessionRes = await fetch("/api/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address, signature }),
-      });
-      if (!sessionRes.ok) return false;
-
-      const data = await sessionRes.json();
-      setSessionAddress((data.address as string).toLowerCase());
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
-
   const handleWalletConnect = useCallback(async (address: string, connectedProvider: EthereumProvider) => {
     setWallet(address);
     setProvider(connectedProvider);
     setShowWalletModal(false);
     await getBalance(address, connectedProvider);
-
-    try {
-      const res = await fetch("/api/session");
-      const data = await res.json();
-      if (data.authenticated && data.address?.toLowerCase() === address.toLowerCase()) {
-        setSessionAddress(data.address.toLowerCase());
-      } else {
-        if (data.authenticated) {
-          // Stale session for a different address — drop it.
-          await fetch("/api/session", { method: "DELETE" });
-        }
-        setSessionAddress(null);
-      }
-    } catch {
-      setSessionAddress(null);
-    }
   }, [getBalance]);
 
   const disconnect = () => {
     setWallet(null); setBalance(null); setProvider(null); setTxStep("");
-    setBundle(null);
-    setSessionAddress(null);
-    try { localStorage.removeItem(BUNDLE_KEY); } catch { /* silent */ }
-    fetch("/api/session", { method: "DELETE" }).catch(() => { /* silent */ });
   };
 
   const clearHistory = () => {
@@ -218,124 +163,63 @@ export default function Chat() {
     } catch { /* silent */ }
   };
 
-  // Approve bundle — user signs ONCE
-  const approveBundle = async (bundleIndex: number) => {
-    if (!wallet || !provider) return;
-    const selected = BUNDLES[bundleIndex];
-    setApproving(true);
-    setTxStep(`Approving ${selected.label}...`);
-
-    try {
-      const chainId = await provider.request({ method: "eth_chainId" }) as string;
-      if (chainId !== ARC_CHAIN_ID) {
-        await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID }] });
-      }
-
-      // approve(operator, amount)
-      const amount = selected.amount.toString(16).padStart(64, "0");
-      const spender = OPERATOR_ADDRESS.slice(2).padStart(64, "0");
-      const approveData = APPROVE_ABI + spender + amount;
-
-      await provider.request({
-        method: "eth_sendTransaction",
-        params: [{ from: wallet, to: USDC_CONTRACT, data: approveData, gas: "0x186A0" }],
-      });
-
-      // One extra signature at bundle-purchase time only — never per query.
-      if (!sessionAddress || sessionAddress !== wallet.toLowerCase()) {
-        setTxStep("Sign to authorize per-query charges...");
-        const ok = await establishSession(wallet, provider);
-        if (!ok) throw new Error("Could not authorize session. Please try again.");
-      }
-
-      const newBundle: BundleState = {
-        remaining: selected.queries,
-        total: selected.queries,
-        approved: true,
-      };
-      setBundle(newBundle);
-      setShowBundleModal(false);
-      setTxStep("");
-      await getBalance(wallet, provider);
-    } catch (err: unknown) {
-      const error = err as { code?: number; message?: string };
-      if (error?.code !== 4001) {
-        alert(error?.message || "Approval failed. Please try again.");
-      }
-    } finally {
-      setApproving(false);
-      setTxStep("");
-    }
-  };
-
-  // POSTs to /api/chat, which handles payment + generation server-side.
-  // Address and amount are never sent by the client — the server derives the
-  // address from the signed session cookie and charges a fixed price.
-  const requestChat = async (msg: string, prov: EthereumProvider): Promise<{ reply?: string; txHash?: string }> => {
-    const body = JSON.stringify({
-      message: msg,
-      history: messages.slice(-8).map(m => ({ role: m.role, content: m.text })),
-    });
-    const doFetch = () => fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-
-    let res = await doFetch();
-
-    if (res.status === 401 && wallet) {
-      // Session expired — re-authorize with one signature, then retry once.
-      const ok = await establishSession(wallet, prov);
-      if (!ok) throw new Error("Session expired. Please reconnect your wallet.");
-      res = await doFetch();
-    }
-
-    const data = await res.json();
-
-    if (res.status === 402 || data.error === "insufficient_allowance") {
-      throw new BundleExhaustedError();
-    }
-    if (!res.ok) {
-      throw new Error(data.error || "Payment failed");
-    }
-    return data;
-  };
-
   const sendMessage = async (text?: string) => {
     const msg = text || input.trim();
     if (!msg || loading || !wallet || !provider) return;
-
-    // Check if bundle needed
-    if (!bundle || bundle.remaining <= 0) {
-      setShowBundleModal(true);
-      return;
-    }
 
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
     setMessages(prev => [...prev, { role: "user", text: msg }]);
     setLoading(true);
-    setTxStep("Processing payment...");
 
     try {
-      const data = await requestChat(msg, provider);
+      setTxStep("Confirm $0.001 USDC payment in MetaMask...");
+
+      const chainId = await provider.request({ method: "eth_chainId" }) as string;
+      if (chainId !== ARC_CHAIN_ID) {
+        await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_CHAIN_ID }] });
+      }
+
+      // Direct USDC transfer: user wallet -> RECEIVER_ADDRESS, exactly 0.001 USDC.
+      const amountHex = PRICE_PER_QUERY.toString(16).padStart(64, "0");
+      const recipientHex = RECEIVER_ADDRESS.slice(2).padStart(64, "0");
+      const transferData = TRANSFER_ABI + recipientHex + amountHex;
+
+      const txHash = await provider.request({
+        method: "eth_sendTransaction",
+        params: [{ from: wallet, to: USDC_CONTRACT, data: transferData, gas: "0x186A0" }],
+      }) as string;
+
+      setTxStep("Confirming transaction...");
+      const mined = await waitForReceipt(provider, txHash);
+      if (!mined) throw new Error("Transaction did not confirm in time. Please try again.");
+
       setTxStep("Generating response...");
 
-      setMessages(prev => [...prev, { role: "assistant", text: data.reply || "Could not generate a response.", txHash: data.txHash }]);
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: msg,
+          history: messages.slice(-8).map(m => ({ role: m.role, content: m.text })),
+          txHash,
+          walletAddress: wallet,
+        }),
+      });
 
-      // Decrement bundle (server independently verifies real allowance on every call)
-      setBundle(prev => prev ? { ...prev, remaining: prev.remaining - 1 } : null);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Payment verification failed");
+      }
+
+      setMessages(prev => [...prev, { role: "assistant", text: data.reply || "Could not generate a response.", txHash: data.txHash || txHash }]);
       await getBalance(wallet, provider);
 
     } catch (err: unknown) {
-      if (err instanceof BundleExhaustedError) {
-        setBundle(null);
-        try { localStorage.removeItem(BUNDLE_KEY); } catch { /* silent */ }
-        setShowBundleModal(true);
-        setMessages(prev => [...prev, { role: "assistant", text: "Your bundle is used up. Please select a new bundle to continue." }]);
+      const error = err as { code?: number; message?: string };
+      if (error?.code === 4001) {
+        setMessages(prev => [...prev, { role: "assistant", text: "Payment cancelled." }]);
       } else {
-        const error = err as { message?: string };
         setMessages(prev => [...prev, { role: "assistant", text: `Error: ${error?.message || "Something went wrong. Try again."}` }]);
       }
     } finally {
@@ -350,67 +234,6 @@ export default function Chat() {
 
       {/* Wallet Modal */}
       {showWalletModal && <WalletModal onConnect={handleWalletConnect} onClose={() => setShowWalletModal(false)} />}
-
-      {/* Bundle Modal */}
-      {showBundleModal && (
-        <div onClick={() => !approving && setShowBundleModal(false)} style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#020e06", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 20, padding: "24px 20px", width: "100%", maxWidth: 380, position: "relative", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}>
-            <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1, background: "linear-gradient(90deg,transparent,rgba(52,211,153,0.4),transparent)" }} />
-
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 6 }}>Buy a Query Bundle</div>
-              <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.6 }}>
-                Sign once, ask multiple questions without any wallet popups. Your USDC is deducted automatically per query.
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
-              {BUNDLES.map((b, i) => (
-                <button
-                  key={i}
-                  onClick={() => approveBundle(i)}
-                  disabled={approving}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "14px 16px", borderRadius: 12,
-                    border: "1px solid rgba(52,211,153,0.15)",
-                    background: "rgba(16,185,129,0.05)",
-                    cursor: approving ? "not-allowed" : "pointer",
-                    opacity: approving ? 0.5 : 1,
-                  }}
-                >
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{b.label}</div>
-                    <div style={{ fontSize: 10, color: "#475569", marginTop: 2, fontFamily: "monospace" }}>{b.price} total · $0.001 per query</div>
-                  </div>
-                  <div style={{ fontSize: 10, color: "#34d399", fontWeight: 700, fontFamily: "monospace" }}>
-                    {approving ? "..." : "APPROVE →"}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {txStep && (
-              <div style={{ fontSize: 10, color: "#f59e0b", fontFamily: "monospace", textAlign: "center", marginBottom: 8 }}>
-                {txStep}
-              </div>
-            )}
-
-            <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.08)" }}>
-              <div style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", marginBottom: 4 }}>HOW IT WORKS</div>
-              <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
-                You approve once → we deduct $0.001 USDC per query automatically → no more wallet popups until bundle runs out.
-              </div>
-            </div>
-
-            {!approving && (
-              <button onClick={() => setShowBundleModal(false)} style={{ width: "100%", marginTop: 12, padding: "8px", background: "none", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, color: "#334155", fontSize: 10, cursor: "pointer", fontFamily: "monospace" }}>
-                CANCEL
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* BG */}
       <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.35 }} />
@@ -430,18 +253,6 @@ export default function Chat() {
         </Link>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          {/* Bundle indicator */}
-          {bundle && bundle.remaining > 0 && (
-            <button
-              onClick={() => setShowBundleModal(true)}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 7, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.06)", cursor: "pointer" }}
-            >
-              <span style={{ fontSize: 8, color: "#34d399", fontFamily: "monospace", fontWeight: 700 }}>
-                {bundle.remaining}/{bundle.total} QUERIES
-              </span>
-            </button>
-          )}
-
           {/* Network selector */}
           <div ref={netMenuRef} style={{ position: "relative" }}>
             <button onClick={() => setShowNetMenu(v => !v)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(52,211,153,0.18)", background: "rgba(1,8,3,0.8)", color: "#34d399", fontSize: 9, fontWeight: 700, fontFamily: "monospace", cursor: "pointer", letterSpacing: "0.08em" }}>
@@ -455,10 +266,6 @@ export default function Chat() {
               <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: "rgba(2,10,5,0.98)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 10, overflow: "hidden", minWidth: 130, zIndex: 100, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>
                 <button onClick={() => setShowNetMenu(false)} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", background: "rgba(16,185,129,0.08)", border: "none", color: "#34d399", fontSize: 10, fontWeight: 700, fontFamily: "monospace", cursor: "pointer", textAlign: "left" }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399" }} />MAINNET<span style={{ marginLeft: "auto", fontSize: 8 }}>✓</span>
-                </button>
-                <div style={{ height: 1, background: "rgba(16,185,129,0.06)" }} />
-                <button onClick={() => { alert("Mainnet coming soon."); setShowNetMenu(false); }} style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "10px 14px", background: "transparent", border: "none", color: "#475569", fontSize: 10, fontWeight: 700, fontFamily: "monospace", cursor: "not-allowed", textAlign: "left" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#475569" }} />MAINNET<span style={{ marginLeft: "auto", fontSize: 7, background: "rgba(71,85,105,0.15)", padding: "1px 5px", borderRadius: 3 }}>SOON</span>
                 </button>
               </div>
             )}
@@ -489,26 +296,10 @@ export default function Chat() {
               <div style={{ width: 52, height: 52, borderRadius: 18, background: "linear-gradient(135deg,#34d399,#10b981)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 20, color: "#000", boxShadow: "0 0 28px rgba(16,185,129,0.3)", marginBottom: 20 }}>M</div>
               <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.5rem)", fontWeight: 900, color: "#fff", margin: "0 0 8px", letterSpacing: "-0.01em" }}>Arc & Circle Intelligence Hub</h2>
               <p style={{ fontSize: 12, color: "#475569", maxWidth: 320, lineHeight: 1.65, margin: "0 0 8px" }}>
-                Pay <span style={{ color: "#34d399", fontWeight: 700 }}>0.001 USDC</span> per question. Sign once, ask many.
+                Pay <span style={{ color: "#34d399", fontWeight: 700 }}>0.001 USDC</span> per question, sent directly from your wallet.
               </p>
 
-              {/* Bundle status */}
-              {bundle && bundle.remaining > 0 ? (
-                <div style={{ marginBottom: 20, padding: "8px 16px", borderRadius: 10, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.06)" }}>
-                  <span style={{ fontSize: 11, color: "#34d399", fontFamily: "monospace" }}>
-                    {bundle.remaining} queries remaining · no wallet popups
-                  </span>
-                </div>
-              ) : wallet ? (
-                <button
-                  onClick={() => setShowBundleModal(true)}
-                  style={{ marginBottom: 20, padding: "8px 18px", borderRadius: 10, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.06)", color: "#34d399", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "monospace" }}
-                >
-                  BUY QUERY BUNDLE →
-                </button>
-              ) : null}
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, width: "100%", maxWidth: 480 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10, width: "100%", maxWidth: 480, marginTop: 8 }}>
                 {SUGGESTIONS.map((s, i) => (
                   <button key={i} onClick={() => wallet ? sendMessage(s.title) : setShowWalletModal(true)}
                     style={{ padding: "14px", borderRadius: 12, border: "1px solid rgba(16,185,129,0.1)", background: "rgba(3,17,10,0.25)", cursor: "pointer", textAlign: "left" }}>
@@ -582,16 +373,16 @@ export default function Chat() {
           <div style={{ display: "flex", alignItems: "flex-end", gap: 10, background: "rgba(3,19,11,0.6)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 16, padding: "10px 12px" }}>
             <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              placeholder={!wallet ? "Connect wallet to start" : !bundle || bundle.remaining <= 0 ? "Buy a bundle to ask questions..." : "Ask anything about Arc or Circle..."}
+              placeholder={!wallet ? "Connect wallet to start" : "Ask anything about Arc or Circle..."}
               disabled={!wallet || loading} rows={1}
               style={{ flex: 1, background: "transparent", border: "none", outline: "none", resize: "none", fontSize: 13, color: "#fff", fontFamily: "inherit", lineHeight: 1.6, maxHeight: 100, scrollbarWidth: "none" }}
               onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 100) + "px"; }}
             />
             <button
               onClick={() => wallet ? sendMessage() : setShowWalletModal(true)}
-              disabled={loading || (!!wallet && (!bundle || bundle.remaining <= 0))}
-              style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: (wallet && bundle && bundle.remaining > 0 && input.trim()) ? "linear-gradient(135deg,#10b981,#059669)" : "rgba(16,185,129,0.06)", boxShadow: (wallet && bundle && bundle.remaining > 0 && input.trim()) ? "0 0 10px rgba(16,185,129,0.3)" : "none" }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(wallet && bundle && bundle.remaining > 0 && input.trim()) ? "#000" : "#334155"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              disabled={loading || !wallet}
+              style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 10, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: (wallet && input.trim()) ? "linear-gradient(135deg,#10b981,#059669)" : "rgba(16,185,129,0.06)", boxShadow: (wallet && input.trim()) ? "0 0 10px rgba(16,185,129,0.3)" : "none" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(wallet && input.trim()) ? "#000" : "#334155"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
             </button>
@@ -599,9 +390,7 @@ export default function Chat() {
           <div style={{ textAlign: "center", marginTop: 6, fontSize: 8, fontFamily: "monospace", color: "#1e3a29", letterSpacing: "0.15em" }}>
             {txStep
               ? <span style={{ color: "#f59e0b", animation: "pulse 1.5s infinite" }}>{txStep.toUpperCase()}</span>
-              : bundle && bundle.remaining > 0
-              ? <span style={{ color: "#34d399" }}>{bundle.remaining} QUERIES REMAINING · NO WALLET POPUP</span>
-              : "ARC MAINNET · 0.001 USDC PER QUERY · BUY BUNDLE TO START"
+              : "ARC MAINNET · $0.001 USDC PER QUERY · CONFIRM IN WALLET"
             }
           </div>
         </div>

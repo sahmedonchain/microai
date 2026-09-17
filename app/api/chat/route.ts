@@ -1,32 +1,27 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import Groq from "groq-sdk";
 import { ethers } from "ethers";
 import { searchKnowledge } from "@/lib/search";
-import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { claimTxHash } from "@/lib/usedTx";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const ARC_RPC = "https://rpc.mainnet.arc.io";
-const ARC_CHAIN_ID = 5042;
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const RECEIVER = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
 
 // Fixed price, 6-decimal USDC units — never accepted from the client.
 const PRICE_PER_QUERY = BigInt(1000); // 0.001 USDC
 
-class InsufficientAllowanceError extends Error {}
+const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
+// keccak256("Transfer(address,address,uint256)")
+const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const MAX_TX_AGE_MS = 5 * 60 * 1000;
 
-function encodeAddressParam(address: string): string {
-  if (!ethers.isAddress(address)) throw new Error("Invalid address");
-  return address.slice(2).toLowerCase().padStart(64, "0");
-}
+class PaymentVerificationError extends Error {}
 
-function encodeUint256Param(value: bigint): string {
-  if (value < BigInt(0)) throw new Error("Invalid amount");
-  const hex = value.toString(16);
-  if (hex.length > 64) throw new Error("Amount out of range");
-  return hex.padStart(64, "0");
+function topicToAddress(topic: string): string {
+  return "0x" + topic.slice(-40);
 }
 
 async function rpcCall(method: string, params: unknown[]) {
@@ -41,54 +36,54 @@ async function rpcCall(method: string, params: unknown[]) {
   return data.result;
 }
 
-async function chargeQuery(userAddress: string): Promise<string> {
-  if (!ethers.isAddress(userAddress)) {
-    throw new Error("Invalid address");
+// Verifies txHash is a real, recent, exact 0.001 USDC transfer from
+// walletAddress to RECEIVER, then atomically marks it spent. Validation
+// happens fully before the claim so a transient RPC hiccup never burns a
+// legitimate payment; the claim itself is what blocks replay.
+async function verifyPayment(txHash: string, walletAddress: string): Promise<void> {
+  const receipt = await rpcCall("eth_getTransactionReceipt", [txHash]);
+  if (!receipt) {
+    throw new PaymentVerificationError("Transaction not found on Arc MAINNET.");
+  }
+  if (receipt.status !== "0x1") {
+    throw new PaymentVerificationError("Transaction did not succeed.");
   }
 
-  const privateKey = process.env.OPERATOR_PRIVATE_KEY;
-  if (!privateKey) throw new Error("Operator not configured");
-
-  const network = new ethers.Network("arc-mainnet", ARC_CHAIN_ID);
-  const provider = new ethers.JsonRpcProvider(ARC_RPC, network, { staticNetwork: network });
-  const operatorKey = privateKey.startsWith("0x") ? privateKey : `0x${privateKey}`;
-  const operator = new ethers.Wallet(operatorKey, provider);
-
-  // Check allowance via raw RPC (no ethers provider call)
-  const allowanceData = "0xdd62ed3e" + encodeAddressParam(userAddress) + encodeAddressParam(operator.address);
-  const allowanceHex = await rpcCall("eth_call", [{ to: USDC_CONTRACT, data: allowanceData }, "latest"]);
-  const allowance = BigInt(allowanceHex || "0x0");
-
-  if (allowance < PRICE_PER_QUERY) {
-    throw new InsufficientAllowanceError("Insufficient allowance");
+  const logs = (receipt.logs || []) as { address?: string; topics?: string[]; data?: string }[];
+  const transferLog = logs.find(
+    (log) =>
+      log.address?.toLowerCase() === USDC_CONTRACT.toLowerCase() &&
+      log.topics?.[0]?.toLowerCase() === TRANSFER_TOPIC &&
+      log.topics?.length === 3
+  );
+  if (!transferLog || !transferLog.topics || !transferLog.data) {
+    throw new PaymentVerificationError("No USDC transfer found in transaction.");
   }
 
-  // Build transferFrom calldata — amount is always the fixed constant above.
-  const transferData =
-    "0x23b872dd" +
-    encodeAddressParam(userAddress) +
-    encodeAddressParam(RECEIVER) +
-    encodeUint256Param(PRICE_PER_QUERY);
+  const from = topicToAddress(transferLog.topics[1]);
+  const to = topicToAddress(transferLog.topics[2]);
+  const value = BigInt(transferLog.data);
 
-  const nonceHex = await rpcCall("eth_getTransactionCount", [operator.address, "latest"]);
-  const nonce = parseInt(nonceHex, 16);
+  if (to.toLowerCase() !== RECEIVER.toLowerCase()) {
+    throw new PaymentVerificationError("Transfer recipient does not match.");
+  }
+  if (value !== PRICE_PER_QUERY) {
+    throw new PaymentVerificationError("Transfer amount does not match.");
+  }
+  if (from.toLowerCase() !== walletAddress.toLowerCase()) {
+    throw new PaymentVerificationError("Transfer sender does not match connected wallet.");
+  }
 
-  const gasPriceHex = await rpcCall("eth_gasPrice", []);
-  const gasPrice = BigInt(gasPriceHex);
+  const block = await rpcCall("eth_getBlockByNumber", [receipt.blockNumber, false]);
+  const blockTimeMs = parseInt(block.timestamp, 16) * 1000;
+  if (Date.now() - blockTimeMs > MAX_TX_AGE_MS) {
+    throw new PaymentVerificationError("Transaction is too old.");
+  }
 
-  const tx = {
-    type: 0,
-    to: USDC_CONTRACT,
-    data: transferData,
-    nonce,
-    gasPrice,
-    gasLimit: BigInt(150000),
-    chainId: ARC_CHAIN_ID,
-    value: BigInt(0),
-  };
-
-  const signedTx = await operator.signTransaction(tx);
-  return rpcCall("eth_sendRawTransaction", [signedTx]);
+  const claimed = await claimTxHash(txHash);
+  if (!claimed) {
+    throw new PaymentVerificationError("Transaction has already been used.");
+  }
 }
 
 const SYSTEM_PROMPT = `
@@ -166,35 +161,29 @@ function safeSearch(query: string, data: KnowledgeItem[]) {
 
 export async function POST(req: Request) {
   try {
-    const store = await cookies();
-    const token = store.get(SESSION_COOKIE)?.value;
-    const session = token ? verifySessionToken(token) : null;
+    const { message, history = [], txHash, walletAddress } = await req.json();
 
-    if (!session) {
-      return NextResponse.json({ error: "session_required" }, { status: 401 });
-    }
-
-    const userAddress = session.sub;
-
-    const { message, history = [] } = await req.json();
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
-
-    let txHash: string;
-    try {
-      txHash = await chargeQuery(userAddress);
-    } catch (err) {
-      if (err instanceof InsufficientAllowanceError) {
-        return NextResponse.json({ error: "insufficient_allowance" }, { status: 402 });
-      }
-      const error = err as { message?: string };
-      console.error("Charge error:", error?.message);
-      return NextResponse.json({ error: "payment_failed" }, { status: 500 });
+    if (typeof txHash !== "string" || !TX_HASH_RE.test(txHash)) {
+      return NextResponse.json({ error: "Invalid or missing transaction hash." }, { status: 401 });
+    }
+    if (typeof walletAddress !== "string" || !ethers.isAddress(walletAddress)) {
+      return NextResponse.json({ error: "Invalid or missing wallet address." }, { status: 401 });
     }
 
-    // The charge already succeeded at this point — from here on we always
-    // return txHash so the user keeps proof of payment even if the AI call fails.
+    try {
+      await verifyPayment(txHash, walletAddress);
+    } catch (err) {
+      const message = err instanceof PaymentVerificationError ? err.message : "Payment verification failed.";
+      console.error("Payment verification error:", err);
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
+
+    // The payment is verified and claimed at this point — from here on we
+    // always return txHash so the user keeps proof of payment even if the
+    // AI call fails.
     try {
       // STEP 1: SEARCH KNOWLEDGE BASE
       const matched = searchKnowledge(message);
@@ -239,7 +228,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ reply, txHash });
     } catch (err) {
-      console.error("AI generation error (payment already charged):", err);
+      console.error("AI generation error (payment already verified):", err);
       return NextResponse.json({
         reply: "Payment succeeded, but the response could not be generated. Please contact support with your transaction hash.",
         txHash,
