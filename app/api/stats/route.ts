@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const RECEIVER = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
+const RECEIVER = "0x78C144A76614A8674285129810555C8bCa78f044";
 
 export async function GET() {
   try {

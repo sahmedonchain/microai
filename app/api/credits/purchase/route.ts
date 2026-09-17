@@ -7,7 +7,7 @@ import { isValidQueryCount, computeBundleAmount } from "@/lib/pricing";
 
 const ARC_RPC = "https://rpc.mainnet.arc.io";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const RECEIVER = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
+const RECEIVER = "0x78C144A76614A8674285129810555C8bCa78f044";
 
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 // keccak256("Transfer(address,address,uint256)")

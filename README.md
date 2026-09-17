@@ -74,7 +74,7 @@ Every AI query costs **$0.001 USDC**, settled directly on-chain. No subscription
 | Explorer | https://explorer.arc.io |
 | USDC Contract | `0x3600000000000000000000000000000000000000` |
 | EURC Contract | `0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1` |
-| Payment Receiver | `0x9a318CD2BC533B5B2e96F7f5b499738732492b15` |
+| Payment Receiver | `0x78C144A76614A8674285129810555C8bCa78f044` |
 | ERC-8004 Agent ID | 69168 |
 | ERC-8183 Job ID | 110278 |
 
@@ -158,6 +158,6 @@ Built for the **Arc Office Hours** submission and the **Stablecoin Commerce Stac
 
 - **Live App:** https://microai-tan.vercel.app
 - **GitHub:** https://github.com/sahmedonchain/microai
-- **Arc Explorer (receiver wallet):** https://explorer.arc.io/address/0x9a318CD2BC533B5B2e96F7f5b499738732492b15
+- **Arc Explorer (receiver wallet):** https://explorer.arc.io/address/0x78C144A76614A8674285129810555C8bCa78f044
 - **Arc MAINNET Explorer:** https://explorer.arc.io
 - **Circle Faucet:** https://faucet.circle.com

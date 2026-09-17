@@ -6,7 +6,7 @@ import { Navbar } from "@/app/components/Navbar";
 const ARC_RPC = "https://rpc.mainnet.arc.io";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const EURC_CONTRACT = "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1";
-const RECEIVER_WALLET = "0x9a318CD2BC533B5B2e96F7f5b499738732492b15";
+const RECEIVER_WALLET = "0x78C144A76614A8674285129810555C8bCa78f044";
 const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
 
 interface NetworkStats {
