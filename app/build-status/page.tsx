@@ -17,20 +17,41 @@ interface RepoStatus {
 }
 
 const REPOS: Omit<RepoStatus, "pushedAt" | "stars" | "status" | "daysAgo">[] = [
-  { name: "MicroAI", org: "Community", repo: "sahmedonchain/microai", url: "https://github.com/sahmedonchain/microai", projectUrl: "https://microai-tan.vercel.app", category: "COMMUNITY BUILDS" },
+  // Official Circle/Arc reference repos — verified live under github.com/circlefin
+  { name: "Arc Multichain Wallet", org: "Circle", repo: "circlefin/arc-multichain-wallet", url: "https://github.com/circlefin/arc-multichain-wallet", projectUrl: "https://docs.arc.io", category: "OFFICIAL ARC/CIRCLE" },
+  { name: "Arc P2P Payments", org: "Circle", repo: "circlefin/arc-p2p-payments", url: "https://github.com/circlefin/arc-p2p-payments", projectUrl: "https://docs.arc.io", category: "OFFICIAL ARC/CIRCLE" },
+  { name: "Arc Commerce", org: "Circle", repo: "circlefin/arc-commerce", url: "https://github.com/circlefin/arc-commerce", projectUrl: "https://docs.arc.io", category: "OFFICIAL ARC/CIRCLE" },
+  { name: "Arc Fintech", org: "Circle", repo: "circlefin/arc-fintech", url: "https://github.com/circlefin/arc-fintech", projectUrl: "https://docs.arc.io", category: "OFFICIAL ARC/CIRCLE" },
+  { name: "Arc Nanopayments", org: "Circle", repo: "circlefin/arc-nanopayments", url: "https://github.com/circlefin/arc-nanopayments", projectUrl: "https://docs.arc.io", category: "OFFICIAL ARC/CIRCLE" },
+  { name: "Arc Escrow", org: "Circle", repo: "circlefin/arc-escrow", url: "https://github.com/circlefin/arc-escrow", projectUrl: "https://docs.arc.io", category: "OFFICIAL ARC/CIRCLE" },
+  { name: "Arc Prediction Markets", org: "Circle", repo: "circlefin/arc-prediction-markets", url: "https://github.com/circlefin/arc-prediction-markets", projectUrl: "https://docs.arc.io", category: "OFFICIAL ARC/CIRCLE" },
+
+  // Established DeFi protocols with confirmed Arc-relevant deployments
   { name: "Uniswap v3", org: "Uniswap Labs", repo: "Uniswap/v3-core", url: "https://github.com/Uniswap/v3-core", projectUrl: "https://uniswap.org", category: "DEX & LIQUIDITY" },
-  { name: "Aave v3", org: "Aave", repo: "aave/aave-v3-core", url: "https://github.com/aave/aave-v3-core", projectUrl: "https://aave.com", category: "LENDING" },
+  { name: "Aave v3", org: "Aave", repo: "aave/aave-v3-origin", url: "https://github.com/aave/aave-v3-origin", projectUrl: "https://aave.com", category: "LENDING" },
   { name: "Curve Finance", org: "Curve", repo: "curvefi/curve-contract", url: "https://github.com/curvefi/curve-contract", projectUrl: "https://curve.fi", category: "DEX & LIQUIDITY" },
   { name: "Morpho Blue", org: "Morpho", repo: "morpho-org/morpho-blue", url: "https://github.com/morpho-org/morpho-blue", projectUrl: "https://morpho.org", category: "LENDING" },
+  { name: "Maple Finance", org: "Maple", repo: "maple-labs/maple-core-v2", url: "https://github.com/maple-labs/maple-core-v2", projectUrl: "https://maple.finance", category: "LENDING" },
+  { name: "Aerodrome", org: "Aerodrome", repo: "aerodrome-finance/contracts", url: "https://github.com/aerodrome-finance/contracts", projectUrl: "https://aerodrome.finance", category: "DEX & LIQUIDITY" },
+  { name: "Fluid", org: "Instadapp", repo: "Instadapp/fluid-contracts-public", url: "https://github.com/Instadapp/fluid-contracts-public", projectUrl: "https://fluid.instadapp.io", category: "DEX & LIQUIDITY" },
+
+  // Bridges
   { name: "Wormhole", org: "Wormhole Foundation", repo: "wormhole-foundation/wormhole", url: "https://github.com/wormhole-foundation/wormhole", projectUrl: "https://wormhole.com", category: "BRIDGES" },
-  { name: "LayerZero", org: "LayerZero Labs", repo: "LayerZero-Labs/LayerZero", url: "https://github.com/LayerZero-Labs/LayerZero", projectUrl: "https://layerzero.network", category: "BRIDGES" },
+  { name: "LayerZero", org: "LayerZero Labs", repo: "LayerZero-Labs/LayerZero-v2", url: "https://github.com/LayerZero-Labs/LayerZero-v2", projectUrl: "https://layerzero.network", category: "BRIDGES" },
   { name: "Across Protocol", org: "Across", repo: "across-protocol/contracts", url: "https://github.com/across-protocol/contracts", projectUrl: "https://across.to", category: "BRIDGES" },
+
+  // Infrastructure & dev tools
   { name: "Chainlink", org: "Chainlink", repo: "smartcontractkit/chainlink", url: "https://github.com/smartcontractkit/chainlink", projectUrl: "https://chain.link", category: "DEV TOOLS" },
   { name: "thirdweb", org: "thirdweb", repo: "thirdweb-dev/js", url: "https://github.com/thirdweb-dev/js", projectUrl: "https://thirdweb.com", category: "DEV TOOLS" },
   { name: "Pimlico", org: "Pimlico", repo: "pimlicolabs/permissionless.js", url: "https://github.com/pimlicolabs/permissionless.js", projectUrl: "https://pimlico.io", category: "DEV TOOLS" },
-  { name: "Maple Finance", org: "Maple", repo: "maple-labs/maple-core-v2", url: "https://github.com/maple-labs/maple-core-v2", projectUrl: "https://maple.finance", category: "LENDING" },
-  { name: "Aerodrome", org: "Aerodrome", repo: "aerodrome-finance/contracts", url: "https://github.com/aerodrome-finance/contracts", projectUrl: "https://aerodrome.finance", category: "DEX & LIQUIDITY" },
-  { name: "Fluid", org: "Fluid", repo: "fluid-contracts/public", url: "https://github.com/Instadapp/fluid", projectUrl: "https://fluid.cx", category: "DEX & LIQUIDITY" },
+  { name: "Blockscout", org: "Blockscout", repo: "blockscout/blockscout", url: "https://github.com/blockscout/blockscout", projectUrl: "https://www.blockscout.com", category: "DEV TOOLS" },
+  { name: "Malachite", org: "Informal Systems", repo: "informalsystems/malachite", url: "https://github.com/informalsystems/malachite", projectUrl: "https://informal.systems", category: "INFRASTRUCTURE" },
+
+  // Wallets
+  { name: "Rainbow Wallet", org: "Rainbow", repo: "rainbow-me/rainbow", url: "https://github.com/rainbow-me/rainbow", projectUrl: "https://rainbow.me", category: "WALLETS" },
+
+  // Community builds
+  { name: "MicroAI", org: "Community", repo: "sahmedonchain/microai", url: "https://github.com/sahmedonchain/microai", projectUrl: "https://microai-tan.vercel.app", category: "COMMUNITY BUILDS" },
 ];
 
 function getDaysAgo(dateStr: string): number {
@@ -55,11 +76,14 @@ const STATUS_CONFIG = {
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
+  "OFFICIAL ARC/CIRCLE": "#2563eb",
   "COMMUNITY BUILDS": "#34d399",
   "DEX & LIQUIDITY":  "#ec4899",
   "LENDING":          "#b6509e",
   "BRIDGES":          "#9333ea",
   "DEV TOOLS":        "#3b82f6",
+  "INFRASTRUCTURE":   "#64748b",
+  "WALLETS":          "#6366f1",
 };
 
 export default function BuildStatusPage() {
