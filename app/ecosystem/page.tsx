@@ -1,6 +1,6 @@
 "use client";
 import { Navbar } from "@/app/components/Navbar";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
 type Project = {
@@ -772,6 +772,18 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default function EcosystemPage() {
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [tvlByProject, setTvlByProject] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/ecosystem-tvl")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data?.tvl) setTvlByProject(data.tvl);
+      })
+      .catch(() => { /* enrichment is optional — cards render fine without it */ });
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = projects.filter((p) => {
     const matchCat = filter === "ALL" || p.category === filter;
@@ -872,7 +884,7 @@ export default function EcosystemPage() {
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
             {featured.map((p) => (
-              <ProjectCard key={p.name} project={p} highlight />
+              <ProjectCard key={p.name} project={p} highlight tvl={tvlByProject[p.name]} />
             ))}
           </div>
         </section>
@@ -887,7 +899,7 @@ export default function EcosystemPage() {
         )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
           {rest.map((p) => (
-            <ProjectCard key={p.name} project={p} />
+            <ProjectCard key={p.name} project={p} tvl={tvlByProject[p.name]} />
           ))}
         </div>
         {filtered.length === 0 && (
@@ -942,7 +954,14 @@ export default function EcosystemPage() {
   );
 }
 
-function ProjectCard({ project: p, highlight }: { project: Project; highlight?: boolean }) {
+function formatTvl(usd: number): string {
+  if (usd >= 1_000_000_000) return `$${(usd / 1_000_000_000).toFixed(2)}B`;
+  if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(1)}M`;
+  if (usd >= 1_000) return `$${(usd / 1_000).toFixed(1)}K`;
+  return `$${usd.toFixed(0)}`;
+}
+
+function ProjectCard({ project: p, highlight, tvl }: { project: Project; highlight?: boolean; tvl?: number }) {
   const catColor = CATEGORY_COLORS[p.category] ?? "#34d399";
   return (
     <div style={{
@@ -976,6 +995,11 @@ function ProjectCard({ project: p, highlight }: { project: Project; highlight?: 
           <span key={t} style={{ fontSize: 9, color: "#475569", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4, fontFamily: "monospace" }}>{t}</span>
         ))}
       </div>
+      {typeof tvl === "number" && (
+        <div style={{ fontSize: 9, color: "#34d399", fontFamily: "monospace", letterSpacing: "0.04em", opacity: 0.85 }}>
+          TVL: {formatTvl(tvl)} on Arc <span style={{ color: "#334155" }}>· DeFiLlama</span>
+        </div>
+      )}
       <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: catColor, fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.08em", textDecoration: "none" }}>
         VISIT →
       </a>
