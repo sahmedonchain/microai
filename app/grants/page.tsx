@@ -4,167 +4,221 @@ import React, { useState } from "react";
 import Link from "next/link";
 
 const grants = [
-  // ===== GRANTS =====
+  // ===== LIVE / OPEN =====
   {
     id: 1,
     type: "GRANT",
     status: "OPEN",
+    org: "DoraHacks x Arc",
+    title: "Arc Microgrants",
+    desc: "20 microgrants of $500 USDC each, from a $10,000 pool, for projects already deployed and working on Arc MAINNET — PoC, small apps, demos, hackathon continuations. No company or traction required. Pseudonymous submission allowed.",
+    reward: "$500 USDC each",
+    deadline: "Oct 14, 2026, 23:59 ET",
+    tags: ["Microgrant", "USDC", "Arc MAINNET", "Rolling Review"],
+    url: "https://dorahacks.io/hackathon/arc-microgrants",
+    logo: "MG",
+    logoColor: "#34d399",
+  },
+  {
+    id: 2,
+    type: "GRANT",
+    status: "OPEN — ROLLING",
     org: "Circle",
-    title: "Circle Developer Grant Program",
-    desc: "Milestone-based funding for teams building production-grade apps on Arc & Circle platform. Focus areas: payments, treasury, FX, agentic economy.",
-    reward: "$5K – $100K USDC",
+    title: "Circle Developer Grants (2026 Cohort 2)",
+    desc: "Milestone-based USDC funding, mentorship, and co-marketing for production-grade apps on Arc and the Circle Developer Platform. Focus areas: onchain lending, capital markets, FX, agentic commerce, payments, treasury management, prediction markets. ~$204K available this cohort. Traction, pilot, or revenue proof prioritized.",
+    reward: "~$204K pool",
     deadline: "Rolling",
-    tags: ["USDC", "Arc", "Payments", "AI Agents"],
-    url: "https://www.circle.com/grant",
+    tags: ["USDC", "Arc", "Payments", "AI Agents", "Treasury"],
+    url: "https://circle.com/grant",
     logo: "C",
     logoColor: "#2563eb",
   },
-  // ===== BOUNTY =====
-  {
-    id: 2,
-    type: "BOUNTY",
-    status: "OPEN",
-    org: "Arc",
-    title: "Arc Bug Bounty Program",
-    desc: "HackerOne-hosted security bounty for Arc MAINNET. Submit reproducible findings on network safety, liveness, or correctness. Test locally only.",
-    reward: "Varies",
-    deadline: "Ongoing",
-    tags: ["Security", "HackerOne", "MAINNET"],
-    url: "https://www.arc.io/blog/open-sourcing-arc-run-your-own-arc-node-and-bug-bounty-program",
-    logo: "A",
-    logoColor: "#10b981",
-  },
-  // ===== LIVE NOW =====
   {
     id: 3,
     type: "HACKATHON",
     status: "LIVE NOW",
-    org: "Arc x Circle",
-    title: "Hackathon: Programmable Money",
-    desc: "Build real products on Arc in 4 weeks. Top teams win places in an 8-week accelerator programme with weekly workshops, 1-1 mentorship, and a direct path to launch. Use Circle's full dev stack — Wallets, CCTP, Gateway, Paymaster, Nanopayments.",
-    reward: "8-Week Accelerator",
-    deadline: "Jul 13 – Aug 22, 2026",
-    tags: ["Accelerator", "USDC", "Arc", "Online", "Circle Stack"],
-    url: "https://community.arc.io/public/events/hackathon-programmable-money-74llz8htis",
-    logo: "PM",
-    logoColor: "#10b981",
+    org: "Canteen x Circle x Arc",
+    title: "Tameion Agents Hackathon",
+    desc: "Builder series for AI agents that hold, allocate, and disburse a business's money — treasury, invoices, contractors, autonomous operations, audit trail. Settled on Arc in USDC.",
+    reward: "~$40,000 pool",
+    deadline: "Sep 27 – Oct 10, 2026",
+    tags: ["AI Agents", "Treasury", "USDC", "Canteen"],
+    url: "https://tameion.thecanteenapp.com/",
+    logo: "TM",
+    logoColor: "#a78bfa",
   },
   {
     id: 4,
-    type: "HACKATHON",
-    status: "LIVE NOW",
-    org: "Arc x Circle",
-    title: "Stablecoins Commerce Stack Challenge",
-    desc: "The official Arc + Circle hackathon. Build on the stablecoin commerce stack — payments, treasury, agentic economy, FX. Online + in-person. Running Apr 14 – Jul 13.",
-    reward: "TBA",
-    deadline: "Apr 14 – Jul 13, 2026",
-    tags: ["USDC", "Commerce", "Arc", "Circle", "Agentic"],
-    url: "https://community.arc.io/public/events/hackathon-the-stablecoins-commerce-stack-challenge-ozc0ih6kba",
-    logo: "S",
-    logoColor: "#34d399",
+    type: "ACCELERATOR",
+    status: "IN PROGRESS",
+    org: "Circle x Arc x Crecimiento",
+    title: "Arc Acceleration Season",
+    desc: "6-week accelerator: onboard, build on testnet, ship on mainnet, Demo Day. Primarily for LatAm fintech and AI startups with existing traction, with direct support from the Circle/Arc team. Applications closed Sep 22 — program is actively running.",
+    reward: "Accelerator + Mentorship",
+    deadline: "Sep 22 – Oct 24, 2026",
+    tags: ["Accelerator", "LatAm", "Fintech", "AI"],
+    url: "https://crecimiento.build",
+    logo: "AS",
+    logoColor: "#f59e0b",
   },
-  // ===== UPCOMING =====
   {
     id: 5,
-    type: "HACKATHON",
-    status: "UPCOMING",
-    org: "ETHGlobal x Arc",
-    title: "ETHGlobal Cannes Hackathon",
-    desc: "Arc sponsoring $15,000 in bounties for builders powering the next era of onchain lending, capital markets, FX, and payments. In-person ETHGlobal hackathon in Cannes.",
-    reward: "$15,000 USDC",
-    deadline: "Jul 2026",
-    tags: ["ETHGlobal", "Cannes", "Lending", "FX", "Capital Markets"],
-    url: "https://community.arc.io/public/events/ethglobal-cannes-hackathon-aejsg2lm44",
-    logo: "E",
-    logoColor: "#8b5cf6",
+    type: "BOUNTY",
+    status: "OPEN — ONGOING",
+    org: "Arc",
+    title: "Arc Bug Bounty Program",
+    desc: "HackerOne-hosted, ongoing, no fixed deadline. Rewards: Extreme (unlimited mint, consensus failure) up to $1,000,000; Critical $20K–$200K; High $10K–$20K; Medium/Low lower tiers.",
+    reward: "Up to $1,000,000",
+    deadline: "Ongoing",
+    tags: ["Security", "HackerOne", "MAINNET"],
+    url: "https://hackerone.com/arc-bbp",
+    logo: "A",
+    logoColor: "#10b981",
   },
   {
     id: 6,
+    type: "BOUNTY",
+    status: "OPEN — ROLLING",
+    org: "Circle",
+    title: "Circle Developer Bounties",
+    desc: "Specific integration challenges — USDC, CCTP, Paymaster, Wallets — for USDC rewards. $20,000 total pool, $1,500 per challenge, multiple winners possible. New bounties added on a rolling basis.",
+    reward: "$1,500 per challenge",
+    deadline: "Rolling",
+    tags: ["USDC", "CCTP", "Paymaster", "Wallets"],
+    url: "https://circle.com/grant",
+    logo: "CB",
+    logoColor: "#2563eb",
+  },
+  {
+    id: 7,
+    type: "PROGRAM",
+    status: "OPEN — ONGOING",
+    org: "Arc",
+    title: "Arc Architects Program",
+    desc: "Community contribution rewards for hackathons, meetups, content, and beta testing. Points-based system (not token/airdrop) granting ecosystem visibility and special access. Ongoing, rolling.",
+    reward: "Points + Access",
+    deadline: "Ongoing",
+    tags: ["Community", "Contribution", "Points"],
+    url: "https://community.arc.io",
+    logo: "AR",
+    logoColor: "#60a5fa",
+  },
+  // ===== UPCOMING =====
+  {
+    id: 8,
+    type: "EVENT",
+    status: "UPCOMING",
+    org: "Circle",
+    title: "Circle House @ TOKEN2049 Singapore",
+    desc: "In-person Circle House at TOKEN2049 Singapore.",
+    reward: "—",
+    deadline: "Oct 7–8, 2026",
+    tags: ["In-Person", "Singapore", "TOKEN2049"],
+    url: "https://community.arc.io/public/events",
+    logo: "T2",
+    logoColor: "#a5b4fc",
+  },
+  {
+    id: 9,
+    type: "EVENT",
+    status: "UPCOMING",
+    org: "Arc",
+    title: "Arc Community Co-working",
+    desc: "In-person Arc builder co-working session in London.",
+    reward: "Free",
+    deadline: "Oct 12, 2026",
+    tags: ["In-Person", "London", "Community"],
+    url: "https://community.arc.io/public/events",
+    logo: "AC",
+    logoColor: "#a5b4fc",
+  },
+  {
+    id: 10,
     type: "HACKATHON",
     status: "UPCOMING",
-    org: "ETHGlobal x Circle",
-    title: "ETHGlobal Lisbon 2026",
-    desc: "Next major ETHGlobal in-person hackathon. Circle & Arc expected to sponsor bounty tracks. Build on Arc MAINNET for prizes.",
+    org: "Encode",
+    title: "Encode London Hackathon & Conference",
+    desc: "Hackathon and conference in London.",
     reward: "TBA",
-    deadline: "Jul 24–26, 2026",
-    tags: ["ETHGlobal", "Lisbon", "Arc", "USDC"],
+    deadline: "Oct 23, 2026",
+    tags: ["Encode", "London", "Conference"],
+    url: "https://encode.club",
+    logo: "EN",
+    logoColor: "#a5b4fc",
+  },
+  {
+    id: 11,
+    type: "EVENT",
+    status: "UPCOMING",
+    org: "Arc",
+    title: "Arc Demos & Meetup",
+    desc: "In-person Arc builder demos and meetup in London.",
+    reward: "Free",
+    deadline: "Oct 26, 2026",
+    tags: ["In-Person", "London", "Demos"],
+    url: "https://community.arc.io/public/events",
+    logo: "AD",
+    logoColor: "#a5b4fc",
+  },
+  {
+    id: 12,
+    type: "EVENT",
+    status: "UPCOMING",
+    org: "Pragma",
+    title: "Pragma Mumbai",
+    desc: "In-person conference in Mumbai.",
+    reward: "—",
+    deadline: "Nov 5, 2026",
+    tags: ["Conference", "Mumbai"],
+    url: "https://community.arc.io/public/events",
+    logo: "PG",
+    logoColor: "#a5b4fc",
+  },
+  {
+    id: 13,
+    type: "HACKATHON",
+    status: "UPCOMING",
+    org: "ETHGlobal x Arc",
+    title: "ETHGlobal Mumbai",
+    desc: "In-person ETHGlobal hackathon in Mumbai. Arc typically sponsors a $10K–$15K USDC track.",
+    reward: "$10K–$15K USDC (typical)",
+    deadline: "Nov 6–8, 2026",
+    tags: ["ETHGlobal", "Mumbai", "USDC"],
+    url: "https://ethglobal.com/events",
+    logo: "E",
+    logoColor: "#8b5cf6",
+  },
+  // ===== ENDED =====
+  {
+    id: 14,
+    type: "HACKATHON",
+    status: "ENDED",
+    org: "ETHGlobal x Arc",
+    title: "ETHOnline 2026 — Arc Track",
+    desc: "$10K total: $5K for testnet submission, $5K for mainnet push.",
+    reward: "$10,000 USDC",
+    deadline: "Ended Sep 30, 2026",
+    tags: ["ETHGlobal", "Arc", "USDC"],
     url: "https://ethglobal.com/events",
     logo: "E",
     logoColor: "#8b5cf6",
   },
   {
-    id: 7,
-    type: "EVENT",
-    status: "UPCOMING",
-    org: "Arc",
-    title: "Buenos Aires Community Meetup",
-    desc: "In-person Arc builder meetup in Buenos Aires. Network with local builders, share projects, and explore Arc ecosystem opportunities in Latin America.",
-    reward: "Free",
-    deadline: "Aug 5, 2026",
-    tags: ["In-Person", "Argentina", "Community", "LATAM"],
-    url: "https://community.arc.io/public/events",
-    logo: "AR",
-    logoColor: "#f59e0b",
-  },
-  // ===== ENDED =====
-  {
-    id: 8,
-    type: "HACKATHON",
-    status: "ENDED",
-    org: "Canteen x Arc x Circle",
-    title: "Agora Hackathon — AI Agents on Arc",
-    desc: "Build AI agents that trade, invest, create, and interface with markets, settled on Arc using USDC. Winners: Mimir Markets (AI Oracle prediction market), Precall (USDC-bonded prediction calls, 68% win rate), Archimedes (quant finance + arXiv research system). All projects open source.",
-    reward: "TBA",
-    deadline: "Jul 2026",
-    tags: ["AI Agents", "Canteen", "USDC", "Open Source"],
-    url: "https://arc-showcase.thecanteenapp.com/",
-    logo: "AG",
-    logoColor: "#a78bfa",
-  },
-  {
-    id: 9,
-    type: "HACKATHON",
-    status: "ENDED",
-    org: "Canteen x Arc x Circle",
-    title: "Lepton Agents Hackathon",
-    desc: "Two-week builder series for AI agents that pay, receive, and orchestrate nanopayments — settled on Arc. $50K prize pool. Six published Requests for Builders (RFBs) with concrete buildable angles.",
-    reward: "$50,000",
-    deadline: "Jun 15–29, 2026",
-    tags: ["AI Agents", "Nanopayments", "Canteen", "USDC"],
-    url: "https://community.arc.io/public/events/hackathon-lepton-agents-ohhczsazvd",
-    logo: "L",
-    logoColor: "#a78bfa",
-  },
-  {
-    id: 10,
+    id: 15,
     type: "HACKATHON",
     status: "ENDED",
     org: "ETHGlobal x Arc x Circle",
-    title: "ETHGlobal New York 2026",
-    desc: "In-person ETHGlobal hackathon. Circle sponsored Arc-track bounties for stablecoin payments, wallets, and onchain financial apps.",
-    reward: "Arc Track Bounties",
-    deadline: "Jun 12–14, 2026",
-    tags: ["ETHGlobal", "Arc", "USDC", "In-Person", "New York"],
-    url: "https://community.arc.io/public/events/ethglobal-new-york-2026-2wbc20jux8",
+    title: "ETHGlobal Tokyo",
+    desc: "In-person ETHGlobal hackathon in Tokyo.",
+    reward: "TBA",
+    deadline: "Sep 25–27, 2026",
+    tags: ["ETHGlobal", "Tokyo"],
+    url: "https://ethglobal.com/events",
     logo: "E",
     logoColor: "#8b5cf6",
   },
   {
-    id: 11,
-    type: "HACKATHON",
-    status: "ENDED",
-    org: "Arc x Circle x lablab.ai",
-    title: "Agentic Economy on Arc Hackathon",
-    desc: "Hybrid hackathon using Circle Nanopayments + Arc for sub-cent agentic transactions. $10,000 prize pool. Online + SF on-site finale.",
-    reward: "$10,000 USDC",
-    deadline: "Apr 20–26, 2026",
-    tags: ["Nanopayments", "AI Agents", "USDC", "lablab.ai"],
-    url: "https://community.arc.io/public/events/agentic-economy-on-arc-hackathon-xoayqenc6j",
-    logo: "AE",
-    logoColor: "#f59e0b",
-  },
-  {
-    id: 12,
+    id: 16,
     type: "HACKATHON",
     status: "ENDED",
     org: "ETHGlobal x Arc x Circle",
@@ -177,26 +231,137 @@ const grants = [
     logo: "E",
     logoColor: "#8b5cf6",
   },
+  {
+    id: 17,
+    type: "HACKATHON",
+    status: "ENDED",
+    org: "ETHGlobal x Arc",
+    title: "ETHGlobal Cannes — Arc Track",
+    desc: "Arc sponsored bounties for builders powering onchain lending, capital markets, FX, and payments.",
+    reward: "$15,000 USDC",
+    deadline: "Apr 2026",
+    tags: ["ETHGlobal", "Cannes", "Lending", "FX"],
+    url: "https://community.arc.io/public/events/ethglobal-cannes-hackathon-aejsg2lm44",
+    logo: "E",
+    logoColor: "#8b5cf6",
+  },
+  {
+    id: 18,
+    type: "HACKATHON",
+    status: "ENDED",
+    org: "ETHGlobal x Arc x Circle",
+    title: "ETHGlobal New York 2026",
+    desc: "In-person ETHGlobal hackathon. Circle sponsored Arc-track bounties for stablecoin payments, wallets, and onchain financial apps.",
+    reward: "$15,000 USDC",
+    deadline: "Jun 12–14, 2026",
+    tags: ["ETHGlobal", "Arc", "USDC", "New York"],
+    url: "https://community.arc.io/public/events/ethglobal-new-york-2026-2wbc20jux8",
+    logo: "E",
+    logoColor: "#8b5cf6",
+  },
+  {
+    id: 19,
+    type: "HACKATHON",
+    status: "ENDED",
+    org: "Canteen x Circle x Arc",
+    title: "Lepton Agents Hackathon",
+    desc: "Two-week builder series for AI agents that pay, receive, and orchestrate nanopayments — settled on Arc. Six published Requests for Builders (RFBs) with concrete buildable angles.",
+    reward: "$50,000",
+    deadline: "Jun 2026",
+    tags: ["AI Agents", "Nanopayments", "Canteen", "USDC"],
+    url: "https://community.arc.io/public/events/hackathon-lepton-agents-ohhczsazvd",
+    logo: "L",
+    logoColor: "#a78bfa",
+  },
+  {
+    id: 20,
+    type: "HACKATHON",
+    status: "ENDED",
+    org: "Encode",
+    title: "Programmable Money Hackathon",
+    desc: "Online + in-person hackathon on programmable money, organized by Encode.",
+    reward: "TBA",
+    deadline: "Jul–Aug 2026",
+    tags: ["Encode", "Programmable Money"],
+    url: "https://encode.club",
+    logo: "PM",
+    logoColor: "#60a5fa",
+  },
+  {
+    id: 21,
+    type: "HACKATHON",
+    status: "ENDED",
+    org: "Canteen x Circle x Arc",
+    title: "Agora Agents Hackathon",
+    desc: "AI agents that trade, invest, create, and interface with markets, settled on Arc using USDC. Winners: Mimir Markets (AI Oracle prediction market), Precall (USDC-bonded prediction calls, 68% win rate), Archimedes (quant finance + arXiv research system). All projects open source.",
+    reward: "~$50,000",
+    deadline: "May 2026",
+    tags: ["AI Agents", "Canteen", "USDC", "Open Source"],
+    url: "https://arc-showcase.thecanteenapp.com/",
+    logo: "AG",
+    logoColor: "#a78bfa",
+  },
+  {
+    id: 22,
+    type: "HACKATHON",
+    status: "ENDED",
+    org: "Circle",
+    title: "USDC OpenClaw Hackathon",
+    desc: "USDC-focused open hackathon.",
+    reward: "$30,000",
+    deadline: "Feb 2026",
+    tags: ["USDC", "Open Hackathon"],
+    url: "https://circle.com/grant",
+    logo: "OC",
+    logoColor: "#2563eb",
+  },
+  {
+    id: 23,
+    type: "GRANT",
+    status: "ENDED",
+    org: "Circle",
+    title: "Circle Developer Grants — Cohort 1",
+    desc: "Closed. Funded Africa/Global South-focused teams: Blockradar, Kolan, Myaza, Payrit, ViFi, SFx Money.",
+    reward: "Closed",
+    deadline: "Closed",
+    tags: ["USDC", "Africa", "Global South"],
+    url: "https://circle.com/grant",
+    logo: "C",
+    logoColor: "#2563eb",
+  },
 ];
 
-const FILTER_TYPES = ["ALL", "GRANT", "HACKATHON", "BOUNTY", "EVENT"];
+const FILTER_TYPES = ["ALL", "GRANT", "HACKATHON", "BOUNTY", "ACCELERATOR", "PROGRAM", "EVENT"];
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  "OPEN":     { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
-  "LIVE NOW": { bg: "rgba(239,68,68,0.08)",  text: "#f87171", dot: "#f87171" },
-  "UPCOMING": { bg: "rgba(99,102,241,0.08)", text: "#a5b4fc", dot: "#a5b4fc" },
-  "ENDED":    { bg: "rgba(71,85,105,0.15)",  text: "#64748b", dot: "#475569" },
+  "OPEN":            { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
+  "OPEN — ONGOING":  { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
+  "OPEN — ROLLING":  { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
+  "LIVE NOW":        { bg: "rgba(239,68,68,0.08)",  text: "#f87171", dot: "#f87171" },
+  "IN PROGRESS":     { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", dot: "#fbbf24" },
+  "UPCOMING":        { bg: "rgba(99,102,241,0.08)", text: "#a5b4fc", dot: "#a5b4fc" },
+  "ENDED":           { bg: "rgba(71,85,105,0.15)",  text: "#64748b", dot: "#475569" },
 };
 const TYPE_COLORS: Record<string, string> = {
-  GRANT:     "#34d399",
-  BOUNTY:    "#f59e0b",
-  HACKATHON: "#a78bfa",
-  EVENT:     "#60a5fa",
+  GRANT:       "#34d399",
+  BOUNTY:      "#f59e0b",
+  HACKATHON:   "#a78bfa",
+  ACCELERATOR: "#fb923c",
+  PROGRAM:     "#38bdf8",
+  EVENT:       "#60a5fa",
 };
+
+function isActiveStatus(status: string) {
+  return status.startsWith("OPEN") || status === "LIVE NOW" || status === "IN PROGRESS";
+}
 
 export default function GrantsPage() {
   const [filter, setFilter] = useState("ALL");
+  const [showEnded, setShowEnded] = useState(false);
 
   const filtered = filter === "ALL" ? grants : grants.filter((g) => g.type === filter);
+  const activeList = filtered.filter((g) => isActiveStatus(g.status));
+  const upcomingList = filtered.filter((g) => g.status === "UPCOMING");
+  const endedList = filtered.filter((g) => g.status === "ENDED");
 
   return (
     <div
@@ -290,9 +455,9 @@ export default function GrantsPage() {
           }}
         >
           {[
-            { label: "OPEN NOW", value: grants.filter((g) => g.status === "OPEN" || g.status === "LIVE NOW").length.toString() },
+            { label: "OPEN NOW", value: grants.filter((g) => isActiveStatus(g.status)).length.toString() },
             { label: "TOTAL LISTINGS", value: grants.length.toString() },
-            { label: "MAX PRIZE", value: "$100K" },
+            { label: "MAX PRIZE", value: "$1M" },
           ].map((s) => (
             <div key={s.label} style={{ textAlign: "center" }}>
               <div
@@ -348,238 +513,67 @@ export default function GrantsPage() {
         </div>
       </section>
 
-      {/* GRANT CARDS */}
-      <section style={{ padding: "20px 16px 60px", maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {filtered.map((grant) => {
-            const sc = STATUS_COLORS[grant.status] ?? STATUS_COLORS["ENDED"];
-            return (
-              <div
-                key={grant.id}
-                style={{
-                  background: "rgba(3,17,10,0.2)",
-                  border: "1px solid rgba(16,185,129,0.08)",
-                  borderRadius: 16,
-                  padding: "20px 18px",
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
-                {(grant.status === "OPEN" || grant.status === "LIVE NOW") && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: 1,
-                      background:
-                        "linear-gradient(90deg, transparent, rgba(52,211,153,0.25), transparent)",
-                    }}
-                  />
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 14,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 12,
-                      background: `${grant.logoColor}18`,
-                      border: `1px solid ${grant.logoColor}30`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 15,
-                      fontWeight: 900,
-                      color: grant.logoColor,
-                      flexShrink: 0,
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {grant.logo}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 200 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 8,
-                          fontWeight: 800,
-                          color: TYPE_COLORS[grant.type] ?? "#94a3b8",
-                          background: `${TYPE_COLORS[grant.type]}15`,
-                          border: `1px solid ${TYPE_COLORS[grant.type]}25`,
-                          padding: "2px 8px",
-                          borderRadius: 5,
-                          fontFamily: "monospace",
-                          letterSpacing: "0.1em",
-                        }}
-                      >
-                        {grant.type}
-                      </span>
-
-                      <span
-                        style={{
-                          fontSize: 8,
-                          fontWeight: 700,
-                          color: sc.text,
-                          background: sc.bg,
-                          padding: "2px 8px",
-                          borderRadius: 5,
-                          fontFamily: "monospace",
-                          letterSpacing: "0.1em",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 5,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 4,
-                            height: 4,
-                            borderRadius: "50%",
-                            background: sc.dot,
-                            display: "inline-block",
-                            animation:
-                              grant.status !== "ENDED" ? "pulse 2s infinite" : undefined,
-                          }}
-                        />
-                        {grant.status}
-                      </span>
-
-                      <span
-                        style={{
-                          fontSize: 9,
-                          color: "#475569",
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        {grant.org}
-                      </span>
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: "clamp(13px, 3.5vw, 15px)",
-                        fontWeight: 800,
-                        color: "#fff",
-                        marginBottom: 8,
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {grant.title}
-                    </div>
-
-                    <p
-                      style={{
-                        fontSize: 12,
-                        color: "#64748b",
-                        lineHeight: 1.65,
-                        margin: "0 0 12px",
-                      }}
-                    >
-                      {grant.desc}
-                    </p>
-
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-                      {grant.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          style={{
-                            fontSize: 9,
-                            color: "#475569",
-                            background: "rgba(255,255,255,0.03)",
-                            border: "1px solid rgba(255,255,255,0.06)",
-                            padding: "2px 8px",
-                            borderRadius: 5,
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        flexWrap: "wrap",
-                        gap: 10,
-                      }}
-                    >
-                      <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-                        <div>
-                          <div
-                            style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}
-                          >
-                            REWARD
-                          </div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>
-                            {grant.reward}
-                          </div>
-                        </div>
-                        <div>
-                          <div
-                            style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}
-                          >
-                            DEADLINE
-                          </div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>
-                            {grant.deadline}
-                          </div>
-                        </div>
-                      </div>
-
-                      <a
-                        href={grant.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          padding: "8px 18px",
-                          borderRadius: 10,
-                          background:
-                            grant.status === "ENDED"
-                              ? "rgba(255,255,255,0.03)"
-                              : "rgba(16,185,129,0.1)",
-                          border:
-                            grant.status === "ENDED"
-                              ? "1px solid rgba(255,255,255,0.07)"
-                              : "1px solid rgba(52,211,153,0.25)",
-                          color: grant.status === "ENDED" ? "#475569" : "#34d399",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: "0.08em",
-                          textDecoration: "none",
-                          fontFamily: "monospace",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {grant.status === "ENDED" ? "VIEW RECAP →" : "APPLY NOW →"}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+      {/* LIVE / OPEN */}
+      <section style={{ padding: "20px 16px 0", maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+          LIVE &amp; OPEN NOW ({activeList.length})
         </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {activeList.map((grant) => (
+            <GrantCard key={grant.id} grant={grant} />
+          ))}
+          {activeList.length === 0 && (
+            <div style={{ padding: "20px", fontSize: 11, color: "#475569", fontFamily: "monospace" }}>
+              No open opportunities for this filter.
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* UPCOMING */}
+      <section style={{ padding: "36px 16px 0", maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ fontSize: 9, color: "#a5b4fc", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+          UPCOMING ({upcomingList.length})
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {upcomingList.map((grant) => (
+            <GrantCard key={grant.id} grant={grant} />
+          ))}
+          {upcomingList.length === 0 && (
+            <div style={{ padding: "20px", fontSize: 11, color: "#475569", fontFamily: "monospace" }}>
+              No upcoming events for this filter.
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ENDED (collapsible) */}
+      <section style={{ padding: "36px 16px 60px", maxWidth: 1000, margin: "0 auto" }}>
+        <button
+          onClick={() => setShowEnded((v) => !v)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            marginBottom: showEnded ? 12 : 0,
+          }}
+        >
+          <span style={{ fontSize: 9, color: "#64748b", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace" }}>
+            ENDED ({endedList.length})
+          </span>
+          <span style={{ fontSize: 9, color: "#475569" }}>{showEnded ? "▲ HIDE" : "▼ SHOW"}</span>
+        </button>
+        {showEnded && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, opacity: 0.75 }}>
+            {endedList.map((grant) => (
+              <GrantCard key={grant.id} grant={grant} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* CTA */}
@@ -701,6 +695,182 @@ export default function GrantsPage() {
         * { box-sizing: border-box; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
       `}</style>
+    </div>
+  );
+}
+
+function GrantCard({ grant }: { grant: (typeof grants)[number] }) {
+  const sc = STATUS_COLORS[grant.status] ?? STATUS_COLORS["ENDED"];
+  return (
+    <div
+      style={{
+        background: "rgba(3,17,10,0.2)",
+        border: "1px solid rgba(16,185,129,0.08)",
+        borderRadius: 16,
+        padding: "20px 18px",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {isActiveStatus(grant.status) && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 1,
+            background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.25), transparent)",
+          }}
+        />
+      )}
+
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: `${grant.logoColor}18`,
+            border: `1px solid ${grant.logoColor}30`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 15,
+            fontWeight: 900,
+            color: grant.logoColor,
+            flexShrink: 0,
+            fontFamily: "monospace",
+          }}
+        >
+          {grant.logo}
+        </div>
+
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+            <span
+              style={{
+                fontSize: 8,
+                fontWeight: 800,
+                color: TYPE_COLORS[grant.type] ?? "#94a3b8",
+                background: `${TYPE_COLORS[grant.type]}15`,
+                border: `1px solid ${TYPE_COLORS[grant.type]}25`,
+                padding: "2px 8px",
+                borderRadius: 5,
+                fontFamily: "monospace",
+                letterSpacing: "0.1em",
+              }}
+            >
+              {grant.type}
+            </span>
+
+            <span
+              style={{
+                fontSize: 8,
+                fontWeight: 700,
+                color: sc.text,
+                background: sc.bg,
+                padding: "2px 8px",
+                borderRadius: 5,
+                fontFamily: "monospace",
+                letterSpacing: "0.1em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
+              <span
+                style={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  background: sc.dot,
+                  display: "inline-block",
+                  animation: grant.status !== "ENDED" ? "pulse 2s infinite" : undefined,
+                }}
+              />
+              {grant.status}
+            </span>
+
+            <span style={{ fontSize: 9, color: "#475569", fontFamily: "monospace" }}>
+              {grant.org}
+            </span>
+          </div>
+
+          <div
+            style={{
+              fontSize: "clamp(13px, 3.5vw, 15px)",
+              fontWeight: 800,
+              color: "#fff",
+              marginBottom: 8,
+              lineHeight: 1.3,
+            }}
+          >
+            {grant.title}
+          </div>
+
+          <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.65, margin: "0 0 12px" }}>
+            {grant.desc}
+          </p>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+            {grant.tags.map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: 9,
+                  color: "#475569",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  padding: "2px 8px",
+                  borderRadius: 5,
+                  fontFamily: "monospace",
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}>
+                  REWARD
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>{grant.reward}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}>
+                  DEADLINE
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>{grant.deadline}</div>
+              </div>
+            </div>
+
+            <a
+              href={grant.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                padding: "8px 18px",
+                borderRadius: 10,
+                background: grant.status === "ENDED" ? "rgba(255,255,255,0.03)" : "rgba(16,185,129,0.1)",
+                border: grant.status === "ENDED" ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(52,211,153,0.25)",
+                color: grant.status === "ENDED" ? "#475569" : "#34d399",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textDecoration: "none",
+                fontFamily: "monospace",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {grant.status === "ENDED" ? "VIEW RECAP →" : "APPLY NOW →"}
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
