@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Navbar } from "@/app/components/Navbar";
 import { timeAgo } from "@/lib/format";
@@ -8,7 +8,8 @@ const ARC_RPC = "https://rpc.mainnet.arc.io";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const EURC_CONTRACT = "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1";
 const RECEIVER_WALLET = "0x78C144A76614A8674285129810555C8bCa78f044";
-const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
+const FETCH_TIMEOUT_MS = 5000;
+const RETRY_DELAY_MS = 3000;
 
 interface NetworkStats {
   blockNumber: number;
@@ -30,13 +31,33 @@ interface RecentTransaction {
   timestamp: string | null;
 }
 
+interface ExplorerData {
+  totalTransactions: number;
+  recentTransactions: RecentTransaction[];
+  stale: boolean;
+  unavailable: boolean;
+  cachedAt: number | null;
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit, ms = FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function rpcCall(method: string, params: unknown[] = []) {
-  const res = await fetch(ARC_RPC, {
+  const res = await fetchWithTimeout(ARC_RPC, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }),
   });
+  if (!res.ok) throw new Error(`RPC returned ${res.status}`);
   const data = await res.json();
+  if (data.error) throw new Error(data.error.message || "RPC error");
   return data.result;
 }
 
@@ -50,21 +71,60 @@ function formatUnits(hex: string, decimals: number): string {
   return `${whole}.${fracStr}`;
 }
 
+// Pulsing placeholder shown only until a stat has ever loaded successfully.
+// Once real data arrives it stays on screen (even mid-refresh) instead of
+// flashing back to this.
+function Skeleton({ width = 90, height = 22 }: { width?: number | string; height?: number }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        width,
+        height,
+        borderRadius: 6,
+        background: "rgba(52,211,153,0.12)",
+        animation: "pulse 1.4s infinite",
+      }}
+    />
+  );
+}
+
+function Unavailable({ onRetry }: { onRetry: () => void }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+      <span style={{ fontSize: 13, color: "#f87171", fontFamily: "monospace" }}>unavailable</span>
+      <button
+        onClick={onRetry}
+        style={{ fontSize: 9, color: "#94a3b8", background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "2px 8px", cursor: "pointer", fontFamily: "monospace" }}
+      >
+        RETRY
+      </button>
+    </span>
+  );
+}
+
 export default function StatsPage() {
   const [stats, setStats] = useState<NetworkStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [networkFailed, setNetworkFailed] = useState(false);
+  const [networkUpdated, setNetworkUpdated] = useState<Date | null>(null);
+  const networkRetried = useRef(false);
+
+  const [revenue, setRevenue] = useState<string | null>(null);
+  const [revenueFailed, setRevenueFailed] = useState(false);
+  const revenueRetried = useRef(false);
+
+  const [explorer, setExplorer] = useState<ExplorerData | null>(null);
+  const [explorerFailed, setExplorerFailed] = useState(false);
+  const explorerRetried = useRef(false);
+
   const [walletInput, setWalletInput] = useState("");
   const [walletData, setWalletData] = useState<WalletBalances | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState("");
-  const [revenue, setRevenue] = useState<string | null>(null);
-  const [txCount, setTxCount] = useState<number | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [liveFeed, setLiveFeed] = useState<RecentTransaction[] | null>(null);
 
   const isValidAddress = (a: string) => /^0x[a-fA-F0-9]{40}$/.test(a.trim());
 
-  const fetchNetworkStats = useCallback(async () => {
+  const fetchNetworkStats = useCallback(async (isRetry = false) => {
     try {
       const [blockHex, gasPriceHex, chainIdHex] = await Promise.all([
         rpcCall("eth_blockNumber"),
@@ -76,59 +136,82 @@ export default function StatsPage() {
         gasPrice: formatUnits(gasPriceHex, 6),
         chainId: parseInt(chainIdHex, 16).toString(),
       });
-      setLastUpdated(new Date());
+      setNetworkUpdated(new Date());
+      setNetworkFailed(false);
+      networkRetried.current = false;
     } catch {
-      /* silent — RPC may be temporarily unavailable */
-    } finally {
-      setLoading(false);
+      if (!isRetry && !networkRetried.current) {
+        networkRetried.current = true;
+        setTimeout(() => fetchNetworkStats(true), RETRY_DELAY_MS);
+      } else {
+        setNetworkFailed(true);
+      }
     }
   }, []);
 
-  const fetchRevenue = useCallback(async () => {
+  const fetchRevenue = useCallback(async (isRetry = false) => {
     try {
       const data = "0x70a08231" + RECEIVER_WALLET.slice(2).padStart(64, "0");
       const result = await rpcCall("eth_call", [{ to: USDC_CONTRACT, data }, "latest"]);
       setRevenue(formatUnits(result, 6));
+      setRevenueFailed(false);
+      revenueRetried.current = false;
     } catch {
-      /* silent */
+      if (!isRetry && !revenueRetried.current) {
+        revenueRetried.current = true;
+        setTimeout(() => fetchRevenue(true), RETRY_DELAY_MS);
+      } else {
+        setRevenueFailed(true);
+      }
     }
   }, []);
 
-  const fetchTxCount = useCallback(async () => {
+  const fetchExplorerData = useCallback(async (isRetry = false) => {
     try {
-      const res = await fetch(`${ARC_EXPLORER_API}/addresses/${RECEIVER_WALLET}`);
+      const res = await fetchWithTimeout("/api/stats", {});
+      if (!res.ok) throw new Error(`stats API returned ${res.status}`);
       const data = await res.json();
-      setTxCount(data.transactions_count ? parseInt(data.transactions_count) : null);
+      if (data.unavailable) throw new Error("explorer unavailable");
+      setExplorer({
+        totalTransactions: data.totalTransactions ?? 0,
+        recentTransactions: Array.isArray(data.recentTransactions) ? data.recentTransactions : [],
+        stale: !!data.stale,
+        unavailable: false,
+        cachedAt: data.cachedAt ?? null,
+      });
+      setExplorerFailed(false);
+      explorerRetried.current = false;
     } catch {
-      /* silent */
+      if (!isRetry && !explorerRetried.current) {
+        explorerRetried.current = true;
+        setTimeout(() => fetchExplorerData(true), RETRY_DELAY_MS);
+      } else {
+        setExplorerFailed(true);
+      }
     }
   }, []);
 
   useEffect(() => {
     fetchNetworkStats();
-    fetchRevenue();
-    fetchTxCount();
-    const interval = setInterval(fetchNetworkStats, 10000);
+    const interval = setInterval(() => fetchNetworkStats(), 10000);
     return () => clearInterval(interval);
-  }, [fetchNetworkStats, fetchRevenue, fetchTxCount]);
+  }, [fetchNetworkStats]);
 
   useEffect(() => {
-    let cancelled = false;
-    const fetchLiveFeed = async () => {
-      try {
-        const res = await fetch("/api/stats");
-        const data = await res.json();
-        if (!cancelled) {
-          setLiveFeed(Array.isArray(data.recentTransactions) ? data.recentTransactions : []);
-        }
-      } catch {
-        /* silent — keep showing the last known feed */
-      }
-    };
-    fetchLiveFeed();
-    const interval = setInterval(fetchLiveFeed, 30000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, []);
+    fetchRevenue();
+    const interval = setInterval(() => fetchRevenue(), 10000);
+    return () => clearInterval(interval);
+  }, [fetchRevenue]);
+
+  useEffect(() => {
+    fetchExplorerData();
+    const interval = setInterval(() => fetchExplorerData(), 30000);
+    return () => clearInterval(interval);
+  }, [fetchExplorerData]);
+
+  const retryNetwork = () => { setNetworkFailed(false); networkRetried.current = false; fetchNetworkStats(); };
+  const retryRevenue = () => { setRevenueFailed(false); revenueRetried.current = false; fetchRevenue(); };
+  const retryExplorer = () => { setExplorerFailed(false); explorerRetried.current = false; fetchExplorerData(); };
 
   const lookupWallet = async () => {
     const addr = walletInput.trim();
@@ -184,21 +267,27 @@ export default function StatsPage() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           {[
-            { label: "BLOCK HEIGHT", value: loading ? "..." : stats?.blockNumber.toLocaleString() ?? "—", suffix: "" },
-            { label: "GAS PRICE", value: loading ? "..." : stats?.gasPrice ?? "—", suffix: " USDC" },
-            { label: "CHAIN ID", value: loading ? "..." : stats?.chainId ?? "—", suffix: "" },
+            { label: "BLOCK HEIGHT", value: stats?.blockNumber.toLocaleString(), suffix: "" },
+            { label: "GAS PRICE", value: stats?.gasPrice, suffix: " USDC" },
+            { label: "CHAIN ID", value: stats?.chainId, suffix: "" },
           ].map((s) => (
             <div key={s.label} style={{ padding: "20px", borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
               <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>{s.label}</div>
               <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-                {s.value}<span style={{ fontSize: 11, color: "#475569" }}>{s.suffix}</span>
+                {s.value !== undefined ? (
+                  <>{s.value}<span style={{ fontSize: 11, color: "#475569" }}>{s.suffix}</span></>
+                ) : networkFailed ? (
+                  <Unavailable onRetry={retryNetwork} />
+                ) : (
+                  <Skeleton />
+                )}
               </div>
             </div>
           ))}
         </div>
-        {lastUpdated && (
+        {networkUpdated && (
           <div style={{ textAlign: "right", marginTop: 10, fontSize: 9, color: "#334155", fontFamily: "monospace" }}>
-            LAST UPDATED {lastUpdated.toLocaleTimeString()} · AUTO-REFRESH 10S
+            LAST UPDATED {timeAgo(networkUpdated.toISOString())} · AUTO-REFRESH 10S
           </div>
         )}
       </section>
@@ -212,18 +301,23 @@ export default function StatsPage() {
           <div style={{ padding: "20px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
             <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL USDC RECEIVED</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-              {revenue === null ? "..." : `$${revenue}`}
+              {revenue !== null ? `$${revenue}` : revenueFailed ? <Unavailable onRetry={retryRevenue} /> : <Skeleton />}
             </div>
             <div style={{ fontSize: 9, color: "#334155", marginTop: 6, fontFamily: "monospace" }}>FROM AI QUERIES</div>
           </div>
           <div style={{ padding: "20px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
             <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL TRANSACTIONS</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-              {txCount === null ? "..." : txCount.toLocaleString()}
+              {explorer !== null ? explorer.totalTransactions.toLocaleString() : explorerFailed ? <Unavailable onRetry={retryExplorer} /> : <Skeleton />}
             </div>
             <div style={{ fontSize: 9, color: "#334155", marginTop: 6, fontFamily: "monospace" }}>ON RECEIVER WALLET</div>
           </div>
         </div>
+        {explorer?.stale && explorer.cachedAt && (
+          <div style={{ textAlign: "right", marginTop: 10, fontSize: 9, color: "#f59e0b", fontFamily: "monospace" }}>
+            EXPLORER API UNREACHABLE · SHOWING LAST KNOWN DATA FROM {timeAgo(new Date(explorer.cachedAt).toISOString())}
+          </div>
+        )}
         <a
           href={`https://explorer.arc.io/address/${RECEIVER_WALLET}`}
           target="_blank"
@@ -240,22 +334,30 @@ export default function StatsPage() {
           LIVE TRANSACTION FEED · LAST 10 · AUTO-REFRESH 30S
         </div>
         <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 16, overflow: "hidden" }}>
-          {liveFeed === null ? (
-            <div style={{ padding: 20, fontSize: 11, color: "#475569", fontFamily: "monospace", textAlign: "center" }}>
-              Loading feed...
-            </div>
-          ) : liveFeed.length === 0 ? (
+          {explorer === null ? (
+            explorerFailed ? (
+              <div style={{ padding: 20, display: "flex", justifyContent: "center" }}>
+                <Unavailable onRetry={retryExplorer} />
+              </div>
+            ) : (
+              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
+                {[0, 1, 2].map((i) => (
+                  <Skeleton key={i} width="100%" height={16} />
+                ))}
+              </div>
+            )
+          ) : explorer.recentTransactions.length === 0 ? (
             <div style={{ padding: 20, fontSize: 11, color: "#475569", fontFamily: "monospace", textAlign: "center" }}>
               No transactions yet.
             </div>
           ) : (
-            liveFeed.map((tx, i) => (
+            explorer.recentTransactions.map((tx, i) => (
               <div
                 key={tx.hash || i}
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
                   padding: "12px 16px",
-                  borderBottom: i < liveFeed.length - 1 ? "1px solid rgba(16,185,129,0.06)" : "none",
+                  borderBottom: i < explorer.recentTransactions.length - 1 ? "1px solid rgba(16,185,129,0.06)" : "none",
                 }}
               >
                 {tx.hash ? (

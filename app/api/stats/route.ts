@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 const RECEIVER = "0x78C144A76614A8674285129810555C8bCa78f044";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const RECENT_LIMIT = 10;
+const FETCH_TIMEOUT_MS = 5000;
 
 interface RawTransfer {
   transaction_hash?: string;
@@ -22,14 +23,37 @@ interface RecentTransaction {
   timestamp: string | null;
 }
 
+interface StatsPayload {
+  totalQuestions: number;
+  totalVolume: string;
+  uniqueWallets: number;
+  totalTransactions: number;
+  recentTransactions: RecentTransaction[];
+}
+
+// In-memory cache (per serverless instance). Explorer API is sometimes
+// unreachable (bot-protection challenge) — when that happens we serve the
+// last successful payload instead of zeroing the page out.
+let cache: { data: StatsPayload; timestamp: number } | null = null;
+
+async function fetchWithTimeout(url: string, ms: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { cache: "no-store", signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function GET() {
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://explorer.arc.io/api/v2/addresses/${RECEIVER}/token-transfers?token=${USDC_CONTRACT}`,
-      { cache: "no-store" }
+      FETCH_TIMEOUT_MS
     );
 
-    if (!res.ok) throw new Error("API failed");
+    if (!res.ok) throw new Error(`Explorer API returned ${res.status}`);
 
     const data = await res.json();
     const transfers: RawTransfer[] = data.items || [];
@@ -40,7 +64,7 @@ export async function GET() {
     const recentTransactions: RecentTransaction[] = [];
 
     transfers.forEach((tx) => {
-      // শুধু incoming USDC payments count করো
+      // Only count incoming USDC payments.
       if (
         tx.to?.hash?.toLowerCase() === RECEIVER.toLowerCase() &&
         tx.from?.hash?.toLowerCase() !== RECEIVER.toLowerCase() &&
@@ -62,20 +86,31 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json({
+    const payload: StatsPayload = {
       totalQuestions,
       totalVolume: totalVolume.toFixed(4),
       uniqueWallets: wallets.size,
       totalTransactions: totalQuestions,
       recentTransactions,
-    });
+    };
+    cache = { data: payload, timestamp: Date.now() };
+
+    return NextResponse.json({ ...payload, stale: false, cachedAt: null, unavailable: false });
   } catch {
+    // Explorer API is down or timed out. Serve the last known good payload
+    // if we have one, rather than zeroing the page out.
+    if (cache) {
+      return NextResponse.json({ ...cache.data, stale: true, cachedAt: cache.timestamp, unavailable: false });
+    }
     return NextResponse.json({
       totalQuestions: 0,
       totalVolume: "0.0000",
       uniqueWallets: 0,
       totalTransactions: 0,
       recentTransactions: [],
+      stale: false,
+      cachedAt: null,
+      unavailable: true,
     });
   }
 }
