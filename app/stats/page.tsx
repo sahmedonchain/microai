@@ -90,6 +90,98 @@ function FlashValue({ value, children }: { value: string | number; children: Rea
   );
 }
 
+const EASE_OUT_CUBIC = (t: number) => 1 - Math.pow(1 - t, 3);
+const TWEEN_DURATION_MS = 700;
+
+// Odometer-style count-up/down: tweens its displayed number from the old
+// value to the new one over ~700ms (eased, not linear) whenever `value`
+// changes, and flashes green at the same time. Shows the real value
+// instantly on first mount — only re-fetches get the tween treatment.
+function TickingNumber({ value, format }: { value: number; format: (n: number) => string }) {
+  const [display, setDisplay] = useState(value);
+  const displayRef = useRef(value);
+  const [flashKey, setFlashKey] = useState(0);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (displayRef.current === value) return;
+    const from = displayRef.current;
+    const to = value;
+    setFlashKey((k) => k + 1);
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / TWEEN_DURATION_MS);
+      const next = from + (to - from) * EASE_OUT_CUBIC(t);
+      displayRef.current = next;
+      setDisplay(next);
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [value]);
+
+  return (
+    <span key={flashKey} style={{ display: "inline-block", animation: flashKey > 0 ? "valueFlash 0.7s ease-out" : undefined }}>
+      {format(display)}
+    </span>
+  );
+}
+
+// Block height gets the same real-data tween, plus a purely-visual ~1
+// block/600ms increment between real refreshes so the counter feels alive
+// like Arc's own explorer — it always snaps back in sync on the next real
+// fetch, so it can't drift for more than one poll interval (~10s).
+function LiveBlockHeight({ blockNumber }: { blockNumber?: number }) {
+  const [display, setDisplay] = useState<number | undefined>(blockNumber);
+  const displayRef = useRef<number | undefined>(blockNumber);
+  const prevRealRef = useRef<number | undefined>(blockNumber);
+  const [flashKey, setFlashKey] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const simRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (blockNumber === undefined) return;
+    if (simRef.current) { clearInterval(simRef.current); simRef.current = null; }
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    if (blockNumber !== prevRealRef.current) setFlashKey((k) => k + 1);
+    prevRealRef.current = blockNumber;
+
+    const from = displayRef.current ?? blockNumber;
+    const to = blockNumber;
+    const start = performance.now();
+    const settle = (v: number) => { displayRef.current = v; setDisplay(v); };
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / TWEEN_DURATION_MS);
+      settle(from + (to - from) * EASE_OUT_CUBIC(t));
+      if (t < 1) {
+        rafRef.current = requestAnimationFrame(step);
+      } else {
+        settle(to);
+        // Visual-only simulated ticking (Arc blocks land roughly every
+        // ~0.6s) — not a real chain read, purely a "feels alive" cue.
+        simRef.current = setInterval(() => {
+          settle((displayRef.current ?? to) + 1);
+        }, 600);
+      }
+    };
+    rafRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (simRef.current) clearInterval(simRef.current);
+    };
+  }, [blockNumber]);
+
+  return (
+    <span key={flashKey} style={{ display: "inline-block", animation: flashKey > 0 ? "valueFlash 0.7s ease-out" : undefined }}>
+      {display !== undefined ? Math.round(display).toLocaleString() : null}
+    </span>
+  );
+}
+
 // Small pulsing-dot "LIVE" badge for section headings that auto-refresh.
 function LiveDot() {
   return (
@@ -294,8 +386,13 @@ export default function StatsPage() {
           NETWORK STATUS
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+          <div style={{ padding: "20px", borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
+            <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>BLOCK HEIGHT</div>
+            <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
+              {stats ? <LiveBlockHeight blockNumber={stats.blockNumber} /> : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
+            </div>
+          </div>
           {[
-            { label: "BLOCK HEIGHT", value: stats?.blockNumber.toLocaleString(), suffix: "" },
             { label: "GAS PRICE", value: stats?.gasPrice, suffix: " USDC" },
             { label: "CHAIN ID", value: stats?.chainId, suffix: "" },
           ].map((s) => (
@@ -331,7 +428,13 @@ export default function StatsPage() {
           <div style={{ padding: "20px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
             <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL USDC RECEIVED</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-              {revenue !== null ? <FlashValue value={revenue}>${revenue}</FlashValue> : revenueFailed ? <Unavailable onRetry={retryRevenue} /> : <Skeleton />}
+              {revenue !== null ? (
+                <TickingNumber value={parseFloat(revenue)} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`} />
+              ) : revenueFailed ? (
+                <Unavailable onRetry={retryRevenue} />
+              ) : (
+                <Skeleton />
+              )}
             </div>
             <div style={{ fontSize: 9, color: "#334155", marginTop: 6, fontFamily: "monospace" }}>FROM AI QUERIES</div>
           </div>
@@ -339,7 +442,7 @@ export default function StatsPage() {
             <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL TRANSACTIONS</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
               {explorer !== null ? (
-                <FlashValue value={explorer.totalTransactions}>{explorer.totalTransactions.toLocaleString()}</FlashValue>
+                <TickingNumber value={explorer.totalTransactions} format={(n) => Math.round(n).toLocaleString()} />
               ) : explorerFailed ? (
                 <Unavailable onRetry={retryExplorer} />
               ) : (
