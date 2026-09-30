@@ -315,7 +315,7 @@ export default function StatsPage() {
         </div>
         {explorer?.stale && explorer.cachedAt && (
           <div style={{ textAlign: "right", marginTop: 10, fontSize: 9, color: "#f59e0b", fontFamily: "monospace" }}>
-            EXPLORER API UNREACHABLE · SHOWING LAST KNOWN DATA FROM {timeAgo(new Date(explorer.cachedAt).toISOString())}
+            SHOWING LAST KNOWN DATA FROM {timeAgo(new Date(explorer.cachedAt).toISOString())}
           </div>
         )}
         <a
