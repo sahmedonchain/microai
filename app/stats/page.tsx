@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { Navbar } from "@/app/components/Navbar";
 import { timeAgo } from "@/lib/format";
@@ -69,6 +69,34 @@ function formatUnits(hex: string, decimals: number): string {
   const frac = value % divisor;
   const fracStr = frac.toString().padStart(decimals, "0").slice(0, 4);
   return `${whole}.${fracStr}`;
+}
+
+// Briefly flashes/scales its content when `value` changes between
+// refreshes, so a live update is noticeable rather than a silent swap.
+// Skips the flash on first mount (only fires on actual changes).
+function FlashValue({ value, children }: { value: string | number; children: ReactNode }) {
+  const prev = useRef(value);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (prev.current !== value) {
+      prev.current = value;
+      setTick((t) => t + 1);
+    }
+  }, [value]);
+  return (
+    <span key={tick} style={{ display: "inline-block", animation: tick > 0 ? "valueFlash 0.7s ease-out" : undefined }}>
+      {children}
+    </span>
+  );
+}
+
+// Small pulsing-dot "LIVE" badge for section headings that auto-refresh.
+function LiveDot() {
+  return (
+    <span
+      style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 1.6s infinite", marginRight: 6 }}
+    />
+  );
 }
 
 // Pulsing placeholder shown only until a stat has ever loaded successfully.
@@ -205,7 +233,7 @@ export default function StatsPage() {
 
   useEffect(() => {
     fetchExplorerData();
-    const interval = setInterval(() => fetchExplorerData(), 30000);
+    const interval = setInterval(() => fetchExplorerData(), 10000);
     return () => clearInterval(interval);
   }, [fetchExplorerData]);
 
@@ -275,7 +303,9 @@ export default function StatsPage() {
               <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>{s.label}</div>
               <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
                 {s.value !== undefined ? (
-                  <>{s.value}<span style={{ fontSize: 11, color: "#475569" }}>{s.suffix}</span></>
+                  <FlashValue value={s.value}>
+                    {s.value}<span style={{ fontSize: 11, color: "#475569" }}>{s.suffix}</span>
+                  </FlashValue>
                 ) : networkFailed ? (
                   <Unavailable onRetry={retryNetwork} />
                 ) : (
@@ -301,14 +331,20 @@ export default function StatsPage() {
           <div style={{ padding: "20px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
             <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL USDC RECEIVED</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-              {revenue !== null ? `$${revenue}` : revenueFailed ? <Unavailable onRetry={retryRevenue} /> : <Skeleton />}
+              {revenue !== null ? <FlashValue value={revenue}>${revenue}</FlashValue> : revenueFailed ? <Unavailable onRetry={retryRevenue} /> : <Skeleton />}
             </div>
             <div style={{ fontSize: 9, color: "#334155", marginTop: 6, fontFamily: "monospace" }}>FROM AI QUERIES</div>
           </div>
           <div style={{ padding: "20px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
             <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL TRANSACTIONS</div>
             <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-              {explorer !== null ? explorer.totalTransactions.toLocaleString() : explorerFailed ? <Unavailable onRetry={retryExplorer} /> : <Skeleton />}
+              {explorer !== null ? (
+                <FlashValue value={explorer.totalTransactions}>{explorer.totalTransactions.toLocaleString()}</FlashValue>
+              ) : explorerFailed ? (
+                <Unavailable onRetry={retryExplorer} />
+              ) : (
+                <Skeleton />
+              )}
             </div>
             <div style={{ fontSize: 9, color: "#334155", marginTop: 6, fontFamily: "monospace" }}>ON RECEIVER WALLET</div>
           </div>
@@ -330,8 +366,8 @@ export default function StatsPage() {
 
       {/* LIVE TRANSACTION FEED */}
       <section style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-          LIVE TRANSACTION FEED · LAST 10 · AUTO-REFRESH 30S
+        <div style={{ display: "flex", alignItems: "center", fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+          <LiveDot />LIVE TRANSACTION FEED · LAST 10 · AUTO-REFRESH 10S
         </div>
         <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 16, overflow: "hidden" }}>
           {explorer === null ? (
@@ -497,6 +533,11 @@ export default function StatsPage() {
         ::-webkit-scrollbar { display: none; }
         * { box-sizing: border-box; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes valueFlash {
+          0% { color: #baffdb; transform: scale(1.1); text-shadow: 0 0 12px rgba(52,211,153,0.5); }
+          60% { color: #34d399; transform: scale(1.03); }
+          100% { color: inherit; transform: scale(1); text-shadow: none; }
+        }
         input::placeholder { color: #334155; }
       `}</style>
     </div>
