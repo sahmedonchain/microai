@@ -200,13 +200,6 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
           </div>
         )}
 
-        {/* Info */}
-        <div className="mt-4 rounded-lg border border-border bg-space px-3 py-2.5">
-          <div className="mb-1 text-xs text-muted">Need Arc Mainnet USDC?</div>
-          <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="text-sm font-medium text-accent-text hover:underline">
-            Get free USDC at faucet.circle.com
-          </a>
-        </div>
       </motion.div>
     </motion.div>
   );

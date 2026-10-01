@@ -250,7 +250,6 @@ COMPLETE NETWORK DETAILS:
 - Chain ID: 5042 (hex: 0x13b2)
 - Currency symbol: USDC
 - Block Explorer: https://explorer.arc.io
-- Faucet: https://faucet.circle.com
 
 CONTRACT ADDRESSES (MAINNET):
 - USDC: 0x3600000000000000000000000000000000000000
@@ -269,34 +268,30 @@ docs.arc.io/arc/references/contract-addresses.md
 
   {
     id: "setup-3",
-    keywords: ["MAINNET usdc faucet", "get usdc MAINNET", "free usdc arc", "arc faucet", "faucet circle"],
+    keywords: ["get usdc MAINNET", "buy usdc arc", "acquire usdc arc", "how to get arc usdc", "arc usdc onramp"],
     title: "How do I get MAINNET USDC on Arc?",
     content: `
 SHORT_ANSWER:
-Go to faucet.circle.com → Select Arc MAINNET → Enter your wallet address → Click Send. USDC arrives in seconds.
+Arc MAINNET uses real USDC, so there is no faucet. Either withdraw USDC from an exchange that supports the Arc network, or bridge USDC from another chain using CCTP.
 
-STEP-BY-STEP:
-Step 1: Go to https://faucet.circle.com
-Step 2: Select network: ARC MAINNET
-Step 3: Select token: USDC
-Step 4: Enter your wallet address
-Step 5: Click "Send"
-Step 6: Wait 10-30 seconds
-Step 7: Check balance at https://explorer.arc.io
+OPTION 1 — WITHDRAW FROM AN EXCHANGE:
+Step 1: Check whether your exchange supports withdrawals to Arc.
+Step 2: Withdraw USDC to your Arc MAINNET wallet address.
+Step 3: Check balance at https://explorer.arc.io
 
-ALSO AVAILABLE:
-- EURC MAINNET tokens from same faucet
-- USYC MAINNET (requires allowlisting via Circle Support)
+OPTION 2 — BRIDGE FROM ANOTHER CHAIN (CCTP):
+Step 1: Hold USDC on a CCTP-supported chain (Ethereum, Base, Arbitrum, Polygon, Solana, etc.).
+Step 2: Use Arc App Kit's bridge() method, or CCTP directly, to burn USDC on the source chain and mint native USDC on Arc (Domain ID 26).
+Step 3: Check balance at https://explorer.arc.io
 
 KEY POINTS:
-- MAINNET USDC has no real monetary value
-- You can request multiple times
 - USDC required for gas fees on Arc
 - USDC Contract: 0x3600000000000000000000000000000000000000
+- EURC can be acquired the same way (withdrawal or CCTP bridge)
 
 SOURCE:
-faucet.circle.com
 docs.arc.io/arc/references/contract-addresses.md
+docs.arc.io/app-kit.md
 `
   },
 
@@ -1364,7 +1359,7 @@ Fix: Set maxFeePerGas: ethers.parseUnits("20", "gwei")
 
 2. "insufficient funds for gas * price + value"
 Cause: Not enough USDC to cover gas + transfer amount
-Fix: Get more MAINNET USDC at faucet.circle.com
+Fix: Top up your wallet with more USDC (withdraw from an exchange or bridge via CCTP)
 
 3. "intrinsic gas too low"
 Cause: Gas limit too low
@@ -1451,12 +1446,10 @@ const address = wallets.data.wallets[0].address;
 console.log("Fund this address:", address);
 
 Step 2: Fund with MAINNET USDC
-- Go to faucet.circle.com
-- Select Arc MAINNET
-- Enter the wallet address
-- Click Send
+- Withdraw USDC from an exchange that supports Arc to that address, or
+- Bridge USDC from another chain via CCTP (Domain ID 26)
 
-Step 3: Wait 10-30 seconds for USDC to arrive
+Step 3: Wait for the transfer or bridge to confirm
 
 Step 4: Verify balance
 const balance = await client.getWalletTokenBalance({ id: walletId });
@@ -1533,7 +1526,7 @@ WHAT IS NOT CONFIRMED:
 - No TGE (Token Generation Event) date
 
 HONEST ADVICE:
-MAINNET participation is speculative but low-risk. Focus on meaningful contributions (building, content creation) rather than simple faucet farming.
+MAINNET participation is speculative but low-risk. Focus on meaningful contributions (building, content creation) rather than low-effort activity farming.
 
 SOURCE:
 Circle CEO statement at Seoul event, April 14, 2026
@@ -1581,7 +1574,7 @@ RECOMMENDED ACTIVITIES (from community guides):
 
 1. MAINNET TRANSACTIONS
 - Add Arc MAINNET to MetaMask (Chain ID: 5042)
-- Get MAINNET USDC from faucet.circle.com
+- Fund your wallet with USDC (exchange withdrawal or CCTP bridge)
 - Send transactions regularly
 - Do cross-chain swaps
 - Interact with multiple dApps
@@ -2475,7 +2468,7 @@ WHAT IS USYC:
 - Available on Arc MAINNET and other chains
 
 GETTING MAINNET USYC:
-Step 1: Get MAINNET USDC from faucet.circle.com
+Step 1: Fund your wallet with USDC (exchange withdrawal or CCTP bridge)
 Step 2: Request allowlisting from Circle Support (support.circle.com)
    - Include your Arc MAINNET wallet address
    - Requests processed in 24-48 hours
@@ -2551,7 +2544,7 @@ Important: ERC-20 interface uses 6 decimals. Native USDC gas token uses 18 decim
 DETAILS:
 - USDC is the native gas token AND ERC-20 token on Arc
 - Use ERC-20 interface for transferFrom, approve, allowance
-- Get MAINNET USDC from: faucet.circle.com (select Arc MAINNET)
+- Fund your wallet via exchange withdrawal or CCTP bridge (no faucet on mainnet)
 - Explorer: explorer.arc.io/address/0x3600000000000000000000000000000000000000
 `,
   },
@@ -2562,7 +2555,7 @@ DETAILS:
     content: `
 SHORT_ANSWER:
 EURC (Euro stablecoin by Circle) on Arc MAINNET: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
-Uses 6 decimals. Get MAINNET EURC from faucet.circle.com.
+Uses 6 decimals. Acquire EURC via exchange withdrawal or CCTP bridge (no faucet on mainnet).
 `,
   },
   {
@@ -2618,7 +2611,7 @@ STEP BY STEP (MetaMask):
 1. Open MetaMask → Settings → Networks → Add Network
 2. Enter the config above
 3. Save and switch to Arc MAINNET
-4. Get MAINNET USDC from faucet.circle.com
+4. Fund your wallet with USDC via exchange withdrawal or CCTP bridge
 `,
   },
 
@@ -2771,7 +2764,7 @@ forge create --rpc-url https://rpc.mainnet.arc.io \\
 \`\`\`
 
 REQUIREMENTS:
-1. Arc MAINNET USDC in wallet (for gas) — get from faucet.circle.com
+1. Arc MAINNET USDC in wallet (for gas) — via exchange withdrawal or CCTP bridge
 2. Private key of your deployer wallet
 3. Standard Solidity (0.8.x works perfectly)
 

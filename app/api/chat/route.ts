@@ -21,7 +21,6 @@ YOUR KNOWLEDGE COVERS:
 - ERC-8183: Job lifecycle standard (escrow, deliverables, USDC settlement)
 - Arc App Kit: Bridge, Swap, Send, Unified Balance across chains
 - Circle products: USDC, EURC, CCTP, Gateway, Developer-Controlled Wallets, Modular Wallets
-- Faucet: faucet.circle.com
 - Docs: docs.arc.io | developers.circle.com
 
 RESPONSE RULES:
