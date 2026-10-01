@@ -1,7 +1,17 @@
 "use client";
-import { Navbar } from "@/app/components/Navbar";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { Search, SlidersHorizontal, MessageSquare } from "lucide-react";
+import { LogoMark } from "@/app/components/landing/LandingNavbar";
+
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Ecosystem", href: "/ecosystem" },
+  { label: "Grants", href: "/grants" },
+  { label: "Build status", href: "/build-status" },
+  { label: "Stats", href: "/stats" },
+];
 
 const grants = [
   // ===== LIVE / OPEN =====
@@ -331,23 +341,27 @@ const grants = [
   },
 ];
 
+type Grant = (typeof grants)[number];
+
 const FILTER_TYPES = ["ALL", "GRANT", "HACKATHON", "BOUNTY", "ACCELERATOR", "PROGRAM", "EVENT"];
-const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  "OPEN":            { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
-  "OPEN — ONGOING":  { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
-  "OPEN — ROLLING":  { bg: "rgba(16,185,129,0.08)", text: "#34d399", dot: "#34d399" },
-  "LIVE NOW":        { bg: "rgba(239,68,68,0.08)",  text: "#f87171", dot: "#f87171" },
-  "IN PROGRESS":     { bg: "rgba(245,158,11,0.08)", text: "#fbbf24", dot: "#fbbf24" },
-  "UPCOMING":        { bg: "rgba(99,102,241,0.08)", text: "#a5b4fc", dot: "#a5b4fc" },
-  "ENDED":           { bg: "rgba(71,85,105,0.15)",  text: "#64748b", dot: "#475569" },
+
+const STATUS_COLORS: Record<string, string> = {
+  "OPEN": "#3dd68c",
+  "OPEN — ONGOING": "#3dd68c",
+  "OPEN — ROLLING": "#3dd68c",
+  "LIVE NOW": "#f2555a",
+  "IN PROGRESS": "#f5b544",
+  "UPCOMING": "#5ea2ec",
+  "ENDED": "#8592a8",
 };
+
 const TYPE_COLORS: Record<string, string> = {
-  GRANT:       "#34d399",
-  BOUNTY:      "#f59e0b",
-  HACKATHON:   "#a78bfa",
-  ACCELERATOR: "#fb923c",
-  PROGRAM:     "#38bdf8",
-  EVENT:       "#60a5fa",
+  GRANT: "#3dd68c",
+  BOUNTY: "#f5b544",
+  HACKATHON: "#b89eea",
+  ACCELERATOR: "#f97316",
+  PROGRAM: "#5ea2ec",
+  EVENT: "#8592a8",
 };
 
 function isActiveStatus(status: string) {
@@ -356,330 +370,270 @@ function isActiveStatus(status: string) {
 
 export default function GrantsPage() {
   const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
   const [showEnded, setShowEnded] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const filtered = filter === "ALL" ? grants : grants.filter((g) => g.type === filter);
+  const filtered = grants.filter((g) => {
+    const matchType = filter === "ALL" || g.type === filter;
+    const q = search.toLowerCase();
+    const matchSearch =
+      search === "" ||
+      g.title.toLowerCase().includes(q) ||
+      g.desc.toLowerCase().includes(q) ||
+      g.org.toLowerCase().includes(q) ||
+      g.tags.some((t) => t.toLowerCase().includes(q));
+    return matchType && matchSearch;
+  });
+
   const activeList = filtered.filter((g) => isActiveStatus(g.status));
   const upcomingList = filtered.filter((g) => g.status === "UPCOMING");
   const endedList = filtered.filter((g) => g.status === "ENDED");
 
+  const typeList = FILTER_TYPES.filter((t) => t !== "ALL");
+  const typeCounts = typeList.map((t) => ({
+    name: t,
+    count: grants.filter((g) => g.type === t).length,
+  }));
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#010503",
-        color: "#e2e8f0",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-      }}
-    >
-      <Navbar />
+    <div className="min-h-screen bg-space font-sans text-text">
+      {/* NAV */}
+      <header className="sticky top-0 z-50 border-b border-border bg-space/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <LogoMark className="size-7" />
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 text-sm transition ${
+                  l.href === "/grants" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => searchRef.current?.focus()}
+              aria-label="Search grants"
+              className="hidden rounded-lg border border-border p-2 text-muted transition hover:text-text sm:flex"
+            >
+              <Search className="size-4" aria-hidden="true" />
+            </button>
+
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+              </span>
+              Arc Mainnet
+            </span>
+          </div>
+        </div>
+      </header>
 
       {/* HERO */}
-      <section
-        style={{
-          position: "relative",
-          padding: "48px 20px 36px",
-          textAlign: "center",
-          borderBottom: "1px solid rgba(16,185,129,0.06)",
-        }}
-      >
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "5px 12px",
-            borderRadius: 20,
-            border: "1px solid rgba(16,185,129,0.15)",
-            background: "rgba(3,17,10,0.6)",
-            marginBottom: 20,
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "#34d399",
-              display: "inline-block",
-              animation: "pulse 2s infinite",
-            }}
-          />
-          <span
-            style={{
-              fontSize: 9,
-              color: "#34d399",
-              fontWeight: 700,
-              letterSpacing: "0.15em",
-              fontFamily: "monospace",
-            }}
-          >
-            LIVE OPPORTUNITIES
-          </span>
-        </div>
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <p className="text-xs text-muted">
+            <Link href="/" className="hover:text-text">Home</Link> / Grants
+          </p>
 
-        <h1
-          style={{
-            fontSize: "clamp(1.6rem, 6vw, 3.5rem)",
-            fontWeight: 900,
-            lineHeight: 1.1,
-            margin: "0 0 14px",
-            background: "linear-gradient(180deg, #fff 0%, rgba(148,163,184,0.5) 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          Arc & Circle<br />Grants & Hackathons
-        </h1>
-
-        <p
-          style={{
-            fontSize: "clamp(12px, 3vw, 14px)",
-            color: "#94a3b8",
-            maxWidth: 480,
-            margin: "0 auto 28px",
-            lineHeight: 1.7,
-          }}
-        >
-          All active grants, bounties, and hackathons from the Arc and Circle ecosystem — updated and curated for builders.
-        </p>
-
-        {/* Stats */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: 24,
-            flexWrap: "wrap",
-          }}
-        >
-          {[
-            { label: "OPEN NOW", value: grants.filter((g) => isActiveStatus(g.status)).length.toString() },
-            { label: "TOTAL LISTINGS", value: grants.length.toString() },
-            { label: "MAX PRIZE", value: "$1M" },
-          ].map((s) => (
-            <div key={s.label} style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  fontSize: "clamp(1.4rem, 5vw, 2rem)",
-                  fontWeight: 900,
-                  color: "#34d399",
-                  fontFamily: "monospace",
-                }}
-              >
-                {s.value}
-              </div>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em" }}>
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* FILTERS */}
-      <section style={{ padding: "24px 16px 0", maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {FILTER_TYPES.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: "6px 16px",
-                borderRadius: 8,
-                border:
-                  filter === f
-                    ? "1px solid rgba(52,211,153,0.4)"
-                    : "1px solid rgba(16,185,129,0.1)",
-                background:
-                  filter === f
-                    ? "rgba(16,185,129,0.1)"
-                    : "rgba(0,0,0,0.2)",
-                color: filter === f ? "#34d399" : "#64748b",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                fontFamily: "monospace",
-                cursor: "pointer",
-              }}
-            >
-              {f}
-            </button>
-          ))}
-          <div style={{ marginLeft: "auto", fontSize: 10, color: "#475569", alignSelf: "center", fontFamily: "monospace" }}>
-            {filtered.length} RESULT{filtered.length !== 1 ? "S" : ""}
+          <div className="mt-4 max-w-xl">
+            <h1 className="text-3xl font-semibold leading-[1.15] text-text sm:text-4xl">
+              Arc &amp; Circle
+              <br />
+              Grants &amp; Hackathons
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-muted">
+              All active grants, bounties, accelerators, and hackathons from the Arc and Circle ecosystem — curated for builders.
+            </p>
           </div>
-        </div>
-      </section>
 
-      {/* LIVE / OPEN */}
-      <section style={{ padding: "20px 16px 0", maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-          LIVE &amp; OPEN NOW ({activeList.length})
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {activeList.map((grant) => (
-            <GrantCard key={grant.id} grant={grant} />
-          ))}
-          {activeList.length === 0 && (
-            <div style={{ padding: "20px", fontSize: 11, color: "#475569", fontFamily: "monospace" }}>
-              No open opportunities for this filter.
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* UPCOMING */}
-      <section style={{ padding: "36px 16px 0", maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ fontSize: 9, color: "#a5b4fc", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-          UPCOMING ({upcomingList.length})
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {upcomingList.map((grant) => (
-            <GrantCard key={grant.id} grant={grant} />
-          ))}
-          {upcomingList.length === 0 && (
-            <div style={{ padding: "20px", fontSize: 11, color: "#475569", fontFamily: "monospace" }}>
-              No upcoming events for this filter.
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ENDED (collapsible) */}
-      <section style={{ padding: "36px 16px 60px", maxWidth: 1000, margin: "0 auto" }}>
-        <button
-          onClick={() => setShowEnded((v) => !v)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-            marginBottom: showEnded ? 12 : 0,
-          }}
-        >
-          <span style={{ fontSize: 9, color: "#64748b", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace" }}>
-            ENDED ({endedList.length})
-          </span>
-          <span style={{ fontSize: 9, color: "#475569" }}>{showEnded ? "▲ HIDE" : "▼ SHOW"}</span>
-        </button>
-        {showEnded && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, opacity: 0.75 }}>
-            {endedList.map((grant) => (
-              <GrantCard key={grant.id} grant={grant} />
+          {/* STAT STRIP — real counts only */}
+          <div className="mt-10 flex flex-wrap gap-3">
+            {[
+              { label: "Open now", value: grants.filter((g) => isActiveStatus(g.status)).length },
+              { label: "Total tracked", value: grants.length },
+              { label: "Categories", value: typeList.length },
+            ].map((s) => (
+              <div key={s.label} className="min-w-[140px] flex-1 rounded-lg border border-border bg-surface px-5 py-4 sm:flex-none">
+                <p className="font-mono text-2xl text-text">{s.value}</p>
+                <p className="mt-1 text-xs text-muted">{s.label}</p>
+              </div>
             ))}
           </div>
-        )}
+        </div>
       </section>
 
-      {/* CTA */}
-      <section
-        style={{
-          borderTop: "1px solid rgba(16,185,129,0.06)",
-          padding: "40px 16px",
-          textAlign: "center",
-          background: "rgba(2,11,6,0.4)",
-        }}
-      >
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>
-          NOT SURE WHERE TO START?
+      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-8 sm:px-6">
+        {/* MAIN */}
+        <div className="min-w-0 flex-1">
+          {/* SEARCH + FILTER BAR */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search grants, orgs, tags..."
+                className="w-full rounded-lg border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              />
+            </div>
+
+            <div className="relative shrink-0">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="appearance-none rounded-lg border border-border bg-surface py-2.5 pl-3 pr-8 text-sm text-text focus:outline-none"
+              >
+                {FILTER_TYPES.map((t) => (
+                  <option key={t} value={t}>{t === "ALL" ? "All categories" : t}</option>
+                ))}
+              </select>
+              <SlidersHorizontal className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs text-muted">
+            {filtered.length === 0
+              ? `No results${search ? ` for "${search}"` : ""}`
+              : `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`}
+          </p>
+
+          {/* LIVE & OPEN */}
+          <div className="mt-6">
+            <p className="text-sm font-medium text-text">Live &amp; open now ({activeList.length})</p>
+            <div className="mt-3 flex flex-col gap-2.5">
+              {activeList.map((g) => <GrantRow key={g.id} grant={g} />)}
+              {activeList.length === 0 && (
+                <p className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+                  No open opportunities for this filter.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* UPCOMING */}
+          <div className="mt-8">
+            <p className="text-sm font-medium text-text">Upcoming ({upcomingList.length})</p>
+            <div className="mt-3 flex flex-col gap-2.5">
+              {upcomingList.map((g) => <GrantRow key={g.id} grant={g} />)}
+              {upcomingList.length === 0 && (
+                <p className="rounded-lg border border-border bg-surface px-4 py-6 text-center text-sm text-muted">
+                  No upcoming events for this filter.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ENDED (collapsible) */}
+          <div className="mt-8">
+            <button
+              type="button"
+              onClick={() => setShowEnded((v) => !v)}
+              className="flex items-center gap-2 text-sm font-medium text-text"
+            >
+              Ended ({endedList.length})
+              <span className="text-xs text-muted">{showEnded ? "Hide ▲" : "Show ▼"}</span>
+            </button>
+            {showEnded && (
+              <div className="mt-3 flex flex-col gap-2.5 opacity-75">
+                {endedList.map((g) => <GrantRow key={g.id} grant={g} />)}
+              </div>
+            )}
+          </div>
         </div>
-        <h2
-          style={{
-            fontSize: "clamp(1.2rem, 4vw, 2rem)",
-            fontWeight: 900,
-            color: "#fff",
-            margin: "0 0 12px",
-          }}
-        >
-          Ask MicroAI
-        </h2>
-        <p style={{ fontSize: 13, color: "#64748b", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
-          Get personalized guidance on which grant or hackathon fits your project — straight from the Arc & Circle Intelligence Hub.
-        </p>
-        <Link
-          href="/chat"
-          style={{
-            display: "inline-block",
-            padding: "12px 28px",
-            borderRadius: 12,
-            background: "#10b981",
-            color: "#000",
-            fontSize: 13,
-            fontWeight: 800,
-            letterSpacing: "0.06em",
-            textDecoration: "none",
-            boxShadow: "0 0 18px rgba(16,185,129,0.2)",
-          }}
-        >
-          LAUNCH CHAT TERMINAL →
-        </Link>
+
+        {/* RIGHT SIDEBAR */}
+        <aside className="hidden w-64 shrink-0 flex-col gap-6 lg:flex">
+          <div>
+            <p className="text-sm font-medium text-text">Categories</p>
+            <div className="mt-3 flex flex-col gap-0.5">
+              <button
+                onClick={() => setFilter("ALL")}
+                className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition ${
+                  filter === "ALL" ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface hover:text-text"
+                }`}
+              >
+                All categories
+                <span className="font-mono text-xs">{grants.length}</span>
+              </button>
+              {typeCounts.map((t) => (
+                <button
+                  key={t.name}
+                  onClick={() => setFilter(t.name)}
+                  className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition ${
+                    filter === t.name ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface hover:text-text"
+                  }`}
+                >
+                  <span className="truncate">{t.name}</span>
+                  <span className="font-mono text-xs">{t.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-secondary/25 bg-secondary-dim p-4">
+            <p className="text-sm font-semibold text-text">Know a grant we&apos;re missing?</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted">
+              Open an issue on our GitHub with the details and we&apos;ll review it for the list.
+            </p>
+            <a
+              href="https://github.com/sahmedonchain/microai/issues"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2.5 inline-block text-xs font-medium text-secondary-text hover:underline"
+            >
+              Suggest a listing on GitHub
+            </a>
+          </div>
+        </aside>
+      </div>
+
+      {/* CTA */}
+      <section className="border-t border-border bg-surface/40">
+        <div className="mx-auto max-w-7xl px-4 py-14 text-center sm:px-6">
+          <h2 className="text-2xl font-semibold text-text">Ask MicroAI</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+            Get personalized guidance on which grant or hackathon fits your project for just $0.001 USDC.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
+          >
+            <MessageSquare className="size-4" aria-hidden="true" />
+            Ask MicroAI
+          </Link>
+        </div>
       </section>
 
       {/* FOOTER */}
-      <footer
-        style={{
-          borderTop: "1px solid rgba(16,185,129,0.08)",
-          background: "#010402",
-          padding: "24px 16px",
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1000,
-            margin: "0 auto",
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 7,
-                background: "rgba(16,185,129,0.08)",
-                border: "1px solid rgba(16,185,129,0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 11,
-                fontWeight: 800,
-                color: "#34d399",
-              }}
-            >
-              M
-            </div>
-            <div style={{ fontSize: 10, color: "#475569" }}>MICROAI · THE ARC & CIRCLE HUB</div>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <LogoMark className="size-5" />
+            <span className="text-xs text-muted">MicroAI · The Arc &amp; Circle hub</span>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+          <div className="flex flex-wrap gap-5">
             {[
-              { l: "ARC", h: "https://arc.io" },
-              { l: "CIRCLE", h: "https://circle.com" },
-              { l: "GITHUB", h: "https://github.com/sahmedonchain/microai" },
-              { l: "EXPLORER", h: "https://explorer.arc.io" },
+              { l: "Arc", h: "https://arc.io" },
+              { l: "Circle", h: "https://circle.com" },
+              { l: "GitHub", h: "https://github.com/sahmedonchain/microai" },
+              { l: "Explorer", h: "https://explorer.arc.io" },
             ].map((link) => (
-              <a
-                key={link.l}
-                href={link.h}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  fontSize: 10,
-                  color: "#475569",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  fontFamily: "monospace",
-                  textDecoration: "none",
-                }}
-              >
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" className="text-xs text-muted transition hover:text-text">
                 {link.l}
               </a>
             ))}
@@ -688,189 +642,72 @@ export default function GrantsPage() {
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html { scroll-behavior: smooth; }
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
-        * { box-sizing: border-box; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        select { color-scheme: dark; }
       `}</style>
     </div>
   );
 }
 
-function GrantCard({ grant }: { grant: (typeof grants)[number] }) {
-  const sc = STATUS_COLORS[grant.status] ?? STATUS_COLORS["ENDED"];
-  return (
-    <div
-      style={{
-        background: "rgba(3,17,10,0.2)",
-        border: "1px solid rgba(16,185,129,0.08)",
-        borderRadius: 16,
-        padding: "20px 18px",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {isActiveStatus(grant.status) && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 1,
-            background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.25), transparent)",
-          }}
-        />
-      )}
+function GrantRow({ grant: g }: { grant: Grant }) {
+  const statusColor = STATUS_COLORS[g.status] ?? STATUS_COLORS["ENDED"];
+  const typeColor = TYPE_COLORS[g.type] ?? "#664c88";
+  const ended = g.status === "ENDED";
 
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 12,
-            background: `${grant.logoColor}18`,
-            border: `1px solid ${grant.logoColor}30`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 15,
-            fontWeight: 900,
-            color: grant.logoColor,
-            flexShrink: 0,
-            fontFamily: "monospace",
-          }}
-        >
-          {grant.logo}
+  return (
+    <motion.a
+      href={g.url}
+      target="_blank"
+      rel="noreferrer"
+      whileHover={{ y: -2, backgroundColor: "rgba(255,255,255,0.03)" }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 no-underline sm:flex-row sm:items-start sm:gap-4"
+    >
+      <div
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold"
+        style={{ background: `${g.logoColor}20`, border: `1px solid ${g.logoColor}35`, color: g.logoColor }}
+      >
+        {g.logo}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className="rounded px-1.5 py-0.5 font-mono text-[9px] font-medium"
+            style={{ background: `${typeColor}18`, border: `1px solid ${typeColor}30`, color: typeColor }}
+          >
+            {g.type}
+          </span>
+          <span
+            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[9px] font-medium"
+            style={{ background: `${statusColor}18`, border: `1px solid ${statusColor}30`, color: statusColor }}
+          >
+            <span className="size-1 rounded-full" style={{ background: statusColor }} />
+            {g.status}
+          </span>
+          <span className="text-xs text-muted">{g.org}</span>
         </div>
 
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-            <span
-              style={{
-                fontSize: 8,
-                fontWeight: 800,
-                color: TYPE_COLORS[grant.type] ?? "#94a3b8",
-                background: `${TYPE_COLORS[grant.type]}15`,
-                border: `1px solid ${TYPE_COLORS[grant.type]}25`,
-                padding: "2px 8px",
-                borderRadius: 5,
-                fontFamily: "monospace",
-                letterSpacing: "0.1em",
-              }}
-            >
-              {grant.type}
+        <p className="mt-1.5 text-sm font-medium text-text">{g.title}</p>
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted">{g.desc}</p>
+
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {g.tags.map((tag) => (
+            <span key={tag} className="rounded border border-border px-1.5 py-0.5 font-mono text-[9px] text-muted">
+              {tag}
             </span>
-
-            <span
-              style={{
-                fontSize: 8,
-                fontWeight: 700,
-                color: sc.text,
-                background: sc.bg,
-                padding: "2px 8px",
-                borderRadius: 5,
-                fontFamily: "monospace",
-                letterSpacing: "0.1em",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
-              <span
-                style={{
-                  width: 4,
-                  height: 4,
-                  borderRadius: "50%",
-                  background: sc.dot,
-                  display: "inline-block",
-                  animation: grant.status !== "ENDED" ? "pulse 2s infinite" : undefined,
-                }}
-              />
-              {grant.status}
-            </span>
-
-            <span style={{ fontSize: 9, color: "#475569", fontFamily: "monospace" }}>
-              {grant.org}
-            </span>
-          </div>
-
-          <div
-            style={{
-              fontSize: "clamp(13px, 3.5vw, 15px)",
-              fontWeight: 800,
-              color: "#fff",
-              marginBottom: 8,
-              lineHeight: 1.3,
-            }}
-          >
-            {grant.title}
-          </div>
-
-          <p style={{ fontSize: 12, color: "#64748b", lineHeight: 1.65, margin: "0 0 12px" }}>
-            {grant.desc}
-          </p>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-            {grant.tags.map((tag) => (
-              <span
-                key={tag}
-                style={{
-                  fontSize: 9,
-                  color: "#475569",
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  padding: "2px 8px",
-                  borderRadius: 5,
-                  fontFamily: "monospace",
-                }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}>
-                  REWARD
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>{grant.reward}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 8, color: "#475569", fontFamily: "monospace", marginBottom: 2 }}>
-                  DEADLINE
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>{grant.deadline}</div>
-              </div>
-            </div>
-
-            <a
-              href={grant.url}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                padding: "8px 18px",
-                borderRadius: 10,
-                background: grant.status === "ENDED" ? "rgba(255,255,255,0.03)" : "rgba(16,185,129,0.1)",
-                border: grant.status === "ENDED" ? "1px solid rgba(255,255,255,0.07)" : "1px solid rgba(52,211,153,0.25)",
-                color: grant.status === "ENDED" ? "#475569" : "#34d399",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textDecoration: "none",
-                fontFamily: "monospace",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {grant.status === "ENDED" ? "VIEW RECAP →" : "APPLY NOW →"}
-            </a>
-          </div>
+          ))}
         </div>
       </div>
-    </div>
+
+      <div className="flex shrink-0 flex-row items-center justify-between gap-6 sm:flex-col sm:items-end sm:justify-start sm:gap-2">
+        <div className="text-left sm:text-right">
+          <p className="font-mono text-xs font-semibold text-accent-text">{g.reward}</p>
+          <p className="mt-0.5 text-[11px] text-muted">{g.deadline}</p>
+        </div>
+        <span className="font-mono text-[11px] font-medium" style={{ color: ended ? "#8592a8" : typeColor }}>
+          View →
+        </span>
+      </div>
+    </motion.a>
   );
 }

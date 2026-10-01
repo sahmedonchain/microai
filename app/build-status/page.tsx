@@ -1,7 +1,17 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Navbar } from "@/app/components/Navbar";
+import { motion } from "framer-motion";
+import { Search, SlidersHorizontal, MessageSquare } from "lucide-react";
+import { LogoMark } from "@/app/components/landing/LandingNavbar";
+
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Ecosystem", href: "/ecosystem" },
+  { label: "Grants", href: "/grants" },
+  { label: "Build status", href: "/build-status" },
+  { label: "Stats", href: "/stats" },
+];
 
 interface RepoStatus {
   name: string;
@@ -67,23 +77,23 @@ function getStatus(days: number | null): "ACTIVE" | "SLOW" | "INACTIVE" {
   return "INACTIVE";
 }
 
-const STATUS_CONFIG = {
-  ACTIVE:   { color: "#34d399", bg: "rgba(16,185,129,0.08)", label: "ACTIVE" },
-  SLOW:     { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", label: "SLOW" },
-  INACTIVE: { color: "#475569", bg: "rgba(71,85,105,0.1)",  label: "INACTIVE" },
-  LOADING:  { color: "#334155", bg: "rgba(51,65,85,0.1)",   label: "LOADING" },
-  ERROR:    { color: "#f87171", bg: "rgba(239,68,68,0.06)", label: "ERROR" },
+const STATUS_CONFIG: Record<RepoStatus["status"], { color: string; label: string }> = {
+  ACTIVE:   { color: "#3dd68c", label: "Active" },
+  SLOW:     { color: "#f5b544", label: "Slow" },
+  INACTIVE: { color: "#8592a8", label: "Inactive" },
+  LOADING:  { color: "#8592a8", label: "Loading" },
+  ERROR:    { color: "#f2555a", label: "Error" },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "OFFICIAL ARC/CIRCLE": "#2563eb",
-  "COMMUNITY BUILDS": "#34d399",
+  "OFFICIAL ARC/CIRCLE": "#2775ca",
+  "COMMUNITY BUILDS": "#3dd68c",
   "DEX & LIQUIDITY":  "#ec4899",
   "LENDING":          "#b6509e",
   "BRIDGES":          "#9333ea",
-  "DEV TOOLS":        "#3b82f6",
-  "INFRASTRUCTURE":   "#64748b",
-  "WALLETS":          "#6366f1",
+  "DEV TOOLS":        "#5ea2ec",
+  "INFRASTRUCTURE":   "#8592a8",
+  "WALLETS":          "#664c88",
 };
 
 export default function BuildStatusPage() {
@@ -91,7 +101,9 @@ export default function BuildStatusPage() {
     REPOS.map(r => ({ ...r, pushedAt: null, stars: null, status: "LOADING", daysAgo: null }))
   );
   const [filter, setFilter] = useState("ALL");
+  const [search, setSearch] = useState("");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchStatuses = async () => {
     const updated = await Promise.all(
@@ -121,146 +133,311 @@ export default function BuildStatusPage() {
     fetchStatuses();
   }, []);
 
-  const categories = ["ALL", ...Array.from(new Set(REPOS.map(r => r.category)))];
-  const filtered = filter === "ALL" ? repos : repos.filter(r => r.category === filter);
+  const categoryList = Array.from(new Set(REPOS.map(r => r.category)));
+  const categoryCounts = categoryList.map((c) => ({
+    name: c,
+    count: REPOS.filter((r) => r.category === c).length,
+  }));
+
+  const filtered = repos.filter((r) => {
+    const matchCat = filter === "ALL" || r.category === filter;
+    const q = search.toLowerCase();
+    const matchSearch = search === "" || r.name.toLowerCase().includes(q) || r.org.toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
 
   const activeCount = repos.filter(r => r.status === "ACTIVE").length;
   const slowCount = repos.filter(r => r.status === "SLOW").length;
+  const inactiveCount = repos.filter(r => r.status === "INACTIVE").length;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#010503", color: "#e2e8f0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <Navbar />
+    <div className="min-h-screen bg-space font-sans text-text">
+      {/* NAV */}
+      <header className="sticky top-0 z-50 border-b border-border bg-space/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <LogoMark className="size-7" />
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 text-sm transition ${
+                  l.href === "/build-status" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => searchRef.current?.focus()}
+              aria-label="Search repos"
+              className="hidden rounded-lg border border-border p-2 text-muted transition hover:text-text sm:flex"
+            >
+              <Search className="size-4" aria-hidden="true" />
+            </button>
+
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+              </span>
+              Arc Mainnet
+            </span>
+          </div>
+        </div>
+      </header>
 
       {/* HERO */}
-      <section style={{ padding: "48px 20px 32px", textAlign: "center", borderBottom: "1px solid rgba(16,185,129,0.06)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 20, border: "1px solid rgba(16,185,129,0.15)", background: "rgba(3,17,10,0.6)", marginBottom: 20 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>LIVE FROM GITHUB API</span>
-        </div>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(148,163,184,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
-          Build Status Tracker
-        </h1>
-        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
-          Who's actually shipping in the Arc ecosystem? Live GitHub activity for every project — updated in real time.
-        </p>
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <p className="text-xs text-muted">
+            <Link href="/" className="hover:text-text">Home</Link> / Build status
+          </p>
 
-        {/* Stats */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
-          {[
-            { label: "ACTIVE (7d)", value: activeCount.toString(), color: "#34d399" },
-            { label: "SLOW (30d)", value: slowCount.toString(), color: "#f59e0b" },
-            { label: "TOTAL TRACKED", value: REPOS.length.toString(), color: "#94a3b8" },
-          ].map(s => (
-            <div key={s.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "clamp(1.4rem,5vw,2rem)", fontWeight: 900, color: s.color, fontFamily: "monospace" }}>{s.value}</div>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {lastUpdated && (
-          <div style={{ marginTop: 16, fontSize: 9, color: "#334155", fontFamily: "monospace" }}>
-            LAST UPDATED {lastUpdated.toLocaleTimeString()}
-            <button onClick={fetchStatuses} style={{ marginLeft: 12, background: "none", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 5, color: "#34d399", fontSize: 9, fontFamily: "monospace", cursor: "pointer", padding: "2px 8px" }}>
-              REFRESH
-            </button>
+          <div className="mt-4 max-w-xl">
+            <h1 className="text-3xl font-semibold leading-[1.15] text-text sm:text-4xl">
+              Build Status
+              <br />
+              Tracker
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-muted">
+              Who&apos;s actually shipping in the Arc ecosystem — live GitHub activity for every tracked project.
+            </p>
           </div>
-        )}
-      </section>
 
-      {/* FILTERS */}
-      <section style={{ padding: "20px 16px 0", maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {categories.map(cat => (
-            <button key={cat} onClick={() => setFilter(cat)}
-              style={{
-                padding: "5px 12px", borderRadius: 7,
-                border: filter === cat ? "1px solid rgba(52,211,153,0.3)" : "1px solid rgba(16,185,129,0.08)",
-                background: filter === cat ? "rgba(16,185,129,0.08)" : "rgba(0,0,0,0.2)",
-                color: filter === cat ? "#34d399" : "#64748b",
-                fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", fontFamily: "monospace", cursor: "pointer",
-              }}
-            >
-              {cat}
-            </button>
-          ))}
+          {/* STAT STRIP — real counts only */}
+          <div className="mt-10 flex flex-wrap gap-3">
+            {[
+              { label: "Active (7d)", value: activeCount },
+              { label: "Slow (30d)", value: slowCount },
+              { label: "Inactive", value: inactiveCount },
+              { label: "Projects tracked", value: REPOS.length },
+            ].map((s) => (
+              <div key={s.label} className="min-w-[140px] flex-1 rounded-lg border border-border bg-surface px-5 py-4 sm:flex-none">
+                <p className="font-mono text-2xl text-text">{s.value}</p>
+                <p className="mt-1 text-xs text-muted">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {lastUpdated && (
+            <div className="mt-4 flex items-center gap-3 text-xs text-muted">
+              Last updated {lastUpdated.toLocaleTimeString()}
+              <button
+                type="button"
+                onClick={fetchStatuses}
+                className="rounded-md border border-border px-2 py-1 text-xs text-accent-text transition hover:bg-surface"
+              >
+                Refresh
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* REPO LIST */}
-      <section style={{ padding: "16px 16px 60px", maxWidth: 1000, margin: "0 auto" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {filtered.map((repo) => {
-            const sc = STATUS_CONFIG[repo.status];
-            const catColor = CATEGORY_COLORS[repo.category] ?? "#64748b";
-            return (
-              <div key={repo.repo} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 12, background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.07)", flexWrap: "wrap" }}>
+      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-8 sm:px-6">
+        {/* MAIN */}
+        <div className="min-w-0 flex-1">
+          {/* SEARCH + FILTER BAR */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search projects..."
+                className="w-full rounded-lg border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              />
+            </div>
 
-                {/* Status dot */}
-                <div style={{ width: 8, height: 8, borderRadius: "50%", background: sc.color, flexShrink: 0, animation: repo.status === "ACTIVE" ? "pulse 2s infinite" : "none" }} />
+            <div className="relative shrink-0">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="appearance-none rounded-lg border border-border bg-surface py-2.5 pl-3 pr-8 text-sm text-text focus:outline-none"
+              >
+                <option value="ALL">All categories</option>
+                {categoryList.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <SlidersHorizontal className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
+            </div>
+          </div>
 
-                {/* Name + category */}
-                <div style={{ flex: 1, minWidth: 120 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{repo.name}</div>
-                  <span style={{ fontSize: 8, color: catColor, background: `${catColor}15`, border: `1px solid ${catColor}25`, padding: "1px 6px", borderRadius: 4, fontFamily: "monospace", letterSpacing: "0.08em" }}>
-                    {repo.category}
-                  </span>
-                </div>
+          <p className="mt-3 text-xs text-muted">
+            {filtered.length === 0
+              ? `No results${search ? ` for "${search}"` : ""}`
+              : `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`}
+          </p>
 
-                {/* Status badge */}
-                <div style={{ padding: "3px 10px", borderRadius: 6, background: sc.bg, border: `1px solid ${sc.color}30`, fontSize: 9, fontWeight: 700, color: sc.color, fontFamily: "monospace", letterSpacing: "0.1em", flexShrink: 0 }}>
-                  {repo.status === "LOADING" ? "..." : sc.label}
-                </div>
+          {/* REPO LIST */}
+          <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
+            {filtered.map((repo) => {
+              const sc = STATUS_CONFIG[repo.status];
+              const catColor = CATEGORY_COLORS[repo.category] ?? "#664c88";
+              return (
+                <motion.a
+                  key={repo.repo}
+                  href={repo.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  whileHover={{ y: -2, backgroundColor: "rgba(255,255,255,0.03)" }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3 no-underline last:border-b-0 sm:flex-nowrap"
+                >
+                  <span
+                    className="size-1.5 shrink-0 rounded-full"
+                    style={{ background: sc.color }}
+                    aria-hidden="true"
+                  />
 
-                {/* Days ago */}
-                <div style={{ fontSize: 11, color: "#475569", fontFamily: "monospace", minWidth: 80, textAlign: "right" }}>
-                  {repo.status === "LOADING" ? "—" :
-                   repo.status === "ERROR" ? "API error" :
-                   repo.daysAgo === 0 ? "today" :
-                   repo.daysAgo === 1 ? "1 day ago" :
-                   repo.daysAgo !== null ? `${repo.daysAgo}d ago` : "—"}
-                </div>
-
-                {/* Stars */}
-                {repo.stars !== null && (
-                  <div style={{ fontSize: 11, color: "#334155", fontFamily: "monospace", minWidth: 50, textAlign: "right" }}>
-                    ★ {repo.stars >= 1000 ? `${(repo.stars / 1000).toFixed(1)}k` : repo.stars}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-text">{repo.name}</span>
+                    </div>
+                    <span
+                      className="mt-1 inline-block rounded px-1.5 py-0.5 font-mono text-[9px] font-medium"
+                      style={{ background: `${catColor}18`, border: `1px solid ${catColor}30`, color: catColor }}
+                    >
+                      {repo.category}
+                    </span>
                   </div>
-                )}
 
-                {/* Links */}
-                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  <a href={repo.url} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", textDecoration: "none", fontWeight: 700, letterSpacing: "0.08em" }}>
-                    GITHUB ↗
-                  </a>
-                  <a href={repo.projectUrl} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: "#34d399", fontFamily: "monospace", textDecoration: "none", fontWeight: 700, letterSpacing: "0.08em" }}>
-                    VISIT ↗
-                  </a>
+                  <span
+                    className="shrink-0 rounded px-2 py-0.5 font-mono text-[10px] font-medium"
+                    style={{ background: `${sc.color}18`, border: `1px solid ${sc.color}30`, color: sc.color }}
+                  >
+                    {repo.status === "LOADING" ? "..." : sc.label}
+                  </span>
+
+                  <span className="w-20 shrink-0 text-right font-mono text-xs text-muted">
+                    {repo.status === "LOADING" ? "—" :
+                     repo.status === "ERROR" ? "API error" :
+                     repo.daysAgo === 0 ? "today" :
+                     repo.daysAgo === 1 ? "1 day ago" :
+                     repo.daysAgo !== null ? `${repo.daysAgo}d ago` : "—"}
+                  </span>
+
+                  {repo.stars !== null && (
+                    <span className="w-14 shrink-0 text-right font-mono text-xs text-muted">
+                      ★ {repo.stars >= 1000 ? `${(repo.stars / 1000).toFixed(1)}k` : repo.stars}
+                    </span>
+                  )}
+
+                  <span className="shrink-0 font-mono text-[11px] font-medium text-accent-text">
+                    View repo →
+                  </span>
+                </motion.a>
+              );
+            })}
+            {filtered.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-muted">No projects match this filter.</p>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <aside className="hidden w-64 shrink-0 flex-col gap-6 lg:flex">
+          <div>
+            <p className="text-sm font-medium text-text">Status</p>
+            <div className="mt-3 flex flex-col gap-0.5">
+              {[
+                { label: "Active", count: activeCount, color: "#3dd68c" },
+                { label: "Slow", count: slowCount, color: "#f5b544" },
+                { label: "Inactive", count: inactiveCount, color: "#8592a8" },
+              ].map((s) => (
+                <div key={s.label} className="flex items-center justify-between rounded-md px-2.5 py-1.5 text-sm text-muted">
+                  <span className="flex items-center gap-2">
+                    <span className="size-1.5 rounded-full" style={{ background: s.color }} />
+                    {s.label}
+                  </span>
+                  <span className="font-mono text-xs">{s.count}</span>
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-text">Categories</p>
+            <div className="mt-3 flex flex-col gap-0.5">
+              <button
+                onClick={() => setFilter("ALL")}
+                className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition ${
+                  filter === "ALL" ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface hover:text-text"
+                }`}
+              >
+                All categories
+                <span className="font-mono text-xs">{REPOS.length}</span>
+              </button>
+              {categoryCounts.map((c) => (
+                <button
+                  key={c.name}
+                  onClick={() => setFilter(c.name)}
+                  className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition ${
+                    filter === c.name ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface hover:text-text"
+                  }`}
+                >
+                  <span className="truncate">{c.name}</span>
+                  <span className="font-mono text-xs">{c.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      {/* CTA */}
+      <section className="border-t border-border bg-surface/40">
+        <div className="mx-auto max-w-7xl px-4 py-14 text-center sm:px-6">
+          <h2 className="text-2xl font-semibold text-text">Ask MicroAI</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+            Get instant answers about any tracked project&apos;s activity for just $0.001 USDC.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
+          >
+            <MessageSquare className="size-4" aria-hidden="true" />
+            Ask MicroAI
+          </Link>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: "1px solid rgba(16,185,129,0.08)", background: "#010402", padding: "22px 16px" }}>
-        <div style={{ maxWidth: 1000, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 9, color: "#1e3a29", fontFamily: "monospace" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
-          <div style={{ display: "flex", gap: 16 }}>
-            {[{ l: "ECOSYSTEM", h: "/ecosystem" }, { l: "GRANTS", h: "/grants" }, { l: "DEBUGGER", h: "/debug" }, { l: "STATS", h: "/stats" }].map(link => (
-              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#1e3a29", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "monospace", textDecoration: "none" }}>{link.l}</Link>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <LogoMark className="size-5" />
+            <span className="text-xs text-muted">MicroAI · The Arc &amp; Circle hub</span>
+          </div>
+          <div className="flex flex-wrap gap-5">
+            {[
+              { l: "Arc", h: "https://arc.io" },
+              { l: "Circle", h: "https://circle.com" },
+              { l: "GitHub", h: "https://github.com/sahmedonchain/microai" },
+              { l: "Explorer", h: "https://explorer.arc.io" },
+            ].map((link) => (
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" className="text-xs text-muted transition hover:text-text">
+                {link.l}
+              </a>
             ))}
           </div>
         </div>
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
-        * { box-sizing: border-box; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        select { color-scheme: dark; }
       `}</style>
     </div>
   );

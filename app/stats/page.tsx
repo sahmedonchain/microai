@@ -1,8 +1,16 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import Link from "next/link";
-import { Navbar } from "@/app/components/Navbar";
+import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { timeAgo } from "@/lib/format";
+
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Ecosystem", href: "/ecosystem" },
+  { label: "Grants", href: "/grants" },
+  { label: "Build status", href: "/build-status" },
+  { label: "Stats", href: "/stats" },
+];
 
 const ARC_RPC = "https://rpc.mainnet.arc.io";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
@@ -95,8 +103,8 @@ const TWEEN_DURATION_MS = 700;
 
 // Odometer-style count-up/down: tweens its displayed number from the old
 // value to the new one over ~700ms (eased, not linear) whenever `value`
-// changes, and flashes green at the same time. Shows the real value
-// instantly on first mount — only re-fetches get the tween treatment.
+// changes, and flashes at the same time. Shows the real value instantly
+// on first mount — only re-fetches get the tween treatment.
 function TickingNumber({ value, format }: { value: number; format: (n: number) => string }) {
   const [display, setDisplay] = useState(value);
   const displayRef = useRef(value);
@@ -182,12 +190,13 @@ function LiveBlockHeight({ blockNumber }: { blockNumber?: number }) {
   );
 }
 
-// Small pulsing-dot "LIVE" badge for section headings that auto-refresh.
+// Small pulsing-dot "Live" badge for section headings that auto-refresh.
 function LiveDot() {
   return (
-    <span
-      style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 1.6s infinite", marginRight: 6 }}
-    />
+    <span className="relative mr-1.5 inline-flex size-1.5">
+      <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-75" aria-hidden="true" />
+      <span className="relative inline-flex size-1.5 rounded-full bg-success" aria-hidden="true" />
+    </span>
   );
 }
 
@@ -197,29 +206,32 @@ function LiveDot() {
 function Skeleton({ width = 90, height = 22 }: { width?: number | string; height?: number }) {
   return (
     <span
-      style={{
-        display: "inline-block",
-        width,
-        height,
-        borderRadius: 6,
-        background: "rgba(52,211,153,0.12)",
-        animation: "pulse 1.4s infinite",
-      }}
+      className="inline-block animate-pulse rounded-md bg-accent-dim"
+      style={{ width, height }}
     />
   );
 }
 
 function Unavailable({ onRetry }: { onRetry: () => void }) {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-      <span style={{ fontSize: 13, color: "#f87171", fontFamily: "monospace" }}>unavailable</span>
+    <span className="inline-flex items-center gap-2">
+      <span className="text-sm text-danger">unavailable</span>
       <button
         onClick={onRetry}
-        style={{ fontSize: 9, color: "#94a3b8", background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "2px 8px", cursor: "pointer", fontFamily: "monospace" }}
+        className="rounded-md border border-border px-2 py-0.5 text-xs text-muted transition hover:text-text"
       >
-        RETRY
+        Retry
       </button>
     </span>
+  );
+}
+
+function StatCard({ label, children, tone = "default" }: { label: string; children: ReactNode; tone?: "default" | "accent" }) {
+  return (
+    <div className={`rounded-lg border px-5 py-4 ${tone === "accent" ? "border-accent/25 bg-accent-dim" : "border-border bg-surface"}`}>
+      <p className="text-xs text-muted">{label}</p>
+      <p className="mt-2 font-mono text-2xl text-text">{children}</p>
+    </div>
   );
 }
 
@@ -363,71 +375,92 @@ export default function StatsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#010503", color: "#e2e8f0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <Navbar />
+    <div className="min-h-screen bg-space font-sans text-text">
+      {/* NAV */}
+      <header className="sticky top-0 z-50 border-b border-border bg-space/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <LogoMark className="size-7" />
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 text-sm transition ${
+                  l.href === "/stats" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+              </span>
+              Arc Mainnet
+            </span>
+          </div>
+        </div>
+      </header>
 
       {/* HERO */}
-      <section style={{ padding: "48px 20px 32px", textAlign: "center", borderBottom: "1px solid rgba(16,185,129,0.06)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 20, border: "1px solid rgba(16,185,129,0.15)", background: "rgba(3,17,10,0.6)", marginBottom: 20 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>LIVE FROM ARC RPC</span>
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <p className="text-xs text-muted">
+            <Link href="/" className="hover:text-text">Home</Link> / Stats
+          </p>
+          <div className="mt-4 max-w-xl">
+            <h1 className="text-3xl font-semibold leading-[1.15] text-text sm:text-4xl">
+              Arc Network
+              <br />
+              Stats
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-muted">
+              Real-time data pulled directly from Arc Mainnet RPC. No static numbers — this refreshes every 10 seconds.
+            </p>
+          </div>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(148,163,184,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
-          Arc Network Stats
-        </h1>
-        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
-          Real-time data pulled directly from Arc Mainnet RPC. No static numbers — this refreshes every 10 seconds.
-        </p>
       </section>
 
-      {/* NETWORK STATS */}
-      <section style={{ padding: "32px 16px 20px", maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-          NETWORK STATUS
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-          <div style={{ padding: "20px", borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
-            <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>BLOCK HEIGHT</div>
-            <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-              {stats ? <LiveBlockHeight blockNumber={stats.blockNumber} /> : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
-            </div>
-          </div>
-          {[
-            { label: "GAS PRICE", value: stats?.gasPrice, suffix: " USDC" },
-            { label: "CHAIN ID", value: stats?.chainId, suffix: "" },
-          ].map((s) => (
-            <div key={s.label} style={{ padding: "20px", borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>{s.label}</div>
-              <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
-                {s.value !== undefined ? (
-                  <FlashValue value={s.value}>
-                    {s.value}<span style={{ fontSize: 11, color: "#475569" }}>{s.suffix}</span>
-                  </FlashValue>
-                ) : networkFailed ? (
-                  <Unavailable onRetry={retryNetwork} />
-                ) : (
-                  <Skeleton />
-                )}
-              </div>
-            </div>
-          ))}
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        {/* NETWORK STATUS */}
+        <p className="text-sm font-medium text-text">Network status</p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatCard label="Block height" tone="accent">
+            {stats ? <LiveBlockHeight blockNumber={stats.blockNumber} /> : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
+          </StatCard>
+          <StatCard label="Gas price" tone="accent">
+            {stats?.gasPrice !== undefined ? (
+              <FlashValue value={stats.gasPrice}>
+                {stats.gasPrice}<span className="ml-1 text-xs text-muted">USDC</span>
+              </FlashValue>
+            ) : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
+          </StatCard>
+          <StatCard label="Chain ID" tone="accent">
+            {stats?.chainId !== undefined ? (
+              <FlashValue value={stats.chainId}>{stats.chainId}</FlashValue>
+            ) : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
+          </StatCard>
         </div>
         {networkUpdated && (
-          <div style={{ textAlign: "right", marginTop: 10, fontSize: 9, color: "#334155", fontFamily: "monospace" }}>
-            LAST UPDATED {timeAgo(networkUpdated.toISOString())} · AUTO-REFRESH 10S
-          </div>
+          <p className="mt-2 text-right text-xs text-muted">
+            Last updated {timeAgo(networkUpdated.toISOString())} · auto-refresh 10s
+          </p>
         )}
-      </section>
 
-      {/* MICROAI REVENUE */}
-      <section style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-          MICROAI ON-CHAIN ACTIVITY
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-          <div style={{ padding: "20px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
-            <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL USDC RECEIVED</div>
-            <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
+        {/* MICROAI ON-CHAIN ACTIVITY */}
+        <p className="mt-10 text-sm font-medium text-text">MicroAI on-chain activity</p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-border bg-surface px-5 py-4">
+            <p className="text-xs text-muted">Total USDC received</p>
+            <p className="mt-2 font-mono text-2xl text-text">
               {revenue !== null ? (
                 <TickingNumber value={parseFloat(revenue)} format={(n) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`} />
               ) : revenueFailed ? (
@@ -435,12 +468,12 @@ export default function StatsPage() {
               ) : (
                 <Skeleton />
               )}
-            </div>
-            <div style={{ fontSize: 9, color: "#334155", marginTop: 6, fontFamily: "monospace" }}>FROM AI QUERIES</div>
+            </p>
+            <p className="mt-1 text-xs text-muted">From AI queries</p>
           </div>
-          <div style={{ padding: "20px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
-            <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>TOTAL TRANSACTIONS</div>
-            <div style={{ fontSize: "clamp(1.3rem,4vw,1.8rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>
+          <div className="rounded-lg border border-border bg-surface px-5 py-4">
+            <p className="text-xs text-muted">Total transactions</p>
+            <p className="mt-2 font-mono text-2xl text-text">
               {explorer !== null ? (
                 <TickingNumber value={explorer.totalTransactions} format={(n) => Math.round(n).toLocaleString()} />
               ) : explorerFailed ? (
@@ -448,200 +481,161 @@ export default function StatsPage() {
               ) : (
                 <Skeleton />
               )}
-            </div>
-            <div style={{ fontSize: 9, color: "#334155", marginTop: 6, fontFamily: "monospace" }}>ON RECEIVER WALLET</div>
+            </p>
+            <p className="mt-1 text-xs text-muted">On receiver wallet</p>
           </div>
         </div>
         {explorer?.stale && explorer.cachedAt && (
-          <div style={{ textAlign: "right", marginTop: 10, fontSize: 9, color: "#f59e0b", fontFamily: "monospace" }}>
-            SHOWING LAST KNOWN DATA FROM {timeAgo(new Date(explorer.cachedAt).toISOString())}
-          </div>
+          <p className="mt-2 text-right text-xs text-warning">
+            Showing last known data from {timeAgo(new Date(explorer.cachedAt).toISOString())}
+          </p>
         )}
         <a
           href={`https://explorer.arc.io/address/${RECEIVER_WALLET}`}
           target="_blank"
           rel="noreferrer"
-          style={{ display: "inline-block", marginTop: 10, fontSize: 10, color: "#34d399", fontFamily: "monospace", fontWeight: 700, textDecoration: "none", letterSpacing: "0.06em" }}
+          className="mt-3 inline-block text-xs font-medium text-accent-text hover:underline"
         >
-          VIEW WALLET ON ARC EXPLORER ↗
+          View wallet on Arc Explorer →
         </a>
-      </section>
 
-      {/* LIVE TRANSACTION FEED */}
-      <section style={{ padding: "20px 16px", maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ display: "flex", alignItems: "center", fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-          <LiveDot />LIVE TRANSACTION FEED · LAST 10 · AUTO-REFRESH 10S
+        {/* LIVE TRANSACTION FEED */}
+        <div className="mt-10 flex items-center text-sm font-medium text-text">
+          <LiveDot />Live transaction feed · last 10 · auto-refresh 10s
         </div>
-        <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 16, overflow: "hidden" }}>
+        <div className="mt-3 overflow-hidden rounded-lg border border-border bg-surface">
           {explorer === null ? (
             explorerFailed ? (
-              <div style={{ padding: 20, display: "flex", justifyContent: "center" }}>
+              <div className="flex justify-center p-5">
                 <Unavailable onRetry={retryExplorer} />
               </div>
             ) : (
-              <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 10 }}>
-                {[0, 1, 2].map((i) => (
-                  <Skeleton key={i} width="100%" height={16} />
-                ))}
+              <div className="flex flex-col gap-2.5 p-5">
+                {[0, 1, 2].map((i) => <Skeleton key={i} width="100%" height={16} />)}
               </div>
             )
           ) : explorer.recentTransactions.length === 0 ? (
-            <div style={{ padding: 20, fontSize: 11, color: "#475569", fontFamily: "monospace", textAlign: "center" }}>
-              No transactions yet.
-            </div>
+            <p className="p-5 text-center text-sm text-muted">No transactions yet.</p>
           ) : (
             explorer.recentTransactions.map((tx, i) => (
               <div
                 key={tx.hash || i}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10,
-                  padding: "12px 16px",
-                  borderBottom: i < explorer.recentTransactions.length - 1 ? "1px solid rgba(16,185,129,0.06)" : "none",
-                }}
+                className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0"
               >
                 {tx.hash ? (
                   <a
                     href={`https://explorer.arc.io/tx/${tx.hash}`}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ fontSize: 11, color: "#34d399", fontFamily: "monospace", textDecoration: "none", flexShrink: 0 }}
+                    className="shrink-0 font-mono text-xs text-accent-text hover:underline"
                   >
                     {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
                   </a>
                 ) : (
-                  <span style={{ fontSize: 11, color: "#475569", fontFamily: "monospace" }}>—</span>
+                  <span className="font-mono text-xs text-muted">—</span>
                 )}
-                <span style={{ fontSize: 10, color: "#475569", fontFamily: "monospace", flex: 1, textAlign: "center" }}>
-                  {timeAgo(tx.timestamp)}
-                </span>
-                <span style={{ fontSize: 11, color: "#6ee7b7", fontFamily: "monospace", fontWeight: 700, flexShrink: 0 }}>
-                  ${tx.amount} USDC
-                </span>
+                <span className="flex-1 text-center font-mono text-xs text-muted">{timeAgo(tx.timestamp)}</span>
+                <span className="shrink-0 font-mono text-xs font-semibold text-success">${tx.amount} USDC</span>
               </div>
             ))
           )}
         </div>
-      </section>
 
-      {/* WALLET LOOKUP */}
-      <section style={{ padding: "20px 16px 60px", maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-          WALLET BALANCE LOOKUP
-        </div>
-        <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 16, padding: "20px" }}>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {/* WALLET LOOKUP */}
+        <p className="mt-10 text-sm font-medium text-text">Wallet balance lookup</p>
+        <div className="mt-3 rounded-lg border border-border bg-surface p-5">
+          <div className="flex flex-wrap gap-2.5">
             <input
               type="text"
               value={walletInput}
               onChange={(e) => setWalletInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && lookupWallet()}
               placeholder="0x... (any Arc mainnet address)"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                background: "rgba(0,0,0,0.4)",
-                border: "1px solid rgba(16,185,129,0.15)",
-                borderRadius: 10,
-                padding: "12px 14px",
-                fontSize: 12,
-                color: "#fff",
-                outline: "none",
-                fontFamily: "monospace",
-              }}
+              className="min-w-0 flex-1 rounded-lg border border-border bg-space px-3.5 py-3 font-mono text-sm text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             />
             <button
               onClick={lookupWallet}
               disabled={walletLoading}
-              style={{
-                padding: "12px 24px",
-                borderRadius: 10,
-                border: "none",
-                background: walletLoading ? "rgba(16,185,129,0.1)" : "linear-gradient(135deg,#10b981,#059669)",
-                color: walletLoading ? "#34d399" : "#000",
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: "0.06em",
-                cursor: walletLoading ? "not-allowed" : "pointer",
-                whiteSpace: "nowrap",
-                fontFamily: "monospace",
-              }}
+              className="shrink-0 rounded-lg bg-accent px-5 py-3 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {walletLoading ? "CHECKING..." : "LOOKUP →"}
+              {walletLoading ? "Checking..." : "Lookup →"}
             </button>
           </div>
 
           {walletError && (
-            <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)", fontSize: 11, color: "#f87171", fontFamily: "monospace" }}>
+            <div className="mt-3 rounded-md border border-danger/20 bg-danger/10 px-3 py-2 text-sm text-danger">
               {walletError}
             </div>
           )}
 
           {walletData && (
-            <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
+            <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               {[
-                { label: "USDC", value: walletData.usdc, color: "#2563eb" },
-                { label: "EURC", value: walletData.eurc, color: "#2563eb" },
-                { label: "NATIVE GAS", value: walletData.native, color: "#34d399" },
+                { label: "USDC", value: walletData.usdc, color: "text-secondary-text" },
+                { label: "EURC", value: walletData.eurc, color: "text-secondary-text" },
+                { label: "Native gas", value: walletData.native, color: "text-success" },
               ].map((b) => (
-                <div key={b.label} style={{ padding: "14px", borderRadius: 10, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div style={{ fontSize: 8, color: "#334155", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "monospace", marginBottom: 6 }}>{b.label}</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: b.color, fontFamily: "monospace" }}>{b.value}</div>
+                <div key={b.label} className="rounded-md border border-border bg-space px-3.5 py-3">
+                  <p className="text-xs text-muted">{b.label}</p>
+                  <p className={`mt-1.5 font-mono text-sm font-semibold ${b.color}`}>{b.value}</p>
                 </div>
               ))}
             </div>
           )}
 
           {!walletData && !walletError && (
-            <div style={{ marginTop: 12, fontSize: 10, color: "#334155", fontFamily: "monospace" }}>
+            <p className="mt-3 text-xs text-muted">
               Paste any Arc MAINNET wallet address to see live USDC, EURC, and native gas balance.
-            </div>
+            </p>
           )}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <section className="border-t border-border bg-surface/40">
+        <div className="mx-auto max-w-7xl px-4 py-14 text-center sm:px-6">
+          <h2 className="text-2xl font-semibold text-text">Ask MicroAI</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+            Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
+          >
+            Ask MicroAI
+          </Link>
         </div>
       </section>
 
-      {/* CTA */}
-      <section style={{ borderTop: "1px solid rgba(16,185,129,0.06)", padding: "36px 16px", textAlign: "center", background: "rgba(2,11,6,0.4)" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>NEED MORE HELP?</div>
-        <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.8rem)", fontWeight: 900, color: "#fff", margin: "0 0 10px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#64748b", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
-          Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
-        </p>
-        <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#10b981", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none" }}>
-          LAUNCH CHAT TERMINAL →
-        </Link>
-      </section>
-
       {/* FOOTER */}
-      <footer style={{ borderTop: "1px solid rgba(16,185,129,0.08)", background: "#010402", padding: "22px 16px" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 9, color: "#1e3a29", fontFamily: "monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
-          <div style={{ display: "flex", gap: 16 }}>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <LogoMark className="size-5" />
+            <span className="text-xs text-muted">MicroAI · The Arc &amp; Circle hub</span>
+          </div>
+          <div className="flex flex-wrap gap-5">
             {[
-              { l: "ECOSYSTEM", h: "/ecosystem" },
-              { l: "GRANTS", h: "/grants" },
-              { l: "DEBUGGER", h: "/debug" },
-              { l: "EXPLORER", h: "https://explorer.arc.io" },
+              { l: "Arc", h: "https://arc.io" },
+              { l: "Circle", h: "https://circle.com" },
+              { l: "GitHub", h: "https://github.com/sahmedonchain/microai" },
+              { l: "Explorer", h: "https://explorer.arc.io" },
             ].map((link) => (
-              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#1e3a29", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "monospace", textDecoration: "none" }}>
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" className="text-xs text-muted transition hover:text-text">
                 {link.l}
-              </Link>
+              </a>
             ))}
           </div>
         </div>
       </footer>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
-        * { box-sizing: border-box; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes valueFlash {
-          0% { color: #baffdb; transform: scale(1.1); text-shadow: 0 0 12px rgba(52,211,153,0.5); }
-          60% { color: #34d399; transform: scale(1.03); }
+          0% { color: #baf5d6; transform: scale(1.1); text-shadow: 0 0 12px rgba(61,214,140,0.5); }
+          60% { color: #3dd68c; transform: scale(1.03); }
           100% { color: inherit; transform: scale(1); text-shadow: none; }
         }
-        input::placeholder { color: #334155; }
+        input::placeholder { color: var(--color-muted); }
       `}</style>
     </div>
   );
