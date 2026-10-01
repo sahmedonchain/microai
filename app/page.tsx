@@ -200,7 +200,11 @@ export default function Home() {
   }, [fetchCredit]);
 
   // Silently restore a previously-authorized wallet (eth_accounts never
-  // prompts) so the page shows the real balance without a reconnect.
+  // prompts) so the page shows the real balance without a reconnect. If
+  // the session cookie was cleared (e.g. "Clear site data") but the
+  // wallet extension still remembers the connection, restoreSession
+  // fails — fall back to establishSession (same as handleConnect) so the
+  // real Redis-backed balance loads instead of getting stuck at 0.
   useEffect(() => {
     const eth = (window as unknown as { ethereum?: EthereumProvider }).ethereum;
     if (!eth) return;
@@ -212,10 +216,14 @@ export default function Home() {
         setWallet(address);
         setProvider(eth);
         const ok = await restoreSession(address);
-        if (!ok) setCredit(0);
+        if (!ok) {
+          const established = await establishSession(address, eth);
+          if (established) await fetchCredit();
+          else setCredit(0);
+        }
       } catch { /* user can connect manually */ }
     })();
-  }, [restoreSession]);
+  }, [restoreSession, establishSession, fetchCredit]);
 
   useEffect(() => {
     let cancelled = false;
@@ -369,9 +377,16 @@ export default function Home() {
     }
   };
 
-  const askLabel = !wallet ? "Connect wallet" : !credit ? "Buy credits" : "Ask MicroAI";
+  const askLabel = !wallet
+    ? "Connect wallet"
+    : credit === null
+    ? "Restoring session..."
+    : !credit
+    ? "Buy credits"
+    : "Ask MicroAI";
   const handleAsk = () => {
     if (!wallet) { setWalletModalOpen(true); return; }
+    if (credit === null) return; // session still resolving — don't nudge toward a purchase yet
     if (!credit) { setBuyModalOpen(true); return; }
     sendMessage();
   };
@@ -735,6 +750,9 @@ export default function Home() {
                 </div>
               </div>
               {!wallet && <p className="mt-2 text-center text-xs text-muted">{askLabel} to send a message.</p>}
+              {wallet && credit === null && (
+                <p className="mt-2 text-center text-xs text-muted">Restoring your session...</p>
+              )}
             </div>
           </motion.main>
 
