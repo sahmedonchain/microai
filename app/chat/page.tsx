@@ -10,6 +10,7 @@ const ARC_CHAIN_ID = "0x13b2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const RECEIVER_ADDRESS = "0x78C144A76614A8674285129810555C8bCa78f044";
 const STORAGE_KEY = "microai_chat_history";
+const DRAFT_KEY = "microai_chat_draft"; // set by the homepage launcher input
 const TRANSFER_ABI = "0xa9059cbb"; // transfer(address,uint256)
 
 const PRESET_QUERIES = [5, 10, 20, 50];
@@ -74,6 +75,17 @@ export default function Chat() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const netMenuRef = useRef<HTMLDivElement>(null);
+
+  // Prefill from the homepage's "ask anything" launcher, if it sent one.
+  useEffect(() => {
+    try {
+      const draft = localStorage.getItem(DRAFT_KEY);
+      if (draft) {
+        setInput(draft);
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    } catch { /* silent */ }
+  }, []);
 
   // Load chat history
   useEffect(() => {

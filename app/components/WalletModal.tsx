@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
 interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -76,6 +77,12 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
     setWallets(detectWallets());
   }, []);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   const connect = async (wallet: WalletOption) => {
     if (!wallet.detected) {
       window.open(wallet.installUrl, "_blank");
@@ -109,89 +116,98 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
   };
 
   return (
-    <div
+    <motion.div
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, zIndex: 999, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-md"
     >
-      <div
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Connect wallet"
         onClick={e => e.stopPropagation()}
-        style={{ background: "#020e06", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 20, padding: "24px 20px", width: "100%", maxWidth: 360, position: "relative", boxShadow: "0 24px 60px rgba(0,0,0,0.6)" }}
+        initial={{ opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.97 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        className="w-full max-w-sm rounded-xl border border-border bg-surface p-5"
       >
-        {/* Top shimmer */}
-        <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 1, background: "linear-gradient(90deg,transparent,rgba(52,211,153,0.4),transparent)" }} />
-
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <div className="mb-5 flex items-center justify-between">
           <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>Connect Wallet</div>
-            <div style={{ fontSize: 10, color: "#334155", fontFamily: "monospace", letterSpacing: "0.08em", marginTop: 2 }}>ARC MAINNET · USDC GAS</div>
+            <div className="text-base font-semibold text-text">Connect wallet</div>
+            <div className="mt-0.5 font-mono text-xs text-muted">Arc Mainnet, gas paid in USDC</div>
           </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#475569", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="flex size-7 items-center justify-center rounded-md border border-border text-muted transition hover:bg-surface-raised hover:text-text"
+          >
+            ×
+          </button>
         </div>
 
         {/* Wallet list */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {wallets.map(wallet => (
             <button
               key={wallet.id}
               onClick={() => connect(wallet)}
               disabled={connecting !== null}
+              className="flex w-full items-center gap-3 rounded-lg border border-border bg-space px-3.5 py-3 text-left transition disabled:cursor-not-allowed"
               style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", borderRadius: 12,
-                border: connecting === wallet.id ? `1px solid ${wallet.color}40` : "1px solid rgba(255,255,255,0.06)",
-                background: connecting === wallet.id ? `${wallet.color}10` : "rgba(255,255,255,0.02)",
-                cursor: connecting !== null ? "not-allowed" : "pointer",
-                transition: "all 0.15s", width: "100%", textAlign: "left",
+                borderColor: connecting === wallet.id ? `${wallet.color}66` : undefined,
+                background: connecting === wallet.id ? `${wallet.color}14` : undefined,
                 opacity: connecting !== null && connecting !== wallet.id ? 0.4 : 1,
               }}
             >
               {/* Icon */}
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${wallet.color}15`, border: `1px solid ${wallet.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
+              <div
+                className="flex size-9 shrink-0 items-center justify-center rounded-lg text-lg"
+                style={{ background: `${wallet.color}20`, border: `1px solid ${wallet.color}35` }}
+              >
                 {connecting === wallet.id ? (
-                  <div style={{ width: 16, height: 16, border: `2px solid ${wallet.color}40`, borderTop: `2px solid ${wallet.color}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                  <span
+                    className="block size-4 animate-spin rounded-full"
+                    style={{ border: `2px solid ${wallet.color}40`, borderTopColor: wallet.color }}
+                  />
                 ) : wallet.icon}
               </div>
 
               {/* Name */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{wallet.name}</div>
-                <div style={{ fontSize: 9, fontFamily: "monospace", marginTop: 1 }}>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-text">{wallet.name}</div>
+                <div className="mt-0.5 font-mono text-xs">
                   {connecting === wallet.id
-                    ? <span style={{ color: wallet.color }}>Connecting...</span>
+                    ? <span style={{ color: wallet.color }}>Connecting…</span>
                     : wallet.detected
-                    ? <span style={{ color: "#34d399" }}>Detected</span>
-                    : <span style={{ color: "#475569" }}>Not installed — click to install</span>
+                    ? <span className="text-success">Detected</span>
+                    : <span className="text-muted">Not installed — click to install</span>
                   }
                 </div>
               </div>
-
-              {/* Arrow */}
-              {!connecting && (
-                <span style={{ fontSize: 12, color: "#334155" }}>{wallet.detected ? "→" : "↗"}</span>
-              )}
             </button>
           ))}
         </div>
 
         {/* Error */}
         {error && (
-          <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)", fontSize: 11, color: "#f87171", fontFamily: "monospace" }}>
+          <div className="mt-3 rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-xs text-danger">
             {error}
           </div>
         )}
 
         {/* Info */}
-        <div style={{ marginTop: 16, padding: "10px 12px", borderRadius: 10, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.08)" }}>
-          <div style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", letterSpacing: "0.08em", marginBottom: 4 }}>NEED MAINNET USDC?</div>
-          <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "#34d399", textDecoration: "none", fontWeight: 600 }}>
-            Get free USDC at faucet.circle.com ↗
+        <div className="mt-4 rounded-lg border border-border bg-space px-3 py-2.5">
+          <div className="mb-1 text-xs text-muted">Need Arc Mainnet USDC?</div>
+          <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="text-sm font-medium text-accent-text hover:underline">
+            Get free USDC at faucet.circle.com
           </a>
         </div>
-
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-        `}</style>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

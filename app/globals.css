@@ -8,8 +8,42 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+/* MicroAI design tokens (see .claude/skills/frontend-design/SKILL.md).
+   Radius mapping onto Tailwind defaults: rounded-sm = 4px (inputs, tags),
+   rounded-lg = 8px (cards, modals), rounded-xl = 12px (panels).
+
+   Accent colors are sampled directly from arc.io and circle.com's own
+   published CSS (not invented): Arc's "Quantum Plum" violet
+   (--primary-colors--quantum-plum in arc.io's stylesheet) and Circle's
+   "stable-blue" family (--colors--stable-blue-500/300 in circle.com's
+   stylesheet). Both pairs are WCAG AA-verified below. */
+@theme {
+  --color-space: #070b14;
+  --color-surface: #0d1320;
+  --color-surface-raised: #131b2c;
+  --color-border: #1e283b;
+  --color-text: #e6ebf5;
+  --color-muted: #8592a8;
+
+  /* Primary accent — Arc violet (Quantum Plum). 7.1:1 white-on-fill,
+     8.6:1 for --color-accent-text as small text/links on --color-space. */
+  --color-accent: #664c88;
+  --color-accent-text: #b89eea;
+  --color-accent-dim: rgb(102 76 136 / 0.14);
+
+  /* Secondary accent — Circle blue (stable-blue). 4.7:1 white-on-fill,
+     7.4:1 for --color-secondary-text as small text/links. */
+  --color-secondary: #2775ca;
+  --color-secondary-text: #5ea2ec;
+  --color-secondary-dim: rgb(39 117 202 / 0.14);
+
+  --color-success: #3dd68c;
+  --color-warning: #f5b544;
+  --color-danger: #f2555a;
 }
 
 @media (prefers-color-scheme: dark) {

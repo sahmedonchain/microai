@@ -1,8 +1,26 @@
 "use client";
-import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Navbar } from '@/app/components/Navbar';
-import { timeAgo, truncateAddress } from '@/lib/format';
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BarChart3,
+  Compass,
+  Gift,
+  Hammer,
+  MessageSquare,
+  Paperclip,
+  Search,
+  Share2,
+} from "lucide-react";
+import { WalletModal } from "@/app/components/WalletModal";
+import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { PRICE_PER_QUERY, formatUsdc } from "@/lib/pricing";
+import { timeAgo, truncateAddress } from "@/lib/format";
+
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
 
 interface RecentTransaction {
   hash: string;
@@ -11,368 +29,367 @@ interface RecentTransaction {
   timestamp: string | null;
 }
 
-export default function Home() {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [chatInput, setChatInput] = useState('');
-  const [chatResponse, setChatResponse] = useState('Ask me anything about Arc Chain deployment or Circle USDC integrations...');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [proofFeed, setProofFeed] = useState<RecentTransaction[]>([]);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+interface StatsPayload {
+  totalQuestions: number;
+  uniqueWallets: number;
+  recentTransactions: RecentTransaction[];
+}
 
-  useEffect(() => {
-    const handleMouse = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY });
-    window.addEventListener('mousemove', handleMouse);
-    return () => window.removeEventListener('mousemove', handleMouse);
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const setSize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    setSize();
-    window.addEventListener('resize', setSize);
-    const particles: { x: number; y: number; vx: number; vy: number; size: number; opacity: number }[] = [];
-    for (let i = 0; i < 50; i++) {
-      particles.push({ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight, vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18, size: Math.random() * 1.4 + 0.4, opacity: Math.random() * 0.16 + 0.04 });
-    }
-    let animId: number;
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(16,185,129,${p.opacity})`; ctx.fill();
-      });
-      animId = requestAnimationFrame(animate);
-    };
-    animate();
-    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', setSize); };
-  }, []);
-
-  // "Proof of work" feed — real recent payments to the receiver wallet.
-  // Fails silently: if the API errors or returns nothing, the section just
-  // doesn't render rather than showing an error to visitors.
-  useEffect(() => {
-    let cancelled = false;
-    const fetchProof = async () => {
-      try {
-        const res = await fetch('/api/stats');
-        if (!res.ok) throw new Error('failed');
-        const data = await res.json();
-        const txs = Array.isArray(data.recentTransactions) ? data.recentTransactions.slice(0, 5) : [];
-        if (!cancelled) setProofFeed(txs);
-      } catch {
-        if (!cancelled) setProofFeed([]);
-      }
-    };
-    fetchProof();
-    const interval = setInterval(fetchProof, 60000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, []);
-
-  const presets = [
-    { label: 'For Developers & Builders', key: 'ERC-8004', q: 'How do I implement ERC-8004 AI Agent on Arc?', r: 'To deploy ERC-8004 on Arc, initialize with Arc Agent Core SDK, specify runtime constraints, and use native USDC gas settlement.' },
-    { label: 'For Fintech & Startups', key: 'CCTP', q: 'How do I integrate Circle CCTP for cross-chain payments?', r: 'Circle CCTP burns USDC on source chain and mints native USDC on Arc — no wrapped tokens, fully native settlement.' },
-    { label: 'For Crypto Native & Traders', key: 'trades', q: 'How does DeFi and liquidity work on Arc?', r: 'Arc supports DeFi protocols with sub-second finality and USDC-native gas — ideal for liquidity pools and instant settlement.' },
-  ];
-
-  const navLinks = [
-  { label: 'ECOSYSTEM', href: '/ecosystem' },
-  { label: 'GRANTS', href: '/grants' },
-  { label: 'DEBUGGER', href: '/debug' },
+const NAV_ITEMS = [
+  { label: "Ask MicroAI", href: "/chat", icon: MessageSquare },
+  { label: "Ecosystem", href: "/ecosystem", icon: Compass },
+  { label: "Grants", href: "/grants", icon: Gift },
+  { label: "Build status", href: "/build-status", icon: Hammer },
+  { label: "Stats", href: "/stats", icon: BarChart3 },
 ];
 
+const POPULAR_PROMPTS = [
+  { name: "Developers", ask: "Why does my USDC transfer revert on Arc?" },
+  { name: "Builders", ask: "Which Arc projects are hiring contributors?" },
+  { name: "Fintech startups", ask: "How do I settle cross-border payouts with CCTP?" },
+  { name: "Crypto natives", ask: "Which Arc protocols gained the most TVL this week?" },
+];
+
+const TOPICS = ["Arc", "Circle", "USDC", "CCTP", "Contracts"];
+const DRAFT_KEY = "microai_chat_draft";
+
+export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [wallet, setWallet] = useState<string | null>(null);
+  const [credit, setCredit] = useState<number | null>(null);
+
+  const [stats, setStats] = useState<StatsPayload | null>(null);
+  const [input, setInput] = useState("");
+  const [contextOpen, setContextOpen] = useState(false);
+  const [context, setContext] = useState("");
+  const [shared, setShared] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const fetchCredit = useCallback(async () => {
+    try {
+      const res = await fetch("/api/credits/balance");
+      const data = await res.json();
+      setCredit(data.authenticated ? data.credits : null);
+    } catch {
+      setCredit(null);
+    }
+  }, []);
+
+  const establishSession = useCallback(async (address: string, prov: EthereumProvider): Promise<boolean> => {
+    try {
+      const nonceRes = await fetch(`/api/session/nonce?address=${address}`);
+      if (!nonceRes.ok) return false;
+      const { message } = await nonceRes.json();
+      const signature = (await prov.request({ method: "personal_sign", params: [message, address] })) as string;
+      const sessionRes = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address, signature }),
+      });
+      return sessionRes.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const restoreSession = useCallback(async (address: string): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/session");
+      const data = await res.json();
+      if (data.authenticated && data.address?.toLowerCase() === address.toLowerCase()) {
+        await fetchCredit();
+        return true;
+      }
+      if (data.authenticated) await fetch("/api/session", { method: "DELETE" });
+    } catch { /* fall through */ }
+    return false;
+  }, [fetchCredit]);
+
+  // Silently restore a previously-authorized wallet (eth_accounts never
+  // prompts) so the sidebar shows the real balance without a reconnect.
+  useEffect(() => {
+    const eth = (window as unknown as { ethereum?: EthereumProvider }).ethereum;
+    if (!eth) return;
+    (async () => {
+      try {
+        const accounts = (await eth.request({ method: "eth_accounts" })) as string[];
+        const address = accounts?.[0];
+        if (!address) return;
+        setWallet(address);
+        await restoreSession(address);
+      } catch { /* user can connect manually */ }
+    })();
+  }, [restoreSession]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/stats")
+      .then((res) => res.json())
+      .then((data) => { if (!cancelled) setStats(data); })
+      .catch(() => { /* stats row is optional enrichment */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleConnect = async (address: string, prov: EthereumProvider) => {
+    setWallet(address);
+    setWalletModalOpen(false);
+    const ok = await restoreSession(address);
+    if (!ok) {
+      const established = await establishSession(address, prov);
+      if (established) await fetchCredit();
+    }
+  };
+
+  const launchChat = (text: string) => {
+    const draft = context ? `${text}\n\nContext:\n${context}` : text;
+    try { localStorage.setItem(DRAFT_KEY, draft); } catch { /* best-effort */ }
+    router.push("/chat");
+  };
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (!text) return;
+    if (!wallet) { setWalletModalOpen(true); return; }
+    launchChat(text);
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "https://microai-tan.vercel.app";
+    try {
+      const nav = navigator as Navigator & { share?: (data: { title?: string; url?: string }) => Promise<void> };
+      if (nav.share) {
+        await nav.share({ title: "MicroAI", url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      }
+    } catch { /* user cancelled share — not an error */ }
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#010503', color: '#e2e8f0', overflowX: 'hidden', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="flex h-screen overflow-hidden bg-space font-sans text-text">
+      {/* SIDEBAR */}
+      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-surface">
+        <Link href="/" className="flex items-center gap-3 border-b border-border px-5 py-5">
+          <LogoMark className="size-8 shrink-0" />
+          <span className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+            <span className="text-xs text-muted">Arc intelligence</span>
+          </span>
+        </Link>
 
-      <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.35, width: '100%', height: '100%' }} />
+        <nav className="flex flex-col gap-1 px-3 py-4">
+          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                  active ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface-raised hover:text-text"
+                }`}
+              >
+                <Icon className="size-4 shrink-0" aria-hidden="true" />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
 
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-        <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '80%', height: '50%', borderRadius: '50%', background: 'rgba(16,185,129,0.04)', filter: 'blur(120px)' }} />
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.012, backgroundImage: 'linear-gradient(rgba(16,185,129,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.2) 1px, transparent 1px)', backgroundSize: '55px 55px' }} />
-        <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', pointerEvents: 'none', background: 'radial-gradient(circle, rgba(16,185,129,0.05), transparent 70%)', left: mousePos.x - 200, top: mousePos.y - 200, transition: 'left 0.4s, top 0.4s' }} />
-      </div>
-
-      {/* NAVBAR */}
-      <Navbar />
-
-      {/* HERO */}
-      <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(40px,8vw,80px) 20px clamp(32px,5vw,52px)', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px', borderRadius: 20, border: '1px solid rgba(16,185,129,0.18)', background: 'rgba(3,17,10,0.7)', marginBottom: 24 }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-          <span style={{ fontSize: 9, color: '#34d399', fontWeight: 700, letterSpacing: '0.18em', fontFamily: 'monospace' }}>NOW LIVE ON MAINNET</span>
+        <div className="flex-1 overflow-y-auto border-t border-border px-5 py-4">
+          <p className="text-xs text-muted">Recent</p>
+          <div className="mt-3 flex flex-col gap-3">
+            {stats?.recentTransactions.length ? (
+              stats.recentTransactions.slice(0, 5).map((tx, i) => (
+                <div key={tx.hash || i} className="flex items-center justify-between gap-2 font-mono text-xs text-muted">
+                  <span>{truncateAddress(tx.from)}</span>
+                  <span>{timeAgo(tx.timestamp)}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted">No queries yet.</p>
+            )}
+          </div>
         </div>
 
-        <h1 style={{ fontSize: 'clamp(2rem, 8vw, 5rem)', fontWeight: 900, lineHeight: 1.05, margin: '0 0 20px', letterSpacing: '-0.03em' }}>
-          <span style={{ display: 'block', background: 'linear-gradient(180deg, #ffffff 30%, rgba(255,255,255,0.7) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>The Arc & Circle</span>
-          <span style={{ display: 'block', background: 'linear-gradient(180deg, rgba(52,211,153,0.9) 0%, rgba(16,185,129,0.4) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Intelligence Hub</span>
-        </h1>
-
-        <p style={{ fontSize: 'clamp(13px, 2.5vw, 16px)', color: '#64748b', maxWidth: 520, margin: '0 auto 32px', lineHeight: 1.7 }}>
-          One AI engine trained on Arc and Circle documentation. Ask any question, get an instant verified answer — for just{' '}
-          <span style={{ color: '#34d399', fontWeight: 700, background: 'rgba(16,185,129,0.08)', padding: '1px 6px', borderRadius: 5 }}>$0.001 USDC</span>
-          {' '}per query, settled on-chain.
-        </p>
-
-        {/* Social proof bar */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 'clamp(16px,4vw,36px)', marginBottom: 32, flexWrap: 'wrap' }}>
-          {[
-            { val: 'ERC-8004', label: 'Agent Registered' },
-            { val: '$0.001', label: 'Per Question' },
-            { val: 'Arc MAINNET', label: 'Live Now' },
-          ].map(s => (
-            <div key={s.label} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 'clamp(13px,3vw,16px)', fontWeight: 900, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.01em' }}>{s.val}</div>
-              <div style={{ fontSize: 9, color: '#334155', fontWeight: 700, letterSpacing: '0.12em', marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-          <Link href="/chat" style={{ padding: '13px 28px', borderRadius: 12, background: 'linear-gradient(135deg,#10b981,#059669)', color: '#000', fontSize: 13, fontWeight: 800, letterSpacing: '0.06em', textDecoration: 'none', boxShadow: '0 0 24px rgba(16,185,129,0.3)' }}>
-            LAUNCH ENGINE →
-          </Link>
-          <Link href="/ecosystem" style={{ padding: '13px 28px', borderRadius: 12, border: '1px solid rgba(16,185,129,0.18)', background: 'rgba(16,185,129,0.04)', color: '#94a3b8', fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', textDecoration: 'none' }}>
-            EXPLORE ECOSYSTEM
-          </Link>
-        </div>
-      </section>
-
-      {/* LIVE DEMO WIDGET */}
-      <section style={{ position: 'relative', zIndex: 10, padding: '0 16px 56px', maxWidth: 860, margin: '0 auto' }}>
-        <div style={{ background: 'rgba(3,19,11,0.25)', backdropFilter: 'blur(20px)', border: '1px solid rgba(16,185,129,0.1)', borderRadius: 20, overflow: 'hidden' }}>
-          {/* Terminal bar */}
-          <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(16,185,129,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(2,12,7,0.6)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {['#ef4444','#f59e0b','#34d399'].map(c => <div key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.6 }} />)}
+        <div className="border-t border-border p-4">
+          {wallet ? (
+            <div className="rounded-lg border border-border bg-space p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted">Credit balance</span>
+                <span className="size-2 rounded-full bg-success" aria-hidden="true" />
               </div>
-              <span style={{ fontSize: 9, color: '#334155', fontFamily: 'monospace', letterSpacing: '0.1em' }}>MICROAI — LIVE DEMO</span>
+              <p className="mt-1 font-mono text-lg text-text">
+                {credit === null ? "—" : credit} <span className="text-xs text-muted">credits</span>
+              </p>
+              <p className="mt-2 truncate font-mono text-xs text-muted">{truncateAddress(wallet)}</p>
             </div>
-            <span style={{ fontSize: 8, color: '#334155', fontFamily: 'monospace' }}>ARC MAINNET</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setWalletModalOpen(true)}
+              className="w-full rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Connect wallet
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* MAIN */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-6 py-4">
+          <span className="text-sm font-medium text-text">Home</span>
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+            <div className="relative hidden max-w-sm flex-1 sm:block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+              <input
+                type="text"
+                placeholder="Ask anything"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const text = (e.target as HTMLInputElement).value.trim();
+                    if (text) { if (!wallet) setWalletModalOpen(true); else launchChat(text); }
+                  }
+                }}
+                className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              />
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-success/20 bg-success/10 px-3 py-1.5 text-xs text-success">
+              <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+              Arc Mainnet
+            </span>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs text-muted transition hover:bg-surface-raised hover:text-text"
+            >
+              <Share2 className="size-3.5" aria-hidden="true" />
+              {shared ? "Copied" : "Share"}
+            </button>
+          </div>
+        </header>
+
+        <motion.main
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center px-6 py-16"
+        >
+          <h1 className="text-center text-3xl font-semibold leading-[1.1] text-text sm:text-4xl">
+            Build smarter on Arc.
+          </h1>
+          <p className="mt-4 max-w-[52ch] text-center text-base leading-relaxed text-muted">
+            Ask anything about Arc, Circle, USDC and CCTP. Answers are backed by real on-chain data, paid for with
+            prepaid credits.
+          </p>
+
+          <div className="mt-10 w-full rounded-lg border border-border bg-surface p-4">
+            <textarea
+              ref={inputRef}
+              rows={2}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+              }}
+              placeholder="Ask anything about Arc, Circle, USDC, CCTP..."
+              className="w-full resize-none bg-transparent text-sm text-text placeholder:text-muted focus:outline-none"
+            />
+
+            <AnimatePresence initial={false}>
+              {contextOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="overflow-hidden"
+                >
+                  <textarea
+                    rows={2}
+                    value={context}
+                    onChange={(e) => setContext(e.target.value)}
+                    placeholder="Paste extra context (a contract address, error log, tx hash)..."
+                    className="mt-2 w-full resize-none rounded-md border border-border bg-space p-2 font-mono text-xs text-text placeholder:text-muted focus:outline-none"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+              <button
+                type="button"
+                onClick={() => setContextOpen((v) => !v)}
+                className={`inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs transition ${
+                  contextOpen ? "text-accent-text" : "text-muted hover:text-text"
+                }`}
+              >
+                <Paperclip className="size-3.5" aria-hidden="true" />
+                Add context
+              </button>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs text-muted">${formatUsdc(PRICE_PER_QUERY)} / query</span>
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {wallet ? "Ask MicroAI" : "Connect to ask"}
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div style={{ padding: '16px' }}>
-            <div style={{ fontSize: 9, color: '#34d399', fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'monospace', marginBottom: 10 }}>SELECT A QUERY TYPE</div>
-
-            {/* Preset buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              {presets.map(item => (
-                <button key={item.key} onClick={() => { setChatInput(item.q); setChatResponse(item.r); }}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 14px', borderRadius: 10, border: chatInput === item.q ? '1px solid rgba(52,211,153,0.35)' : '1px solid rgba(16,185,129,0.06)', background: chatInput === item.q ? 'rgba(16,185,129,0.07)' : 'rgba(0,0,0,0.15)', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'all 0.15s' }}>
-                  <span style={{ fontSize: 12, color: chatInput === item.q ? '#34d399' : '#64748b', fontWeight: 600 }}>{item.label}</span>
-                  <span style={{ fontSize: 9, color: '#334155', fontFamily: 'monospace', flexShrink: 0 }}>Try →</span>
+          <section className="mt-16 w-full" aria-labelledby="popular-heading">
+            <h2 id="popular-heading" className="text-sm font-medium text-muted">
+              Popular with builders
+            </h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {POPULAR_PROMPTS.map((p) => (
+                <button
+                  key={p.name}
+                  type="button"
+                  onClick={() => { setInput(p.ask); inputRef.current?.focus(); }}
+                  className="rounded-lg border border-border bg-surface p-4 text-left transition hover:border-accent/40 hover:bg-surface-raised"
+                >
+                  <p className="text-xs text-secondary-text">{p.name}</p>
+                  <p className="mt-2 text-sm leading-snug text-text">{p.ask}</p>
                 </button>
               ))}
             </div>
+          </section>
 
-            {/* Response area */}
-            <div style={{ background: 'rgba(1,6,3,0.7)', border: '1px solid rgba(16,185,129,0.08)', borderRadius: 12, overflow: 'hidden' }}>
-              <div style={{ padding: '8px 14px', borderBottom: '1px solid rgba(16,185,129,0.06)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-                <span style={{ fontSize: 8, color: 'rgba(52,211,153,0.5)', fontFamily: 'monospace', letterSpacing: '0.12em' }}>MICRO_AI · RESPONSE</span>
+          <section className="mt-16 flex w-full flex-col items-center gap-6 border-t border-border pt-10">
+            <div className="flex flex-wrap items-center justify-center gap-8">
+              <div className="text-center">
+                <p className="font-mono text-2xl text-text">{stats ? stats.totalQuestions.toLocaleString() : "—"}</p>
+                <p className="mt-1 text-xs text-muted">Questions answered</p>
               </div>
-              <div style={{ padding: '12px 14px', fontFamily: 'monospace' }}>
-                {chatInput && (
-                  <>
-                    <div style={{ fontSize: 9, color: '#334155', marginBottom: 6 }}>&gt; {chatInput}</div>
-                    <div style={{ height: 1, background: 'rgba(16,185,129,0.05)', marginBottom: 8 }} />
-                  </>
-                )}
-                <div style={{ fontSize: 11, color: '#6ee7b7', lineHeight: 1.65 }}>{chatResponse}</div>
-              </div>
-              <div style={{ padding: '10px', background: 'rgba(1,5,2,0.8)', borderTop: '1px solid rgba(16,185,129,0.05)', display: 'flex', gap: 8 }}>
-                <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Type a question..."
-                  style={{ flex: 1, minWidth: 0, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(16,185,129,0.12)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#fff', outline: 'none', fontFamily: 'monospace' }} />
-                <Link href="/chat" style={{ padding: '8px 16px', background: '#10b981', color: '#000', fontSize: 11, fontWeight: 800, borderRadius: 8, textDecoration: 'none', whiteSpace: 'nowrap', fontFamily: 'monospace', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                  LAUNCH →
-                </Link>
+              <div className="text-center">
+                <p className="font-mono text-2xl text-text">{stats ? stats.uniqueWallets.toLocaleString() : "—"}</p>
+                <p className="mt-1 text-xs text-muted">Wallets served</p>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3 COLUMNS: WHO IS IT FOR */}
-      <section id="hub-sectors" style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,60px) 16px', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ fontSize: 9, color: '#334155', fontWeight: 700, letterSpacing: '0.25em', fontFamily: 'monospace', marginBottom: 10 }}>BUILT FOR EVERYONE IN THE ECOSYSTEM</div>
-          <h2 style={{ fontSize: 'clamp(1.4rem, 5vw, 2.8rem)', fontWeight: 900, color: '#fff', margin: '0 0 12px', letterSpacing: '-0.02em' }}>One Hub. Every Role.</h2>
-          <p style={{ fontSize: 13, color: '#475569', maxWidth: 460, margin: '0 auto', lineHeight: 1.65 }}>Whether you deploy contracts or onboard communities, MicroAI speaks your language.</p>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12 }}>
-          {[
-            { icon: '⬡', title: 'Developers & Builders', color: '#34d399', points: ['Smart Contract Development', 'AI Agent Setup (ERC-8004)', 'Agentic Commerce (ERC-8183)', 'Frontend dApp Building'] },
-            { icon: '◈', title: 'Fintech & Startups', color: '#60a5fa', points: ['Cross-border Payment Apps', 'Treasury & Payroll Systems', 'Circle CCTP Integration', 'FX & Stablecoin Settlement'] },
-            { icon: '◇', title: 'Crypto Native', color: '#a78bfa', points: ['DeFi Protocol Building', 'Liquidity & AMM Setup', 'Cross-chain Bridges', 'Chainlink Oracle Setup'] },
-            { icon: '○', title: 'New to Arc', color: '#f59e0b', points: ['Getting Started Guides', 'Hackathon & Grant Help', 'Faucet & Wallet Setup', 'Arc House & Discord FAQ'] },
-          ].map(sector => (
-            <div key={sector.title} style={{ padding: '20px', borderRadius: 14, background: 'rgba(3,17,10,0.18)', border: '1px solid rgba(16,185,129,0.07)', transition: 'border-color 0.2s' }}>
-              <div style={{ fontSize: 18, marginBottom: 12, color: sector.color, opacity: 0.7 }}>{sector.icon}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#fff', marginBottom: 12, letterSpacing: '-0.01em' }}>{sector.title}</div>
-              <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {sector.points.map((p, i) => (
-                  <li key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#475569', alignItems: 'flex-start' }}>
-                    <span style={{ color: sector.color, flexShrink: 0, opacity: 0.6, marginTop: 1 }}>—</span><span>{p}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link href="/chat" style={{ display: 'inline-block', marginTop: 16, fontSize: 9, color: sector.color, fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.12em', textDecoration: 'none', opacity: 0.7 }}>
-                ASK NOW →
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,56px) 16px', background: 'rgba(2,10,5,0.5)', borderTop: '1px solid rgba(16,185,129,0.05)', borderBottom: '1px solid rgba(16,185,129,0.05)' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ fontSize: 9, color: '#334155', fontWeight: 700, letterSpacing: '0.25em', fontFamily: 'monospace', marginBottom: 10 }}>HOW IT WORKS</div>
-            <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 2.2rem)', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Pay once. Get the answer.</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 4 }}>
-            {[
-              { n: '1', name: 'Connect Wallet', desc: 'MetaMask on Arc MAINNET. Takes 30 seconds.' },
-              { n: '2', name: 'Ask Your Question', desc: 'Anything about Arc SDK, Circle APIs, or smart contracts.' },
-              { n: '3', name: 'Sign 0.001 USDC', desc: 'One click in your wallet. No subscription, no account.' },
-              { n: '4', name: 'Get the Answer', desc: 'Instant response with on-chain TX proof on Arc Explorer.' },
-            ].map((s, i, arr) => (
-              <div key={s.n} style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
-                <div style={{ flex: 1, padding: '18px 16px', borderRadius: 12, background: 'rgba(3,14,8,0.4)', border: '1px solid rgba(16,185,129,0.06)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(52,211,153,0.3)', fontFamily: 'monospace', marginBottom: 8 }}>{s.n}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{s.name}</div>
-                  <p style={{ fontSize: 11, color: '#475569', lineHeight: 1.6, margin: 0 }}>{s.desc}</p>
-                </div>
-                {i < arr.length - 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '0 2px', marginTop: 28, flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, color: '#1e3a29' }}>›</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: 28 }}>
-            <Link href="/chat" style={{ display: 'inline-block', padding: '12px 28px', borderRadius: 12, background: '#10b981', color: '#000', fontSize: 13, fontWeight: 800, letterSpacing: '0.06em', textDecoration: 'none', boxShadow: '0 0 18px rgba(16,185,129,0.2)' }}>
-              START FOR $0.001 →
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,56px) 16px', maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 9, color: '#334155', fontWeight: 700, letterSpacing: '0.25em', fontFamily: 'monospace', marginBottom: 10 }}>WHAT'S INSIDE</div>
-          <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 2.2rem)', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>Trained on Real Docs</h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
-          {[
-            { title: 'Full Protocol Coverage', desc: 'Arc docs, Circle developer docs, CCTP, ERC-8004, ERC-8183 — all in the knowledge base.' },
-            { title: 'Verified Contract Addresses', desc: 'USDC, EURC, TokenMessengerV2, MessageTransmitterV2 — never guess an address again.' },
-            { title: 'Code Examples', desc: 'Ask for a Hardhat config, a Solidity snippet, or a Circle API call — get working code.' },
-            { title: 'Error Debugging', desc: 'Paste your error or trace log. Get Arc-specific, context-aware debugging help instantly.' },
-            { title: 'Grants & Opportunities', desc: 'Every live Arc + Circle grant, hackathon, and bounty tracked in one place.' },
-            { title: 'Ecosystem Directory', desc: '41 projects across 11 categories — from MetaMask and Aave to BlackRock and Goldman Sachs.' },
-          ].map(f => (
-            <div key={f.title} style={{ padding: '18px', borderRadius: 12, background: 'rgba(3,12,7,0.3)', border: '1px solid rgba(16,185,129,0.06)' }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(52,211,153,0.3)', marginBottom: 12 }} />
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', marginBottom: 7 }}>{f.title}</div>
-              <p style={{ fontSize: 11, color: '#475569', lineHeight: 1.65, margin: 0 }}>{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* PRICING */}
-      <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(36px,5vw,56px) 16px', textAlign: 'center', background: 'rgba(2,10,5,0.3)', borderTop: '1px solid rgba(16,185,129,0.05)' }}>
-        <div style={{ maxWidth: 360, margin: '0 auto' }}>
-          <div style={{ fontSize: 9, color: '#334155', fontWeight: 700, letterSpacing: '0.25em', fontFamily: 'monospace', marginBottom: 10 }}>PRICING</div>
-          <h2 style={{ fontSize: 'clamp(1.3rem, 4vw, 2rem)', fontWeight: 900, color: '#fff', margin: '0 0 24px', letterSpacing: '-0.02em' }}>No subscription.<br />Pay per answer.</h2>
-          <div style={{ background: 'rgba(3,14,8,0.8)', border: '1px solid rgba(16,185,129,0.12)', borderRadius: 20, padding: '28px 22px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 0, left: '25%', right: '25%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(52,211,153,0.3), transparent)' }} />
-            <div style={{ fontSize: 'clamp(2.8rem,10vw,4rem)', fontWeight: 900, color: '#fff', fontFamily: 'monospace', letterSpacing: '-0.03em', lineHeight: 1 }}>$0.001</div>
-            <div style={{ fontSize: 9, color: '#34d399', fontWeight: 700, letterSpacing: '0.2em', fontFamily: 'monospace', marginTop: 8, marginBottom: 20 }}>USDC · PER QUERY · ON-CHAIN</div>
-            <div style={{ height: 1, background: 'rgba(16,185,129,0.08)', marginBottom: 18 }} />
-            <ul style={{ textAlign: 'left', margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                'No monthly subscription',
-                'No account or email required',
-                'Every answer logged on Arc Explorer',
-                'Full ecosystem access included',
-              ].map(item => (
-                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: '#64748b' }}>
-                  <span style={{ color: '#34d399', flexShrink: 0, fontSize: 10 }}>✓</span> {item}
-                </li>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {TOPICS.map((t) => (
+                <span key={t} className="rounded-full border border-border px-3 py-1 text-xs text-muted">
+                  {t}
+                </span>
               ))}
-            </ul>
-            <Link href="/chat" style={{ display: 'block', marginTop: 20, padding: '13px 0', borderRadius: 12, background: 'linear-gradient(135deg, #34d399, #10b981)', color: '#000', fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', textDecoration: 'none' }}>
-              ASK YOUR FIRST QUESTION →
-            </Link>
-          </div>
-        </div>
-      </section>
+            </div>
+          </section>
+        </motion.main>
+      </div>
 
-      {/* PROOF OF WORK */}
-      {proofFeed.length > 0 && (
-        <section style={{ position: 'relative', zIndex: 10, padding: 'clamp(24px,4vw,40px) 16px', maxWidth: 720, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 18 }}>
-            <div style={{ fontSize: 9, color: '#334155', fontWeight: 700, letterSpacing: '0.25em', fontFamily: 'monospace', marginBottom: 8 }}>PROOF OF WORK</div>
-            <h3 style={{ fontSize: 'clamp(1rem,3vw,1.3rem)', fontWeight: 800, color: '#fff', margin: 0 }}>Recent Queries</h3>
-          </div>
-          <div style={{ background: 'rgba(3,17,10,0.2)', border: '1px solid rgba(16,185,129,0.1)', borderRadius: 14, overflow: 'hidden' }}>
-            {proofFeed.map((tx, i) => (
-              <div
-                key={tx.hash || i}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
-                  padding: '11px 16px',
-                  borderBottom: i < proofFeed.length - 1 ? '1px solid rgba(16,185,129,0.06)' : 'none',
-                }}
-              >
-                <span style={{ fontSize: 10, color: '#475569', fontFamily: 'monospace' }}>{timeAgo(tx.timestamp)}</span>
-                <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{truncateAddress(tx.from)}</span>
-                <span style={{ fontSize: 10, color: '#34d399', fontWeight: 700, fontFamily: 'monospace' }}>✓ Answered</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* FOOTER */}
-      <footer style={{ position: 'relative', zIndex: 10, borderTop: '1px solid rgba(16,185,129,0.07)', background: '#010402', padding: '22px 16px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#34d399' }}>M</div>
-            <div style={{ fontSize: 9, color: '#1e3a29', fontFamily: 'monospace', letterSpacing: '0.1em' }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-            {[{ l: 'ARC', h: 'https://arc.io' }, { l: 'CIRCLE', h: 'https://circle.com' }, { l: 'GITHUB', h: 'https://github.com/sahmedonchain/microai' }, { l: 'EXPLORER', h: 'https://explorer.arc.io' }].map(link => (
-              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 9, color: '#1e3a29', fontWeight: 700, letterSpacing: '0.12em', fontFamily: 'monospace', textDecoration: 'none' }}>{link.l}</a>
-            ))}
-          </div>
-        </div>
-      </footer>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html { scroll-behavior: smooth; }
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
-        * { box-sizing: border-box; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .desktop-nav { display: none !important; }
-        .hamburger-btn { display: flex !important; }
-        @media (min-width: 768px) {
-          .desktop-nav { display: flex !important; }
-          .hamburger-btn { display: none !important; }
-        }
-      `}</style>
+      <AnimatePresence>
+        {walletModalOpen && <WalletModal onConnect={handleConnect} onClose={() => setWalletModalOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
