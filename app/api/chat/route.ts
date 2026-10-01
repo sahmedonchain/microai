@@ -4,8 +4,13 @@ import Groq from "groq-sdk";
 import { searchKnowledge } from "@/lib/search";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { spendCredit } from "@/lib/credits";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+const MAX_MESSAGE_LENGTH = 4000;
+const CHAT_RATE_LIMIT = 20; // requests
+const CHAT_RATE_WINDOW_MS = 60_000; // per minute, per wallet
 
 const SYSTEM_PROMPT = `
 You are MicroAI — the official Arc & Circle Intelligence Hub AI assistant.
@@ -90,9 +95,16 @@ export async function POST(req: Request) {
     }
     const walletAddress = session.sub;
 
+    if (!checkRateLimit(`chat:${walletAddress}`, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_MS)) {
+      return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
+    }
+
     const { message, history = [] } = await req.json();
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      return NextResponse.json({ error: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.` }, { status: 400 });
     }
 
     // Prepaid credit is checked and spent atomically here — never a

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
-import { claimTxHash } from "@/lib/usedTx";
+import { claimTxHash, releaseTxHash } from "@/lib/usedTx";
 import { addCredit } from "@/lib/credits";
 import { isValidQueryCount, computeBundleAmount } from "@/lib/pricing";
 
@@ -114,7 +114,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: 402 });
     }
 
-    const newTotal = await addCredit(walletAddress, queries);
+    // verifyPurchase() already claimed txHash (atomic NX) to block concurrent
+    // double-spends of the same transaction. If crediting then fails, release
+    // that claim rather than leaving the payer with a burned, uncreditable
+    // txHash and no way to retry the same on-chain payment.
+    let newTotal: number;
+    try {
+      newTotal = await addCredit(walletAddress, queries);
+    } catch (err) {
+      console.error("addCredit failed after claiming txHash, releasing claim:", err);
+      await releaseTxHash(txHash).catch((releaseErr) => {
+        console.error("Failed to release txHash after addCredit failure:", releaseErr);
+      });
+      return NextResponse.json(
+        { error: "Payment verified but crediting failed. Please retry with the same transaction." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({ ok: true, credits: newTotal, txHash });
   } catch (error) {
     console.error(error);

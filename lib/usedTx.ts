@@ -28,3 +28,10 @@ export async function claimTxHash(txHash: string): Promise<boolean> {
   const result = await getClient().set(txKey(txHash), "1", { nx: true, ex: TTL_SECONDS });
   return result === "OK";
 }
+
+// Releases a claim — used only when crediting the wallet after a successful
+// claim fails, so the payer isn't permanently locked out of retrying the
+// same on-chain transaction for a credit they never received.
+export async function releaseTxHash(txHash: string): Promise<void> {
+  await getClient().del(txKey(txHash));
+}

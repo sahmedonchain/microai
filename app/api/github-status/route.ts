@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
+import { isTrackedRepo } from "@/lib/trackedRepos";
 
 const CACHE_TTL_SECONDS = 12 * 60; // 12 min, within the requested 10-15 min window
 const FETCH_TIMEOUT_MS = 5000;
@@ -64,6 +65,9 @@ export async function GET(req: Request) {
 
   if (!repo) {
     return NextResponse.json({ error: "Missing repo" }, { status: 400 });
+  }
+  if (!isTrackedRepo(repo)) {
+    return NextResponse.json({ error: "Repo not tracked" }, { status: 400 });
   }
 
   const key = cacheKey(repo);
