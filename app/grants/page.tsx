@@ -21,7 +21,7 @@ const grants = [
     status: "OPEN",
     org: "DoraHacks x Arc",
     title: "Arc Microgrants",
-    desc: "20 microgrants of $500 USDC each, from a $10,000 pool, for projects already deployed and working on Arc MAINNET — PoC, small apps, demos, hackathon continuations. No company or traction required. Pseudonymous submission allowed.",
+    desc: "20 microgrants of $500 USDC each, from a $10,000 pool, for projects already deployed and working on Arc MAINNET: PoC, small apps, demos, hackathon continuations. No company or traction required. Pseudonymous submission allowed.",
     reward: "$500 USDC each",
     deadline: "Oct 14, 2026, 23:59 ET",
     tags: ["Microgrant", "USDC", "Arc MAINNET", "Rolling Review"],
@@ -32,7 +32,7 @@ const grants = [
   {
     id: 2,
     type: "GRANT",
-    status: "OPEN — ROLLING",
+    status: "OPEN (ROLLING)",
     org: "Circle",
     title: "Circle Developer Grants (2026 Cohort 2)",
     desc: "Milestone-based USDC funding, mentorship, and co-marketing for production-grade apps on Arc and the Circle Developer Platform. Focus areas: onchain lending, capital markets, FX, agentic commerce, payments, treasury management, prediction markets. ~$204K available this cohort. Traction, pilot, or revenue proof prioritized.",
@@ -49,7 +49,7 @@ const grants = [
     status: "LIVE NOW",
     org: "Canteen x Circle x Arc",
     title: "Tameion Agents Hackathon",
-    desc: "Builder series for AI agents that hold, allocate, and disburse a business's money — treasury, invoices, contractors, autonomous operations, audit trail. Settled on Arc in USDC.",
+    desc: "Builder series for AI agents that hold, allocate, and disburse a business's money: treasury, invoices, contractors, autonomous operations, audit trail. Settled on Arc in USDC.",
     reward: "~$40,000 pool",
     deadline: "Sep 27 – Oct 10, 2026",
     tags: ["AI Agents", "Treasury", "USDC", "Canteen"],
@@ -63,7 +63,7 @@ const grants = [
     status: "IN PROGRESS",
     org: "Circle x Arc x Crecimiento",
     title: "Arc Acceleration Season",
-    desc: "6-week accelerator: onboard, build on testnet, ship on mainnet, Demo Day. Primarily for LatAm fintech and AI startups with existing traction, with direct support from the Circle/Arc team. Applications closed Sep 22 — program is actively running.",
+    desc: "6-week accelerator: onboard, build on testnet, ship on mainnet, Demo Day. Primarily for LatAm fintech and AI startups with existing traction, with direct support from the Circle/Arc team. Applications closed Sep 22. Program is actively running.",
     reward: "Accelerator + Mentorship",
     deadline: "Sep 22 – Oct 24, 2026",
     tags: ["Accelerator", "LatAm", "Fintech", "AI"],
@@ -74,7 +74,7 @@ const grants = [
   {
     id: 5,
     type: "BOUNTY",
-    status: "OPEN — ONGOING",
+    status: "OPEN (ONGOING)",
     org: "Arc",
     title: "Arc Bug Bounty Program",
     desc: "HackerOne-hosted, ongoing, no fixed deadline. Rewards: Extreme (unlimited mint, consensus failure) up to $1,000,000; Critical $20K–$200K; High $10K–$20K; Medium/Low lower tiers.",
@@ -88,10 +88,10 @@ const grants = [
   {
     id: 6,
     type: "BOUNTY",
-    status: "OPEN — ROLLING",
+    status: "OPEN (ROLLING)",
     org: "Circle",
     title: "Circle Developer Bounties",
-    desc: "Specific integration challenges — USDC, CCTP, Paymaster, Wallets — for USDC rewards. $20,000 total pool, $1,500 per challenge, multiple winners possible. New bounties added on a rolling basis.",
+    desc: "Specific integration challenges (USDC, CCTP, Paymaster, Wallets) for USDC rewards. $20,000 total pool, $1,500 per challenge, multiple winners possible. New bounties added on a rolling basis.",
     reward: "$1,500 per challenge",
     deadline: "Rolling",
     tags: ["USDC", "CCTP", "Paymaster", "Wallets"],
@@ -102,7 +102,7 @@ const grants = [
   {
     id: 7,
     type: "PROGRAM",
-    status: "OPEN — ONGOING",
+    status: "OPEN (ONGOING)",
     org: "Arc",
     title: "Arc Architects Program",
     desc: "Community contribution rewards for hackathons, meetups, content, and beta testing. Points-based system (not token/airdrop) granting ecosystem visibility and special access. Ongoing, rolling.",
@@ -121,7 +121,7 @@ const grants = [
     org: "Circle",
     title: "Circle House @ TOKEN2049 Singapore",
     desc: "In-person Circle House at TOKEN2049 Singapore.",
-    reward: "—",
+    reward: "N/A",
     deadline: "Oct 7–8, 2026",
     tags: ["In-Person", "Singapore", "TOKEN2049"],
     url: "https://community.arc.io/public/events",
@@ -177,7 +177,7 @@ const grants = [
     org: "Pragma",
     title: "Pragma Mumbai",
     desc: "In-person conference in Mumbai.",
-    reward: "—",
+    reward: "N/A",
     deadline: "Nov 5, 2026",
     tags: ["Conference", "Mumbai"],
     url: "https://community.arc.io/public/events",
@@ -204,7 +204,7 @@ const grants = [
     type: "HACKATHON",
     status: "ENDED",
     org: "ETHGlobal x Arc",
-    title: "ETHOnline 2026 — Arc Track",
+    title: "ETHOnline 2026: Arc Track",
     desc: "$10K total: $5K for testnet submission, $5K for mainnet push.",
     reward: "$10,000 USDC",
     deadline: "Ended Sep 30, 2026",
@@ -232,7 +232,7 @@ const grants = [
     type: "HACKATHON",
     status: "ENDED",
     org: "ETHGlobal x Arc x Circle",
-    title: "HackMoney 2026 — Arc Track",
+    title: "HackMoney 2026: Arc Track",
     desc: "155 teams built on Arc MAINNET. $10,000 USDC awarded across 3 tracks: chain-abstracted USDC apps, global treasury systems, agentic commerce.",
     reward: "$10,000 USDC",
     deadline: "Mar 2026",
@@ -246,7 +246,7 @@ const grants = [
     type: "HACKATHON",
     status: "ENDED",
     org: "ETHGlobal x Arc",
-    title: "ETHGlobal Cannes — Arc Track",
+    title: "ETHGlobal Cannes: Arc Track",
     desc: "Arc sponsored bounties for builders powering onchain lending, capital markets, FX, and payments.",
     reward: "$15,000 USDC",
     deadline: "Apr 2026",
@@ -275,7 +275,7 @@ const grants = [
     status: "ENDED",
     org: "Canteen x Circle x Arc",
     title: "Lepton Agents Hackathon",
-    desc: "Two-week builder series for AI agents that pay, receive, and orchestrate nanopayments — settled on Arc. Six published Requests for Builders (RFBs) with concrete buildable angles.",
+    desc: "Two-week builder series for AI agents that pay, receive, and orchestrate nanopayments, settled on Arc. Six published Requests for Builders (RFBs) with concrete buildable angles.",
     reward: "$50,000",
     deadline: "Jun 2026",
     tags: ["AI Agents", "Nanopayments", "Canteen", "USDC"],
@@ -330,7 +330,7 @@ const grants = [
     type: "GRANT",
     status: "ENDED",
     org: "Circle",
-    title: "Circle Developer Grants — Cohort 1",
+    title: "Circle Developer Grants: Cohort 1",
     desc: "Closed. Funded Africa/Global South-focused teams: Blockradar, Kolan, Myaza, Payrit, ViFi, SFx Money.",
     reward: "Closed",
     deadline: "Closed",
@@ -347,8 +347,8 @@ const FILTER_TYPES = ["ALL", "GRANT", "HACKATHON", "BOUNTY", "ACCELERATOR", "PRO
 
 const STATUS_COLORS: Record<string, string> = {
   "OPEN": "#3dd68c",
-  "OPEN — ONGOING": "#3dd68c",
-  "OPEN — ROLLING": "#3dd68c",
+  "OPEN (ONGOING)": "#3dd68c",
+  "OPEN (ROLLING)": "#3dd68c",
   "LIVE NOW": "#f2555a",
   "IN PROGRESS": "#f5b544",
   "UPCOMING": "#5ea2ec",
@@ -455,7 +455,7 @@ export default function GrantsPage() {
               Grants &amp; Hackathons
             </h1>
             <p className="mt-4 text-base leading-relaxed text-muted">
-              All active grants, bounties, accelerators, and hackathons from the Arc and Circle ecosystem — curated for builders.
+              All active grants, bounties, accelerators, and hackathons from the Arc and Circle ecosystem, curated for builders.
             </p>
           </div>
 

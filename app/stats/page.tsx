@@ -423,7 +423,7 @@ export default function StatsPage() {
               Stats
             </h1>
             <p className="mt-4 text-base leading-relaxed text-muted">
-              Real-time data pulled directly from Arc Mainnet RPC. No static numbers — this refreshes every 10 seconds.
+              Real-time data pulled directly from Arc Mainnet RPC. No static numbers: this refreshes every 10 seconds.
             </p>
           </div>
         </div>
@@ -532,7 +532,7 @@ export default function StatsPage() {
                     {tx.hash.slice(0, 8)}...{tx.hash.slice(-6)}
                   </a>
                 ) : (
-                  <span className="font-mono text-xs text-muted">—</span>
+                  <span className="font-mono text-xs text-muted">N/A</span>
                 )}
                 <span className="flex-1 text-center font-mono text-xs text-muted">{timeAgo(tx.timestamp)}</span>
                 <span className="shrink-0 font-mono text-xs font-semibold text-success">${tx.amount} USDC</span>

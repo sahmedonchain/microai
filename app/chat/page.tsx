@@ -405,7 +405,7 @@ export default function Chat() {
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 6 }}>Buy Query Credit</div>
               <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.6 }}>
-                One payment, one wallet confirmation. Then ask as many questions as you bought — no more popups.
+                One payment, one wallet confirmation. Then ask as many questions as you bought, with no more popups.
               </div>
             </div>
 
@@ -563,7 +563,7 @@ export default function Chat() {
               <div style={{ width: 52, height: 52, borderRadius: 18, background: "linear-gradient(135deg,#34d399,#10b981)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 20, color: "#000", boxShadow: "0 0 28px rgba(16,185,129,0.3)", marginBottom: 20 }}>M</div>
               <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.5rem)", fontWeight: 900, color: "#fff", margin: "0 0 8px", letterSpacing: "-0.01em" }}>Arc & Circle Intelligence Hub</h2>
               <p style={{ fontSize: 12, color: "#475569", maxWidth: 320, lineHeight: 1.65, margin: "0 0 8px" }}>
-                Buy query credit once, then ask <span style={{ color: "#34d399", fontWeight: 700 }}>as many questions as you like</span> — no wallet popup per query.
+                Buy query credit once, then ask <span style={{ color: "#34d399", fontWeight: 700 }}>as many questions as you like</span>, with no wallet popup per query.
               </p>
 
               {wallet && credit !== null && credit > 0 ? (

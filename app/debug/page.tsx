@@ -109,7 +109,7 @@ export default function DebugPage() {
           Transaction Debugger
         </h1>
         <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
-          Paste any Arc MAINNET transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened — and how to fix it.
+          Paste any Arc MAINNET transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened, and how to fix it.
         </p>
       </section>
 
@@ -230,7 +230,7 @@ export default function DebugPage() {
                   { label: "GAS USED", value: result.txData.gas_used },
                   { label: "GAS LIMIT", value: result.txData.gas_limit },
                   { label: "BLOCK", value: result.txData.block_number?.toString() || "Pending" },
-                  { label: "FEE (USDC)", value: result.txData.fee?.value ? (parseInt(result.txData.fee.value) / 1e6).toFixed(6) : "—" },
+                  { label: "FEE (USDC)", value: result.txData.fee?.value ? (parseInt(result.txData.fee.value) / 1e6).toFixed(6) : "N/A" },
                 ].map((row) => (
                   <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>{row.label}</span>

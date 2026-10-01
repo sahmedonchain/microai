@@ -209,7 +209,7 @@ export default function BuildStatusPage() {
               Tracker
             </h1>
             <p className="mt-4 text-base leading-relaxed text-muted">
-              Who&apos;s actually shipping in the Arc ecosystem — live GitHub activity for every tracked project.
+              Who&apos;s actually shipping in the Arc ecosystem? Live GitHub activity for every tracked project.
             </p>
           </div>
 
@@ -322,11 +322,11 @@ export default function BuildStatusPage() {
                   </span>
 
                   <span className="w-20 shrink-0 text-right font-mono text-xs text-muted">
-                    {repo.status === "LOADING" ? "—" :
+                    {repo.status === "LOADING" ? "N/A" :
                      repo.status === "ERROR" ? "API error" :
                      repo.daysAgo === 0 ? "today" :
                      repo.daysAgo === 1 ? "1 day ago" :
-                     repo.daysAgo !== null ? `${repo.daysAgo}d ago` : "—"}
+                     repo.daysAgo !== null ? `${repo.daysAgo}d ago` : "N/A"}
                   </span>
 
                   {repo.stars !== null && (

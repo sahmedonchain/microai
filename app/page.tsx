@@ -518,7 +518,7 @@ export default function Home() {
             <p className="mt-4 max-w-[52ch] text-center text-base leading-relaxed text-muted">
               Get fast, accurate answers about Arc, Circle, USDC, and on-chain development.
               <br />
-              From smart contracts to integrations — I&apos;m here to help you build.
+              From smart contracts to integrations, I&apos;m here to help you build.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
@@ -716,7 +716,7 @@ export default function Home() {
                   )}
                 </div>
                 <p className="mt-1 font-mono text-xl text-text">
-                  {credit === null ? "—" : credit} <span className="text-xs text-muted">queries</span>
+                  {credit === null ? "N/A" : credit} <span className="text-xs text-muted">queries</span>
                 </p>
               </div>
 
@@ -761,7 +761,7 @@ export default function Home() {
               </div>
               <div className="mt-1.5 flex items-center justify-between rounded-md bg-space px-3 py-2.5">
                 <span className="text-xs text-muted">Credits remaining</span>
-                <span className="font-mono text-xs text-text">{credit ?? "—"}</span>
+                <span className="font-mono text-xs text-text">{credit ?? "N/A"}</span>
               </div>
 
               <p className="mt-6 text-xs font-medium tracking-wide text-muted">Recent activity</p>

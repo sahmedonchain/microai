@@ -185,7 +185,7 @@ export function WalletModal({ onConnect, onClose }: WalletModalProps) {
                     ? <span style={{ color: wallet.color }}>Connecting…</span>
                     : wallet.detected
                     ? <span className="text-success">Detected</span>
-                    : <span className="text-muted">Not installed — click to install</span>
+                    : <span className="text-muted">Not installed. Click to install</span>
                   }
                 </div>
               </div>

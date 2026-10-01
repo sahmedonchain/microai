@@ -238,7 +238,7 @@ const projects: Project[] = [
   },
   {
     name: "thirdweb",
-    desc: "Full-stack Web3 development framework. SDKs, smart contract tools, and wallets — all Arc-compatible.",
+    desc: "Full-stack Web3 development framework. SDKs, smart contract tools, and wallets, all Arc-compatible.",
     category: "DEV TOOLS",
     tags: ["SDK", "Smart Contracts", "Full-Stack"],
     url: "https://thirdweb.com",
@@ -445,7 +445,7 @@ const projects: Project[] = [
   },
   {
     name: "Canteen",
-    desc: "Builder platform and hackathon organizer on Arc. Runs Agora and Lepton Agents hackathons — AI agents that pay, receive, and orchestrate USDC nanopayments on Arc.",
+    desc: "Builder platform and hackathon organizer on Arc. Runs Agora and Lepton Agents hackathons, for AI agents that pay, receive, and orchestrate USDC nanopayments on Arc.",
     category: "AI & AGENTS",
     tags: ["Hackathons", "AI Agents", "Nanopayments", "Community"],
     url: "https://thecanteenapp.com",
@@ -938,7 +938,7 @@ export default function EcosystemPage() {
                 Ecosystem Directory
               </h1>
               <p className="mt-4 text-base leading-relaxed text-muted">
-                Every project, protocol, and builder in the Arc + Circle ecosystem — from community dApps to
+                Every project, protocol, and builder in the Arc + Circle ecosystem, from community dApps to
                 institutional partners.
               </p>
             </div>
