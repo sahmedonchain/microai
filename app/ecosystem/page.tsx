@@ -1,7 +1,31 @@
 "use client";
-import { Navbar } from "@/app/components/Navbar";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  Grid2x2,
+  List,
+  MessageSquare,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
+import { WalletModal } from "@/app/components/WalletModal";
+import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { truncateAddress } from "@/lib/format";
+
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Ecosystem", href: "/ecosystem" },
+  { label: "Grants", href: "/grants" },
+  { label: "Build status", href: "/build-status" },
+  { label: "Stats", href: "/stats" },
+];
+
+const PAGE_SIZE = 20;
 
 type Project = {
   name: string;
@@ -769,10 +793,19 @@ const CATEGORY_COLORS: Record<string, string> = {
   "COMMUNITY BUILDS": "#34d399",
 };
 
+
 export default function EcosystemPage() {
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"tvl" | "name">("tvl");
+  const [view, setView] = useState<"list" | "grid">("list");
+  const [page, setPage] = useState(1);
   const [tvlByProject, setTvlByProject] = useState<Record<string, number>>({});
+
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [wallet, setWallet] = useState<string | null>(null);
+
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -781,8 +814,21 @@ export default function EcosystemPage() {
       .then((data) => {
         if (!cancelled && data?.tvl) setTvlByProject(data.tvl);
       })
-      .catch(() => { /* enrichment is optional — cards render fine without it */ });
+      .catch(() => { /* enrichment is optional — rows render fine without it */ });
     return () => { cancelled = true; };
+  }, []);
+
+  // Silently restore a previously-authorized wallet (eth_accounts never
+  // prompts) — this page only needs the address for display, no session.
+  useEffect(() => {
+    const eth = (window as unknown as { ethereum?: EthereumProvider }).ethereum;
+    if (!eth) return;
+    (async () => {
+      try {
+        const accounts = (await eth.request({ method: "eth_accounts" })) as string[];
+        if (accounts?.[0]) setWallet(accounts[0]);
+      } catch { /* user can connect manually */ }
+    })();
   }, []);
 
   const filtered = projects.filter((p) => {
@@ -795,182 +841,362 @@ export default function EcosystemPage() {
     return matchCat && matchSearch;
   });
 
-  // DeFiLlama-style single ranked list: TVL-bearing projects first (highest
-  // TVL on top, matching how DeFiLlama's own protocol list sorts), then
-  // everything else in its existing order. Featured projects keep a small
-  // badge instead of a separate carve-out section.
+  // Sort: "tvl" puts real Arc-chain TVL first (highest on top, matching
+  // DeFiLlama's own list), untracked projects after in their existing
+  // order. "name" is a straight alphabetical sort — the only two sort
+  // criteria we can back with real data (we don't track a "date added").
   const ranked = [...filtered].sort((a, b) => {
+    if (sort === "name") return a.name.localeCompare(b.name);
     const tvlA = tvlByProject[a.name] ?? -1;
     const tvlB = tvlByProject[b.name] ?? -1;
     return tvlB - tvlA;
   });
 
+  const totalPages = Math.max(1, Math.ceil(ranked.length / PAGE_SIZE));
+  const pageStart = (page - 1) * PAGE_SIZE;
+  const pageItems = ranked.slice(pageStart, pageStart + PAGE_SIZE);
+
+  const categoryList = categories.filter((c) => c !== "ALL");
+  const categoryCounts = categoryList.map((c) => ({
+    name: c,
+    count: projects.filter((p) => p.category === c).length,
+  }));
+  const tvlTrackedCount = Object.keys(tvlByProject).length;
+
   return (
-    <div style={{ minHeight: "100vh", background: "#010503", color: "#e2e8f0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <Navbar />
+    <div className="min-h-screen bg-space font-sans text-text">
+      {/* NAV */}
+      <header className="sticky top-0 z-50 border-b border-border bg-space/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <LogoMark className="size-7" />
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 text-sm transition ${
+                  l.href === "/ecosystem" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => searchRef.current?.focus()}
+              aria-label="Search projects"
+              className="hidden rounded-lg border border-border p-2 text-muted transition hover:text-text sm:flex"
+            >
+              <Search className="size-4" aria-hidden="true" />
+            </button>
+
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+              </span>
+              Arc Mainnet
+            </span>
+
+            {wallet ? (
+              <span className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-xs text-text sm:inline-flex">
+                <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+                {truncateAddress(wallet)}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setWalletModalOpen(true)}
+                className="rounded-lg bg-accent px-3.5 py-2 text-xs font-medium text-white transition hover:brightness-110"
+              >
+                Connect wallet
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
 
       {/* HERO */}
-      <section style={{ padding: "48px 20px 36px", textAlign: "center", borderBottom: "1px solid rgba(16,185,129,0.06)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(16,185,129,0.15)", background: "rgba(3,17,10,0.6)", marginBottom: 20 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>LIVE ECOSYSTEM MAP</span>
-        </div>
-        <h1 style={{ fontSize: "clamp(1.6rem, 6vw, 3.5rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg, #fff 0%, rgba(148,163,184,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
-          Arc & Circle<br />Ecosystem Directory
-        </h1>
-        <p style={{ fontSize: "clamp(12px, 3vw, 14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto 28px", lineHeight: 1.7 }}>
-          Every project, protocol, and builder in the Arc + Circle ecosystem — from community dApps to institutional partners.
-        </p>
-        <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
-          {[
-            { label: "PROJECTS", value: projects.length.toString() },
-            { label: "CATEGORIES", value: (categories.length - 1).toString() },
-            { label: "COMMUNITY BUILDS", value: projects.filter(p => p.category === "COMMUNITY BUILDS").length.toString() },
-          ].map((s) => (
-            <div key={s.label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "clamp(1.4rem, 5vw, 2rem)", fontWeight: 900, color: "#34d399", fontFamily: "monospace" }}>{s.value}</div>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em" }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <p className="text-xs text-muted">
+            <Link href="/" className="hover:text-text">Home</Link> / Ecosystem
+          </p>
 
-      {/* SEARCH + FILTERS */}
-      <section style={{ padding: "24px 16px 0", maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ position: "relative", marginBottom: 16 }}>
-          <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: "#475569", fontFamily: "monospace" }}>⌕</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects, tags, categories..."
-            style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(16,185,129,0.12)", borderRadius: 10, padding: "10px 14px 10px 32px", fontSize: 12, color: "#fff", outline: "none", fontFamily: "monospace", boxSizing: "border-box" }}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, scrollbarWidth: "none" }}>
-          {categories.map((cat) => {
-            const color = CATEGORY_COLORS[cat] ?? "#34d399";
-            const active = filter === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => setFilter(cat)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  border: active ? `1px solid ${color}60` : "1px solid rgba(16,185,129,0.08)",
-                  background: active ? `${color}15` : "rgba(0,0,0,0.2)",
-                  color: active ? color : "#64748b",
-                  fontSize: 9,
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  fontFamily: "monospace",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                }}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ marginTop: 12, fontSize: 10, color: "#475569", fontFamily: "monospace" }}>
-          {filtered.length} PROJECT{filtered.length !== 1 ? "S" : ""}
-          {search && ` FOR "${search.toUpperCase()}"`}
-        </div>
-      </section>
-
-      {/* PROJECTS — DeFiLlama-style ranked row list */}
-      <section style={{ padding: "20px 16px 60px", maxWidth: 1100, margin: "0 auto" }}>
-        {ranked.length > 0 && (
-          <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.08)", borderRadius: 12, overflow: "hidden" }}>
-            {/* Header row */}
-            <div
-              className="ecosystem-grid"
-              style={{
-                display: "grid",
-                gap: 12,
-                padding: "10px 16px",
-                borderBottom: "1px solid rgba(16,185,129,0.08)",
-                fontSize: 9,
-                color: "#475569",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                fontFamily: "monospace",
-              }}
-            >
-              <span>#</span>
-              <span>PROJECT</span>
-              <span className="hide-on-mobile">CATEGORY</span>
-              <span className="hide-on-mobile">DESCRIPTION</span>
-              <span style={{ textAlign: "right" }}>TVL ON ARC</span>
-              <span style={{ textAlign: "right" }}>LINK</span>
+          <div className="mt-4 flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
+            <div className="max-w-xl">
+              <h1 className="text-3xl font-semibold leading-[1.15] text-text sm:text-4xl">
+                Arc &amp; Circle
+                <br />
+                Ecosystem Directory
+              </h1>
+              <p className="mt-4 text-base leading-relaxed text-muted">
+                Every project, protocol, and builder in the Arc + Circle ecosystem — from community dApps to
+                institutional partners.
+              </p>
             </div>
 
-            {ranked.map((p, i) => (
-              <ProjectRow key={p.name} project={p} rank={i + 1} tvl={tvlByProject[p.name]} />
+            <div className="flex shrink-0 items-center gap-5">
+              <EcosystemGlyph />
+              <p className="max-w-[20ch] text-sm leading-relaxed text-muted">
+                Built on Arc. Backed by real on-chain and DeFiLlama data.
+              </p>
+            </div>
+          </div>
+
+          {/* STAT STRIP — real counts only */}
+          <div className="mt-10 flex flex-wrap gap-3">
+            {[
+              { label: "Total projects", value: projects.length },
+              { label: "Categories", value: categoryList.length },
+              { label: "Live TVL tracked", value: tvlTrackedCount },
+            ].map((s) => (
+              <div key={s.label} className="min-w-[140px] flex-1 rounded-lg border border-border bg-surface px-5 py-4 sm:flex-none">
+                <p className="font-mono text-2xl text-text">{s.value}</p>
+                <p className="mt-1 text-xs text-muted">{s.label}</p>
+              </div>
             ))}
           </div>
-        )}
-        {filtered.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#475569", fontFamily: "monospace", fontSize: 12 }}>
-            NO RESULTS FOR "{search.toUpperCase()}"
-          </div>
-        )}
+        </div>
       </section>
 
+      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-8 sm:px-6">
+        {/* MAIN */}
+        <div className="min-w-0 flex-1">
+          {/* SEARCH + FILTER BAR */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Search projects, tags, categories..."
+                className="w-full rounded-lg border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              />
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <div className="relative">
+                <select
+                  value={filter}
+                  onChange={(e) => { setFilter(e.target.value); setPage(1); }}
+                  className="appearance-none rounded-lg border border-border bg-surface py-2.5 pl-3 pr-8 text-sm text-text focus:outline-none"
+                >
+                  {categories.map((c) => (
+                    <option key={c} value={c}>{c === "ALL" ? "All categories" : c}</option>
+                  ))}
+                </select>
+                <SlidersHorizontal className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" aria-hidden="true" />
+              </div>
+
+              <select
+                value={sort}
+                onChange={(e) => { setSort(e.target.value as "tvl" | "name"); setPage(1); }}
+                className="rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text focus:outline-none"
+              >
+                <option value="tvl">Sort: TVL</option>
+                <option value="name">Sort: Name</option>
+              </select>
+
+              <div className="flex rounded-lg border border-border bg-surface p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setView("list")}
+                  aria-label="List view"
+                  className={`rounded-md p-1.5 transition ${view === "list" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"}`}
+                >
+                  <List className="size-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView("grid")}
+                  aria-label="Grid view"
+                  className={`rounded-md p-1.5 transition ${view === "grid" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"}`}
+                >
+                  <Grid2x2 className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-3 text-xs text-muted">
+            {ranked.length === 0
+              ? `No results${search ? ` for "${search}"` : ""}`
+              : `Showing ${pageStart + 1}-${Math.min(pageStart + PAGE_SIZE, ranked.length)} of ${ranked.length}`}
+          </p>
+
+          {/* LIST / GRID */}
+          {view === "list" ? (
+            <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
+              <div className="ecosystem-grid hidden gap-3 border-b border-border px-4 py-2.5 text-xs text-muted sm:grid">
+                <span>#</span>
+                <span>Project</span>
+                <span>Category</span>
+                <span>Description</span>
+                <span className="text-right">TVL on Arc</span>
+                <span className="text-right">Link</span>
+              </div>
+              {pageItems.map((p, i) => (
+                <ProjectRow key={p.name} project={p} rank={pageStart + i + 1} tvl={tvlByProject[p.name]} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {pageItems.map((p) => (
+                <ProjectCard key={p.name} project={p} tvl={tvlByProject[p.name]} />
+              ))}
+            </div>
+          )}
+
+          {/* PAGINATION */}
+          {ranked.length > PAGE_SIZE && (
+            <div className="mt-6 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-text transition hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-muted">Page {page} of {totalPages}</span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-text transition hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <aside className="hidden w-64 shrink-0 flex-col gap-6 lg:flex">
+          <div>
+            <p className="text-sm font-medium text-text">Categories</p>
+            <div className="mt-3 flex flex-col gap-0.5">
+              <button
+                onClick={() => { setFilter("ALL"); setPage(1); }}
+                className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition ${
+                  filter === "ALL" ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface hover:text-text"
+                }`}
+              >
+                All categories
+                <span className="font-mono text-xs">{projects.length}</span>
+              </button>
+              {categoryCounts.map((c) => (
+                <button
+                  key={c.name}
+                  onClick={() => { setFilter(c.name); setPage(1); }}
+                  className={`flex items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition ${
+                    filter === c.name ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface hover:text-text"
+                  }`}
+                >
+                  <span className="truncate">{c.name}</span>
+                  <span className="font-mono text-xs">{c.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-secondary/25 bg-secondary-dim p-4">
+            <p className="text-sm font-semibold text-text">Want to list your project?</p>
+            <p className="mt-1.5 text-xs leading-relaxed text-muted">
+              Open an issue on our GitHub with your project details and we&apos;ll review it for the directory.
+            </p>
+            <a
+              href="https://github.com/sahmedonchain/microai/issues"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2.5 inline-block text-xs font-medium text-secondary-text hover:underline"
+            >
+              Suggest a project on GitHub
+            </a>
+          </div>
+        </aside>
+      </div>
+
       {/* CTA */}
-      <section style={{ borderTop: "1px solid rgba(16,185,129,0.06)", padding: "40px 16px", textAlign: "center", background: "rgba(2,11,6,0.4)" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>WANT TO KNOW MORE ABOUT ANY PROJECT?</div>
-        <h2 style={{ fontSize: "clamp(1.2rem, 4vw, 2rem)", fontWeight: 900, color: "#fff", margin: "0 0 12px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#64748b", maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.65 }}>
-          Get instant answers about any Arc or Circle ecosystem project for just $0.001 USDC.
-        </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#10b981", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none", boxShadow: "0 0 18px rgba(16,185,129,0.2)" }}>
-            ASK MICROAI →
-          </Link>
-          <Link href="/grants" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.05)", color: "#34d399", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textDecoration: "none" }}>
-            VIEW GRANTS →
+      <section className="border-t border-border bg-surface/40">
+        <div className="mx-auto max-w-7xl px-4 py-14 text-center sm:px-6">
+          <h2 className="text-2xl font-semibold text-text">Ask MicroAI</h2>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+            Get instant answers about any Arc or Circle ecosystem project for just $0.001 USDC.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
+          >
+            <MessageSquare className="size-4" aria-hidden="true" />
+            Ask MicroAI
           </Link>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: "1px solid rgba(16,185,129,0.08)", background: "#010402", padding: "24px 16px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 24, height: 24, borderRadius: 7, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#34d399" }}>M</div>
-            <div style={{ fontSize: 10, color: "#475569" }}>MICROAI · THE ARC & CIRCLE HUB</div>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <LogoMark className="size-5" />
+            <span className="text-xs text-muted">MicroAI · The Arc &amp; Circle hub</span>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-            {[{ l: "ARC", h: "https://arc.io" }, { l: "CIRCLE", h: "https://circle.com" }, { l: "GITHUB", h: "https://github.com/sahmedonchain/microai" }, { l: "EXPLORER", h: "https://explorer.arc.io" }].map((link) => (
-              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: "#475569", fontWeight: 700, letterSpacing: "0.1em", fontFamily: "monospace", textDecoration: "none" }}>{link.l}</a>
+          <div className="flex flex-wrap gap-5">
+            {[
+              { l: "Arc", h: "https://arc.io" },
+              { l: "Circle", h: "https://circle.com" },
+              { l: "GitHub", h: "https://github.com/sahmedonchain/microai" },
+              { l: "Explorer", h: "https://explorer.arc.io" },
+            ].map((link) => (
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" className="text-xs text-muted transition hover:text-text">
+                {link.l}
+              </a>
             ))}
           </div>
         </div>
       </footer>
 
+      {walletModalOpen && (
+        <WalletModal onConnect={(addr) => { setWallet(addr); setWalletModalOpen(false); }} onClose={() => setWalletModalOpen(false)} />
+      )}
+
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html { scroll-behavior: smooth; }
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
-        * { box-sizing: border-box; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        input::placeholder { color: #475569; }
-        .ecosystem-row:hover { background: rgba(16,185,129,0.05); }
-        .ecosystem-row:last-child { border-bottom: none; }
-        .ecosystem-grid { grid-template-columns: 32px 1fr 140px minmax(0,2fr) 110px 70px; }
-        @media (max-width: 720px) {
+        .ecosystem-grid { grid-template-columns: 28px 1fr 130px minmax(0,2fr) 100px 60px; }
+        select { color-scheme: dark; }
+        @media (max-width: 640px) {
           .hide-on-mobile { display: none; }
-          .ecosystem-grid { grid-template-columns: 24px 1fr 90px 90px; }
+          .ecosystem-row.ecosystem-grid { grid-template-columns: 24px 1fr 70px 60px; }
         }
       `}</style>
     </div>
+  );
+}
+
+// Decorative hero graphic — two overlapping circles with connection nodes,
+// in our own brand colors. Purely visual, no data.
+function EcosystemGlyph() {
+  return (
+    <svg width="120" height="88" viewBox="0 0 120 88" fill="none" aria-hidden="true" className="shrink-0">
+      <circle cx="46" cy="44" r="34" stroke="var(--color-accent-text)" strokeOpacity="0.4" strokeWidth="1.5" />
+      <circle cx="78" cy="44" r="34" stroke="var(--color-secondary-text)" strokeOpacity="0.4" strokeWidth="1.5" />
+      <line x1="46" y1="44" x2="78" y2="44" stroke="var(--color-border)" strokeWidth="1" />
+      <line x1="46" y1="44" x2="30" y2="20" stroke="var(--color-border)" strokeWidth="1" />
+      <line x1="78" y1="44" x2="96" y2="66" stroke="var(--color-border)" strokeWidth="1" />
+      <circle cx="46" cy="44" r="4" fill="var(--color-accent-text)" />
+      <circle cx="78" cy="44" r="4" fill="var(--color-secondary-text)" />
+      <circle cx="30" cy="20" r="3" fill="var(--color-accent-text)" fillOpacity="0.7" />
+      <circle cx="96" cy="66" r="3" fill="var(--color-secondary-text)" fillOpacity="0.7" />
+    </svg>
   );
 }
 
@@ -982,71 +1208,97 @@ function formatTvl(usd: number): string {
 }
 
 function ProjectRow({ project: p, rank, tvl }: { project: Project; rank: number; tvl?: number }) {
-  const catColor = CATEGORY_COLORS[p.category] ?? "#34d399";
+  const catColor = CATEGORY_COLORS[p.category] ?? "#664c88";
   return (
-    <a
+    <motion.a
       href={p.url}
       target="_blank"
       rel="noreferrer"
-      className="ecosystem-row ecosystem-grid"
-      style={{
-        display: "grid",
-        gap: 12,
-        alignItems: "center",
-        padding: "12px 16px",
-        borderBottom: "1px solid rgba(16,185,129,0.05)",
-        textDecoration: "none",
-        transition: "background 0.12s",
-      }}
+      whileHover={{ y: -2, backgroundColor: "rgba(255,255,255,0.03)" }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="ecosystem-grid ecosystem-row grid items-center gap-3 border-b border-border px-4 py-3 no-underline last:border-b-0"
     >
-      <span style={{ fontSize: 11, color: "#475569", fontFamily: "monospace" }}>{rank}</span>
+      <span className="font-mono text-xs text-muted">{rank}</span>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+      <div className="flex min-w-0 items-center gap-2.5">
         <div
-          style={{
-            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-            background: `${p.logoColor}18`, border: `1px solid ${p.logoColor}30`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 10, fontWeight: 900, color: p.logoColor, fontFamily: "monospace",
-          }}
+          className="flex size-7 shrink-0 items-center justify-center rounded-md font-mono text-[10px] font-bold"
+          style={{ background: `${p.logoColor}20`, border: `1px solid ${p.logoColor}35`, color: p.logoColor }}
         >
           {p.logo}
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
-            {p.featured && (
-              <span style={{ fontSize: 7, fontWeight: 700, color: "#34d399", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(52,211,153,0.25)", padding: "1px 5px", borderRadius: 4, fontFamily: "monospace", letterSpacing: "0.06em", flexShrink: 0 }}>
-                FEATURED
-              </span>
-            )}
-          </div>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate text-sm font-medium text-text">{p.name}</span>
+          {p.featured && (
+            <span className="shrink-0 rounded border border-accent/30 bg-accent-dim px-1.5 py-0.5 font-mono text-[9px] text-accent-text">
+              Featured
+            </span>
+          )}
         </div>
       </div>
 
       <span
-        className="hide-on-mobile"
-        style={{
-          justifySelf: "start", fontSize: 8, fontWeight: 700, color: catColor,
-          background: `${catColor}15`, border: `1px solid ${catColor}25`,
-          padding: "2px 7px", borderRadius: 4, fontFamily: "monospace", letterSpacing: "0.06em",
-          whiteSpace: "nowrap",
-        }}
+        className="hide-on-mobile w-fit justify-self-start truncate rounded px-2 py-0.5 font-mono text-[10px] font-medium"
+        style={{ background: `${catColor}18`, border: `1px solid ${catColor}30`, color: catColor }}
       >
         {p.category}
       </span>
 
-      <p className="hide-on-mobile" style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {p.desc}
-      </p>
+      <p className="hide-on-mobile truncate text-xs text-muted">{p.desc}</p>
 
-      <span style={{ textAlign: "right", fontSize: 12, fontWeight: 700, color: typeof tvl === "number" ? "#34d399" : "#334155", fontFamily: "monospace" }}>
-        {typeof tvl === "number" ? formatTvl(tvl) : "—"}
+      <span className="text-right font-mono text-xs font-semibold text-accent-text">
+        {typeof tvl === "number" ? formatTvl(tvl) : ""}
       </span>
 
-      <span style={{ textAlign: "right", fontSize: 10, color: catColor, fontWeight: 700, fontFamily: "monospace" }}>
-        VISIT ↗
+      <span className="text-right font-mono text-[11px] font-medium" style={{ color: catColor }}>
+        Visit →
       </span>
-    </a>
+    </motion.a>
+  );
+}
+
+function ProjectCard({ project: p, tvl }: { project: Project; tvl?: number }) {
+  const catColor = CATEGORY_COLORS[p.category] ?? "#664c88";
+  return (
+    <motion.a
+      href={p.url}
+      target="_blank"
+      rel="noreferrer"
+      whileHover={{ y: -2, borderColor: "var(--color-accent)" }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 no-underline"
+    >
+      <div className="flex items-center gap-2.5">
+        <div
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold"
+          style={{ background: `${p.logoColor}20`, border: `1px solid ${p.logoColor}35`, color: p.logoColor }}
+        >
+          {p.logo}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate text-sm font-medium text-text">{p.name}</span>
+            {p.featured && (
+              <span className="shrink-0 rounded border border-accent/30 bg-accent-dim px-1.5 py-0.5 font-mono text-[9px] text-accent-text">
+                Featured
+              </span>
+            )}
+          </div>
+          <span
+            className="mt-1 inline-block rounded px-1.5 py-0.5 font-mono text-[9px] font-medium"
+            style={{ background: `${catColor}18`, border: `1px solid ${catColor}30`, color: catColor }}
+          >
+            {p.category}
+          </span>
+        </div>
+      </div>
+      <p className="line-clamp-2 flex-1 text-xs leading-relaxed text-muted">{p.desc}</p>
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-xs font-semibold text-accent-text">
+          {typeof tvl === "number" ? formatTvl(tvl) : ""}
+        </span>
+        <span className="font-mono text-[11px] font-medium" style={{ color: catColor }}>Visit →</span>
+      </div>
+    </motion.a>
   );
 }
