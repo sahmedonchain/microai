@@ -1,26 +1,25 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
 import { WalletModal } from "@/app/components/WalletModal";
 import { truncateAddress } from "@/lib/format";
 
+// M monogram: two overlapping arcs forming an "M", on an Arc violet → Circle
+// blue gradient. Abstract, geometric, reads clean at favicon size.
 export function LogoMark({ className = "" }: { className?: string }) {
+  const gradientId = useId();
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" className={className}>
-      <rect width="32" height="32" rx="8" fill="var(--color-accent)" />
-      <ellipse
-        cx="16"
-        cy="16"
-        rx="10"
-        ry="4.5"
-        fill="none"
-        stroke="white"
-        strokeOpacity="0.55"
-        strokeWidth="1.5"
-        transform="rotate(-30 16 16)"
-      />
-      <circle cx="16" cy="16" r="3.5" fill="white" />
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="var(--color-accent)" />
+          <stop offset="100%" stopColor="var(--color-secondary)" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="8" fill={`url(#${gradientId})`} />
+      <path d="M8 23 V10 A4 4 0 0 1 16 10 V23" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M16 23 V10 A4 4 0 0 1 24 10 V23" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="2.4" strokeLinecap="round" />
     </svg>
   );
 }

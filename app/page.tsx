@@ -22,6 +22,8 @@ import {
   Link2,
   MessageSquare,
   Paperclip,
+  PanelLeftClose,
+  PanelLeftOpen,
   Receipt,
   Wrench,
 } from "lucide-react";
@@ -114,7 +116,25 @@ async function waitForReceipt(
   return false;
 }
 
+const SIDEBAR_COLLAPSED_KEY = "microai_sidebar_collapsed";
+
 export default function Home() {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+    } catch { /* localStorage unavailable — keep default expanded */ }
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [wallet, setWallet] = useState<string | null>(null);
   const [provider, setProvider] = useState<EthereumProvider | null>(null);
@@ -368,14 +388,40 @@ export default function Home() {
   return (
     <div className="flex h-screen overflow-hidden bg-space font-sans text-text">
       {/* LEFT SIDEBAR */}
-      <aside className="flex w-64 shrink-0 flex-col border-r border-border bg-surface">
-        <Link href="/" className="flex items-center gap-3 border-b border-border px-5 py-5">
-          <LogoMark className="size-8 shrink-0" />
-          <span className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold text-text">MicroAI</span>
-            <span className="text-xs text-muted">Build on Arc</span>
-          </span>
-        </Link>
+      {sidebarCollapsed && (
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          aria-label="Expand sidebar"
+          className="fixed left-4 top-4 z-50 flex size-9 items-center justify-center rounded-lg border border-border bg-surface text-muted shadow-lg transition hover:text-text"
+        >
+          <PanelLeftOpen className="size-4" aria-hidden="true" />
+        </button>
+      )}
+      <motion.aside
+        initial={false}
+        animate={{ width: sidebarCollapsed ? 0 : 256 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className={`flex shrink-0 overflow-hidden bg-surface ${sidebarCollapsed ? "" : "border-r border-border"}`}
+      >
+        <div className="flex w-64 shrink-0 flex-col">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-5">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <LogoMark className="size-8 shrink-0" />
+            <span className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold text-text">MicroAI</span>
+              <span className="text-xs text-muted">Build on Arc</span>
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-label="Collapse sidebar"
+            className="shrink-0 rounded-md p-1.5 text-muted transition hover:bg-surface-raised hover:text-text"
+          >
+            <PanelLeftClose className="size-4" aria-hidden="true" />
+          </button>
+        </div>
 
         <nav className="flex flex-col gap-1 px-3 py-4">
           {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
@@ -431,7 +477,8 @@ export default function Home() {
             Learn more <ChevronRight className="size-3" aria-hidden="true" />
           </Link>
         </div>
-      </aside>
+        </div>
+      </motion.aside>
 
       {/* CENTER + RIGHT */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
