@@ -1,13 +1,8 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--color-space);
+  --color-foreground: var(--color-text);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-jetbrains-mono);
 }
@@ -46,17 +41,10 @@
   --color-danger: #f2555a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-space);
+  color: var(--color-text);
+  font-family: var(--font-inter), system-ui, sans-serif;
 }
 
 html, body {
@@ -66,3 +54,18 @@ html, body {
 ::-webkit-scrollbar {
   display: none;
 }
+
+/* Inline chat-response markdown (app/page.tsx). */
+.markdown p { margin: 0.4em 0; line-height: 1.7; }
+.markdown p:first-child { margin-top: 0; }
+.markdown p:last-child { margin-bottom: 0; }
+.markdown strong { color: var(--color-text); font-weight: 600; }
+.markdown ul { list-style: disc; padding-left: 1.2em; margin: 0.5em 0; }
+.markdown ol { list-style: decimal; padding-left: 1.2em; margin: 0.5em 0; }
+.markdown li { margin-bottom: 0.25em; }
+.markdown h1, .markdown h2, .markdown h3 { color: var(--color-text); font-weight: 600; margin: 0.8em 0 0.3em; }
+.markdown code { background: var(--color-space); border: 1px solid var(--color-border); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.85em; color: var(--color-accent-text); font-family: var(--font-jetbrains-mono), monospace; }
+.markdown pre { background: var(--color-space); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.8em; margin: 0.6em 0; overflow-x: auto; }
+.markdown pre code { background: none; border: none; padding: 0; }
+.markdown a { color: var(--color-secondary-text); }
+.markdown hr { border: none; border-top: 1px solid var(--color-border); margin: 0.8em 0; }

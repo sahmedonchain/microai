@@ -795,8 +795,15 @@ export default function EcosystemPage() {
     return matchCat && matchSearch;
   });
 
-  const featured = filtered.filter((p) => p.featured);
-  const rest = filtered.filter((p) => !p.featured);
+  // DeFiLlama-style single ranked list: TVL-bearing projects first (highest
+  // TVL on top, matching how DeFiLlama's own protocol list sorts), then
+  // everything else in its existing order. Featured projects keep a small
+  // badge instead of a separate carve-out section.
+  const ranked = [...filtered].sort((a, b) => {
+    const tvlA = tvlByProject[a.name] ?? -1;
+    const tvlB = tvlByProject[b.name] ?? -1;
+    return tvlB - tvlA;
+  });
 
   return (
     <div style={{ minHeight: "100vh", background: "#010503", color: "#e2e8f0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -876,32 +883,38 @@ export default function EcosystemPage() {
         </div>
       </section>
 
-      {/* FEATURED */}
-      {featured.length > 0 && (
-        <section style={{ padding: "20px 16px 0", maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-            COMMUNITY SPOTLIGHT
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12 }}>
-            {featured.map((p) => (
-              <ProjectCard key={p.name} project={p} highlight tvl={tvlByProject[p.name]} />
+      {/* PROJECTS — DeFiLlama-style ranked row list */}
+      <section style={{ padding: "20px 16px 60px", maxWidth: 1100, margin: "0 auto" }}>
+        {ranked.length > 0 && (
+          <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.08)", borderRadius: 12, overflow: "hidden" }}>
+            {/* Header row */}
+            <div
+              className="ecosystem-grid"
+              style={{
+                display: "grid",
+                gap: 12,
+                padding: "10px 16px",
+                borderBottom: "1px solid rgba(16,185,129,0.08)",
+                fontSize: 9,
+                color: "#475569",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                fontFamily: "monospace",
+              }}
+            >
+              <span>#</span>
+              <span>PROJECT</span>
+              <span className="hide-on-mobile">CATEGORY</span>
+              <span className="hide-on-mobile">DESCRIPTION</span>
+              <span style={{ textAlign: "right" }}>TVL ON ARC</span>
+              <span style={{ textAlign: "right" }}>LINK</span>
+            </div>
+
+            {ranked.map((p, i) => (
+              <ProjectRow key={p.name} project={p} rank={i + 1} tvl={tvlByProject[p.name]} />
             ))}
           </div>
-        </section>
-      )}
-
-      {/* MAIN GRID */}
-      <section style={{ padding: "20px 16px 60px", maxWidth: 1100, margin: "0 auto" }}>
-        {featured.length > 0 && rest.length > 0 && (
-          <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-            ALL PROJECTS
-          </div>
         )}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
-          {rest.map((p) => (
-            <ProjectCard key={p.name} project={p} tvl={tvlByProject[p.name]} />
-          ))}
-        </div>
         {filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "#475569", fontFamily: "monospace", fontSize: 12 }}>
             NO RESULTS FOR "{search.toUpperCase()}"
@@ -917,8 +930,8 @@ export default function EcosystemPage() {
           Get instant answers about any Arc or Circle ecosystem project for just $0.001 USDC.
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-          <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#10b981", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none", boxShadow: "0 0 18px rgba(16,185,129,0.2)" }}>
-            LAUNCH CHAT TERMINAL →
+          <Link href="/" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#10b981", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none", boxShadow: "0 0 18px rgba(16,185,129,0.2)" }}>
+            ASK MICROAI →
           </Link>
           <Link href="/grants" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, border: "1px solid rgba(52,211,153,0.2)", background: "rgba(16,185,129,0.05)", color: "#34d399", fontSize: 13, fontWeight: 700, letterSpacing: "0.06em", textDecoration: "none" }}>
             VIEW GRANTS →
@@ -949,6 +962,13 @@ export default function EcosystemPage() {
         * { box-sizing: border-box; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         input::placeholder { color: #475569; }
+        .ecosystem-row:hover { background: rgba(16,185,129,0.05); }
+        .ecosystem-row:last-child { border-bottom: none; }
+        .ecosystem-grid { grid-template-columns: 32px 1fr 140px minmax(0,2fr) 110px 70px; }
+        @media (max-width: 720px) {
+          .hide-on-mobile { display: none; }
+          .ecosystem-grid { grid-template-columns: 24px 1fr 90px 90px; }
+        }
       `}</style>
     </div>
   );
@@ -961,48 +981,72 @@ function formatTvl(usd: number): string {
   return `$${usd.toFixed(0)}`;
 }
 
-function ProjectCard({ project: p, highlight, tvl }: { project: Project; highlight?: boolean; tvl?: number }) {
+function ProjectRow({ project: p, rank, tvl }: { project: Project; rank: number; tvl?: number }) {
   const catColor = CATEGORY_COLORS[p.category] ?? "#34d399";
   return (
-    <div style={{
-      background: highlight ? "rgba(3,22,13,0.4)" : "rgba(3,17,10,0.2)",
-      border: highlight ? "1px solid rgba(52,211,153,0.15)" : "1px solid rgba(16,185,129,0.07)",
-      borderRadius: 14,
-      padding: "18px",
-      display: "flex",
-      flexDirection: "column",
-      gap: 10,
-      position: "relative",
-      overflow: "hidden",
-    }}>
-      {highlight && (
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: "linear-gradient(90deg, transparent, rgba(52,211,153,0.3), transparent)" }} />
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${p.logoColor}18`, border: `1px solid ${p.logoColor}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: p.logoColor, flexShrink: 0, fontFamily: "monospace" }}>
+    <a
+      href={p.url}
+      target="_blank"
+      rel="noreferrer"
+      className="ecosystem-row ecosystem-grid"
+      style={{
+        display: "grid",
+        gap: 12,
+        alignItems: "center",
+        padding: "12px 16px",
+        borderBottom: "1px solid rgba(16,185,129,0.05)",
+        textDecoration: "none",
+        transition: "background 0.12s",
+      }}
+    >
+      <span style={{ fontSize: 11, color: "#475569", fontFamily: "monospace" }}>{rank}</span>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+        <div
+          style={{
+            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+            background: `${p.logoColor}18`, border: `1px solid ${p.logoColor}30`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 10, fontWeight: 900, color: p.logoColor, fontFamily: "monospace",
+          }}
+        >
           {p.logo}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>{p.name}</div>
-          <span style={{ fontSize: 8, fontWeight: 700, color: catColor, background: `${catColor}15`, border: `1px solid ${catColor}25`, padding: "1px 7px", borderRadius: 4, fontFamily: "monospace", letterSpacing: "0.08em" }}>
-            {p.category}
-          </span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
+            {p.featured && (
+              <span style={{ fontSize: 7, fontWeight: 700, color: "#34d399", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(52,211,153,0.25)", padding: "1px 5px", borderRadius: 4, fontFamily: "monospace", letterSpacing: "0.06em", flexShrink: 0 }}>
+                FEATURED
+              </span>
+            )}
+          </div>
         </div>
       </div>
-      <p style={{ fontSize: 11, color: "#64748b", lineHeight: 1.65, margin: 0, flex: 1 }}>{p.desc}</p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-        {p.tags.map((t) => (
-          <span key={t} style={{ fontSize: 9, color: "#475569", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: 4, fontFamily: "monospace" }}>{t}</span>
-        ))}
-      </div>
-      {typeof tvl === "number" && (
-        <div style={{ fontSize: 9, color: "#34d399", fontFamily: "monospace", letterSpacing: "0.04em", opacity: 0.85 }}>
-          TVL: {formatTvl(tvl)} on Arc <span style={{ color: "#334155" }}>· DeFiLlama</span>
-        </div>
-      )}
-      <a href={p.url} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: catColor, fontWeight: 700, fontFamily: "monospace", letterSpacing: "0.08em", textDecoration: "none" }}>
-        VISIT →
-      </a>
-    </div>
+
+      <span
+        className="hide-on-mobile"
+        style={{
+          justifySelf: "start", fontSize: 8, fontWeight: 700, color: catColor,
+          background: `${catColor}15`, border: `1px solid ${catColor}25`,
+          padding: "2px 7px", borderRadius: 4, fontFamily: "monospace", letterSpacing: "0.06em",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {p.category}
+      </span>
+
+      <p className="hide-on-mobile" style={{ fontSize: 11, color: "#64748b", lineHeight: 1.5, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {p.desc}
+      </p>
+
+      <span style={{ textAlign: "right", fontSize: 12, fontWeight: 700, color: typeof tvl === "number" ? "#34d399" : "#334155", fontFamily: "monospace" }}>
+        {typeof tvl === "number" ? formatTvl(tvl) : "—"}
+      </span>
+
+      <span style={{ textAlign: "right", fontSize: 10, color: catColor, fontWeight: 700, fontFamily: "monospace" }}>
+        VISIT ↗
+      </span>
+    </a>
   );
 }
