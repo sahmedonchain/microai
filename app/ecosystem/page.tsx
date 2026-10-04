@@ -23,6 +23,7 @@ const NAV_LINKS = [
   { label: "Grants", href: "/grants" },
   { label: "Build status", href: "/build-status" },
   { label: "Stats", href: "/stats" },
+  { label: "News", href: "/news" },
 ];
 
 const PAGE_SIZE = 20;

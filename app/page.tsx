@@ -21,6 +21,7 @@ import {
   Hammer,
   Link2,
   MessageSquare,
+  Newspaper,
   Paperclip,
   PanelLeftClose,
   PanelLeftOpen,
@@ -31,6 +32,7 @@ import { WalletModal } from "@/app/components/WalletModal";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { PRICE_PER_QUERY, MIN_QUERIES, MAX_QUERIES, formatUsdc } from "@/lib/pricing";
 import { timeAgo, truncateAddress } from "@/lib/format";
+import type { NewsItem } from "@/lib/news";
 
 const ARC_CHAIN_ID = "0x13b2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
@@ -67,6 +69,7 @@ const NAV_ITEMS = [
   { label: "Grants", href: "/grants", icon: Gift },
   { label: "Build status", href: "/build-status", icon: Hammer },
   { label: "Stats", href: "/stats", icon: BarChart3 },
+  { label: "News", href: "/news", icon: Newspaper },
 ];
 
 const DEV_RESOURCES = [
@@ -150,6 +153,7 @@ export default function Home() {
   const [txStep, setTxStep] = useState("");
 
   const [stats, setStats] = useState<StatsPayload | null>(null);
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -231,6 +235,15 @@ export default function Home() {
       .then((res) => res.json())
       .then((data) => { if (!cancelled) setStats(data); })
       .catch(() => { /* stats row is optional enrichment */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/news")
+      .then((res) => res.json())
+      .then((data) => { if (!cancelled && Array.isArray(data.items)) setNewsItems(data.items.slice(0, 4)); })
+      .catch(() => { /* news teaser is optional enrichment */ });
     return () => { cancelled = true; };
   }, []);
 
@@ -679,6 +692,36 @@ export default function Home() {
                       </div>
                       <ChevronRight className="mt-1 size-4 shrink-0 text-muted transition group-hover:text-accent-text" aria-hidden="true" />
                     </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {messages.length === 0 && newsItems.length > 0 && (
+              <section className="mt-6 w-full" aria-labelledby="news-heading">
+                <div className="flex items-center justify-between">
+                  <h2 id="news-heading" className="text-sm font-medium text-text">Latest on Arc</h2>
+                  <Link href="/news" className="text-xs font-medium text-accent-text hover:underline">
+                    All news
+                  </Link>
+                </div>
+                <div className="mt-4 flex flex-col gap-2">
+                  {newsItems.map((item) => (
+                    <a
+                      key={item.id}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-left no-underline transition hover:border-accent/40 hover:bg-surface-raised"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-text">{item.title}</p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          {item.source}{item.publishedAt ? ` · ${timeAgo(item.publishedAt)}` : ""}
+                        </p>
+                      </div>
+                      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
+                    </a>
                   ))}
                 </div>
               </section>

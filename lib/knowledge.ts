@@ -150,8 +150,8 @@ SPECS:
 - Gas throughput: 20M gas/second
 - Finality: Sub-second (deterministic)
 - Block time: Sub-second
-- Base fee target: ~$0.01 per transaction
-- Max base fee: 1e-3 USDC (~$0.001 per gas unit)
+- Base fee target: ~$0.001 per ERC-20 transfer
+- Maximum base fee: 20,000 Gwei (hard ceiling)
 
 NOTE:
 Arc MAINNET has processed over 244M transactions as of May 2026. Mainnet specs may differ slightly. Performance is optimized for financial transactions, not gaming or high-frequency NFT minting.
@@ -459,9 +459,9 @@ EXPLANATION:
 Arc's fee model:
 - Gas unit: USDC (18 decimals for internal accounting)
 - Pricing: EIP-1559 + EWMA smoothing
-- Base fee target: ~$0.01 per transaction
+- Base fee target: ~$0.001 per ERC-20 transfer
 - Minimum base fee: 20 Gwei
-- Maximum base fee: 1e-3 USDC
+- Maximum base fee: 20,000 Gwei (hard ceiling)
 - Fees are stable — short spikes don't cause sudden jumps
 
 HOW TO SET GAS (ethers.js):

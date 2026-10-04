@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { label: "Grants", href: "/grants" },
   { label: "Build status", href: "/build-status" },
   { label: "Stats", href: "/stats" },
+  { label: "News", href: "/news" },
 ];
 
 const ARC_RPC = "https://rpc.mainnet.arc.io";
@@ -21,7 +22,8 @@ const RETRY_DELAY_MS = 3000;
 
 interface NetworkStats {
   blockNumber: number;
-  gasPrice: string;
+  gasPriceGwei: string;
+  gasPricePerTransferUsd: string;
   chainId: string;
 }
 
@@ -77,6 +79,20 @@ function formatUnits(hex: string, decimals: number): string {
   const frac = value % divisor;
   const fracStr = frac.toString().padStart(decimals, "0").slice(0, 4);
   return `${whole}.${fracStr}`;
+}
+
+// eth_gasPrice on Arc returns wei (18-decimal native gas accounting), not a
+// 6-decimal USDC amount — docs.arc.io/arc/references/gas-and-fees. Convert to
+// Gwei for display, and estimate a standard 21000-gas transfer's USD cost
+// (USDC ~= $1, so wei-denominated gas cost converts directly to USD at 1e18).
+// Max base fee is a 20,000 Gwei hard ceiling, so these values never approach
+// Number.MAX_SAFE_INTEGER and BigInt -> Number loses no precision here.
+function formatGasPrice(hex: string): { gwei: string; perTransferUsd: string } {
+  if (!hex || hex === "0x") return { gwei: "0", perTransferUsd: "0.000000" };
+  const wei = Number(BigInt(hex));
+  const gwei = wei / 1e9;
+  const perTransferUsd = (wei * 21000) / 1e18;
+  return { gwei: gwei.toFixed(2), perTransferUsd: perTransferUsd.toFixed(6) };
 }
 
 // Briefly flashes/scales its content when `value` changes between
@@ -263,9 +279,11 @@ export default function StatsPage() {
         rpcCall("eth_gasPrice"),
         rpcCall("eth_chainId"),
       ]);
+      const gasPrice = formatGasPrice(gasPriceHex);
       setStats({
         blockNumber: parseInt(blockHex, 16),
-        gasPrice: formatUnits(gasPriceHex, 6),
+        gasPriceGwei: gasPrice.gwei,
+        gasPricePerTransferUsd: gasPrice.perTransferUsd,
         chainId: parseInt(chainIdHex, 16).toString(),
       });
       setNetworkUpdated(new Date());
@@ -436,13 +454,19 @@ export default function StatsPage() {
           <StatCard label="Block height" tone="accent">
             {stats ? <LiveBlockHeight blockNumber={stats.blockNumber} /> : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
           </StatCard>
-          <StatCard label="Gas price" tone="accent">
-            {stats?.gasPrice !== undefined ? (
-              <FlashValue value={stats.gasPrice}>
-                {stats.gasPrice}<span className="ml-1 text-xs text-muted">USDC</span>
-              </FlashValue>
-            ) : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
-          </StatCard>
+          <div className="rounded-lg border border-accent/25 bg-accent-dim px-5 py-4">
+            <p className="text-xs text-muted">Gas price</p>
+            <p className="mt-2 font-mono text-2xl text-text">
+              {stats?.gasPriceGwei !== undefined ? (
+                <FlashValue value={stats.gasPriceGwei}>
+                  {stats.gasPriceGwei}<span className="ml-1 text-xs text-muted">Gwei</span>
+                </FlashValue>
+              ) : networkFailed ? <Unavailable onRetry={retryNetwork} /> : <Skeleton />}
+            </p>
+            {stats?.gasPricePerTransferUsd !== undefined && (
+              <p className="mt-1 text-xs text-muted">~${stats.gasPricePerTransferUsd} per transfer</p>
+            )}
+          </div>
           <StatCard label="Chain ID" tone="accent">
             {stats?.chainId !== undefined ? (
               <FlashValue value={stats.chainId}>{stats.chainId}</FlashValue>
