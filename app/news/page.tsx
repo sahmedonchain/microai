@@ -3,18 +3,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
 import { motion } from "framer-motion";
-import {
-  Search,
-  ExternalLink,
-  RefreshCw,
-  BadgeCheck,
-  Users,
-  Send,
-} from "lucide-react";
+import { Search, ExternalLink, RefreshCw } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { timeAgo } from "@/lib/format";
 import type { NewsItem, NewsTag, NewsPayload, SourceStatus } from "@/lib/news";
-import type { CommunityItem, SubmittedPost } from "@/lib/community";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -40,7 +32,9 @@ const SOURCE_COLORS: Record<string, string> = {
   "Circle Blog": "#5ea2ec",
   "Circle Pressroom": "#5ea2ec",
   Press: "#8592a8",
-  X: "#8592a8",
+  "BSC News": "#f5b544",
+  "Yahoo Finance": "#8592a8",
+  "CNBC World": "#8592a8",
 };
 
 const ALL_TAGS: NewsTag[] = ["Partnership", "Integration", "Launch", "Funding", "Developer", "Regulation", "Event"];
@@ -50,110 +44,6 @@ type NewsFilter = "all" | "important" | "official" | "x" | "press";
 const POLL_INTERVAL_MS = 60_000;
 
 export default function NewsPage() {
-  const [tab, setTab] = useState<"news" | "community">("news");
-
-  return (
-    <div className="min-h-screen bg-space font-sans text-text">
-      <header className="sticky top-0 z-50 border-b border-border bg-space/90 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <LogoMark className="size-7" />
-            <span className="text-sm font-semibold text-text">MicroAI</span>
-          </Link>
-          <nav className="hidden items-center gap-1 md:flex">
-            {NAV_LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`rounded-md px-3 py-1.5 text-sm transition ${
-                  l.href === "/news" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex shrink-0 items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
-              <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
-              </span>
-              Arc Mainnet
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-          <p className="text-xs text-muted">
-            <Link href="/" className="hover:text-text">Home</Link> / News
-          </p>
-          <div className="mt-4 max-w-xl">
-            <h1 className="text-3xl font-semibold leading-[1.15] text-text sm:text-4xl">
-              Arc &amp; Circle
-              <br />
-              News
-            </h1>
-            <p className="mt-4 text-base leading-relaxed text-muted">
-              Announcements, press coverage, and who&apos;s building and writing about Arc, pulled from free public sources.
-            </p>
-          </div>
-
-          <div className="mt-8 inline-flex rounded-lg border border-border bg-surface p-1">
-            {[
-              { id: "news" as const, label: "Latest news" },
-              { id: "community" as const, label: "Community content" },
-            ].map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={`rounded-md px-4 py-2 text-sm font-medium transition ${
-                  tab === t.id ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {tab === "news" ? <LatestNewsTab /> : <CommunityTab />}
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <LogoMark className="size-5" />
-            <span className="text-xs text-muted">MicroAI · The Arc &amp; Circle hub</span>
-          </div>
-          <div className="flex flex-wrap gap-5">
-            {[
-              { l: "Arc", h: "https://arc.io" },
-              { l: "Circle", h: "https://circle.com" },
-              { l: "GitHub", h: "https://github.com/sahmedonchain/microai" },
-              { l: "Explorer", h: "https://explorer.arc.io" },
-            ].map((link) => (
-              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" className="text-xs text-muted transition hover:text-text">
-                {link.l}
-              </a>
-            ))}
-          </div>
-        </div>
-      </footer>
-
-      <style>{`select { color-scheme: dark; }`}</style>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Latest news tab
-// ---------------------------------------------------------------------------
-
-function LatestNewsTab() {
   const [payload, setPayload] = useState<NewsPayload | null>(null);
   const [failed, setFailed] = useState(false);
   const [search, setSearch] = useState("");
@@ -219,148 +109,220 @@ function LatestNewsTab() {
   };
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:flex-row">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search news..."
-              className="w-full rounded-lg border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={fetchNews}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-muted transition hover:text-text"
-          >
-            <RefreshCw className="size-3.5" aria-hidden="true" />
-            Refresh
-          </button>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[
-            { id: "all" as const, label: "All" },
-            { id: "important" as const, label: "Key announcements" },
-            { id: "official" as const, label: "Official" },
-            { id: "x" as const, label: "Official on X" },
-            { id: "press" as const, label: "Press" },
-          ].map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => handleFilterClick(f.id)}
-              className={`rounded-full border px-3 py-1 text-xs transition ${
-                filter === f.id ? "border-accent/40 bg-accent-dim text-accent-text" : "border-border text-muted hover:text-text"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {tagCounts.size > 0 && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {ALL_TAGS.filter((t) => tagCounts.has(t)).map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
-                className="rounded-full border px-2.5 py-1 font-mono text-[10px] font-medium transition"
-                style={{
-                  borderColor: tagFilter === tag ? TAG_COLORS[tag] : "var(--color-border)",
-                  background: tagFilter === tag ? `${TAG_COLORS[tag]}18` : "transparent",
-                  color: tagFilter === tag ? TAG_COLORS[tag] : "var(--color-muted)",
-                }}
+    <div className="min-h-screen bg-space font-sans text-text">
+      <header className="sticky top-0 z-50 border-b border-border bg-space/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <LogoMark className="size-7" />
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+          </Link>
+          <nav className="hidden items-center gap-1 md:flex">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 text-sm transition ${
+                  l.href === "/news" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
+                }`}
               >
-                {tag} ({tagCounts.get(tag)})
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+              </span>
+              Arc Mainnet
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+          <p className="text-xs text-muted">
+            <Link href="/" className="hover:text-text">Home</Link> / News
+          </p>
+          <div className="mt-4 max-w-xl">
+            <h1 className="text-3xl font-semibold leading-[1.15] text-text sm:text-4xl">
+              Arc &amp; Circle
+              <br />
+              News
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-muted">
+              Announcements and press coverage of Arc and Circle, pulled from free public sources.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:flex-row">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden="true" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search news..."
+                className="w-full rounded-lg border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={fetchNews}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-muted transition hover:text-text"
+            >
+              <RefreshCw className="size-3.5" aria-hidden="true" />
+              Refresh
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[
+              { id: "all" as const, label: "All" },
+              { id: "important" as const, label: "Key announcements" },
+              { id: "official" as const, label: "Official" },
+              { id: "x" as const, label: "Official on X" },
+              { id: "press" as const, label: "Press" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => handleFilterClick(f.id)}
+                className={`rounded-full border px-3 py-1 text-xs transition ${
+                  filter === f.id ? "border-accent/40 bg-accent-dim text-accent-text" : "border-border text-muted hover:text-text"
+                }`}
+              >
+                {f.label}
               </button>
             ))}
           </div>
-        )}
 
-        <p className="mt-3 text-xs text-muted">
-          {payload === null
-            ? "Loading..."
-            : filtered.length === 0
-            ? `No results${search ? ` for "${search}"` : ""}`
-            : `${filtered.length} result${filtered.length !== 1 ? "s" : ""}${payload.stale ? " · showing last known data" : ""}`}
-        </p>
+          {tagCounts.size > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {ALL_TAGS.filter((t) => tagCounts.has(t)).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+                  className="rounded-full border px-2.5 py-1 font-mono text-[10px] font-medium transition"
+                  style={{
+                    borderColor: tagFilter === tag ? TAG_COLORS[tag] : "var(--color-border)",
+                    background: tagFilter === tag ? `${TAG_COLORS[tag]}18` : "transparent",
+                    color: tagFilter === tag ? TAG_COLORS[tag] : "var(--color-muted)",
+                  }}
+                >
+                  {tag} ({tagCounts.get(tag)})
+                </button>
+              ))}
+            </div>
+          )}
 
-        <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
-          {payload === null ? (
-            failed ? (
-              <p className="px-4 py-8 text-center text-sm text-muted">Could not load news. <button onClick={fetchNews} className="text-accent-text hover:underline">Retry</button></p>
+          <p className="mt-3 text-xs text-muted">
+            {payload === null
+              ? "Loading..."
+              : filtered.length === 0
+              ? `No results${search ? ` for "${search}"` : ""}`
+              : `${filtered.length} result${filtered.length !== 1 ? "s" : ""}${payload.stale ? " · showing last known data" : ""}`}
+          </p>
+
+          <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
+            {payload === null ? (
+              failed ? (
+                <p className="px-4 py-8 text-center text-sm text-muted">Could not load news. <button onClick={fetchNews} className="text-accent-text hover:underline">Retry</button></p>
+              ) : (
+                <div className="flex flex-col gap-3 p-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="h-16 animate-pulse rounded-md bg-accent-dim" />
+                  ))}
+                </div>
+              )
+            ) : payload.unavailable ? (
+              <p className="px-4 py-8 text-center text-sm text-muted">News sources are temporarily unavailable. Please check back soon.</p>
+            ) : filtered.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted">Nothing matches this filter yet.</p>
             ) : (
-              <div className="flex flex-col gap-3 p-4">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 animate-pulse rounded-md bg-accent-dim" />
+              filtered.map((item) => <NewsRow key={item.id} item={item} isNew={newIds.has(item.id)} />)
+            )}
+          </div>
+        </div>
+
+        <aside ref={xSidebarRef} className="flex w-full shrink-0 flex-col gap-6 lg:w-72">
+          <XTimelinePanel />
+
+          <div>
+            <p className="text-sm font-medium text-text">Links</p>
+            <div className="mt-3 flex flex-col gap-0.5">
+              {[
+                { label: "@arc on X", href: "https://x.com/arc" },
+                { label: "@circle on X", href: "https://x.com/circle" },
+                { label: "Arc blog", href: "https://arc.io/blog" },
+                { label: "Circle pressroom", href: "https://circle.com/pressroom" },
+                { label: "Arc community", href: "https://community.arc.io" },
+                { label: "Arc events", href: "https://community.arc.io/public/events" },
+                { label: "Discord", href: "https://discord.com/invite/buildonarc" },
+              ].map((l) => (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-surface hover:text-text"
+                >
+                  {l.label}
+                  <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {payload?.sources && (
+            <div>
+              <p className="text-sm font-medium text-text">Live sources</p>
+              <div className="mt-3 flex flex-col gap-1.5">
+                {payload.sources.map((s: SourceStatus) => (
+                  <div key={s.name} className="flex items-center justify-between rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs">
+                    <span className="flex items-center gap-1.5 text-muted">
+                      <span className={`size-1.5 rounded-full ${s.status === "ok" ? "bg-success" : "bg-danger"}`} aria-hidden="true" />
+                      {s.name}
+                    </span>
+                    <span className="font-mono text-muted">{s.status === "ok" ? s.count : "error"}</span>
+                  </div>
                 ))}
               </div>
-            )
-          ) : payload.unavailable ? (
-            <p className="px-4 py-8 text-center text-sm text-muted">News sources are temporarily unavailable. Please check back soon.</p>
-          ) : filtered.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-muted">Nothing matches this filter yet.</p>
-          ) : (
-            filtered.map((item) => <NewsRow key={item.id} item={item} isNew={newIds.has(item.id)} />)
+              {payload.updatedAt > 0 && (
+                <p className="mt-2 text-xs text-muted">Updated {timeAgo(new Date(payload.updatedAt).toISOString())}</p>
+              )}
+            </div>
           )}
-        </div>
+        </aside>
       </div>
 
-      <aside ref={xSidebarRef} className="flex w-full shrink-0 flex-col gap-6 lg:w-72">
-        <XTimelinePanel />
-
-        <div>
-          <p className="text-sm font-medium text-text">Links</p>
-          <div className="mt-3 flex flex-col gap-0.5">
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <LogoMark className="size-5" />
+            <span className="text-xs text-muted">MicroAI · The Arc &amp; Circle hub</span>
+          </div>
+          <div className="flex flex-wrap gap-5">
             {[
-              { label: "@arc on X", href: "https://x.com/arc" },
-              { label: "@circle on X", href: "https://x.com/circle" },
-              { label: "Arc blog", href: "https://arc.io/blog" },
-              { label: "Circle pressroom", href: "https://circle.com/pressroom" },
-              { label: "Arc community", href: "https://community.arc.io" },
-              { label: "Arc events", href: "https://community.arc.io/public/events" },
-              { label: "Discord", href: "https://discord.com/invite/buildonarc" },
-            ].map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted transition hover:bg-surface hover:text-text"
-              >
-                {l.label}
-                <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
+              { l: "Arc", h: "https://arc.io" },
+              { l: "Circle", h: "https://circle.com" },
+              { l: "GitHub", h: "https://github.com/sahmedonchain/microai" },
+              { l: "Explorer", h: "https://explorer.arc.io" },
+            ].map((link) => (
+              <a key={link.l} href={link.h} target="_blank" rel="noreferrer" className="text-xs text-muted transition hover:text-text">
+                {link.l}
               </a>
             ))}
           </div>
         </div>
-
-        {payload?.sources && (
-          <div>
-            <p className="text-sm font-medium text-text">Live sources</p>
-            <div className="mt-3 flex flex-col gap-1.5">
-              {payload.sources.map((s: SourceStatus) => (
-                <div key={s.name} className="flex items-center justify-between rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs">
-                  <span className="flex items-center gap-1.5 text-muted">
-                    <span className={`size-1.5 rounded-full ${s.status === "ok" ? "bg-success" : "bg-danger"}`} aria-hidden="true" />
-                    {s.name}
-                  </span>
-                  <span className="font-mono text-muted">{s.status === "ok" ? s.count : "error"}</span>
-                </div>
-              ))}
-            </div>
-            {payload.updatedAt > 0 && (
-              <p className="mt-2 text-xs text-muted">Updated {timeAgo(new Date(payload.updatedAt).toISOString())}</p>
-            )}
-          </div>
-        )}
-      </aside>
+      </footer>
     </div>
   );
 }
@@ -385,6 +347,7 @@ function NewsRow({ item, isNew }: { item: NewsItem; isNew: boolean }) {
         >
           {label}
         </span>
+        <span className="text-xs text-muted">Source: {item.source}</span>
         {item.important && (
           <span className="rounded px-1.5 py-0.5 font-mono text-[9px] font-medium text-accent-text" style={{ background: "var(--color-accent-dim)", border: "1px solid rgba(102,76,136,0.3)" }}>
             Key announcement
@@ -478,250 +441,5 @@ function XTimelinePanel() {
 
       <Script src="https://platform.twitter.com/widgets.js" strategy="afterInteractive" onLoad={() => setWidgetLoaded(true)} />
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Community content tab
-// ---------------------------------------------------------------------------
-
-interface CreatorRank {
-  name: string;
-  xHandle?: string;
-  verifiedCount: number;
-}
-
-function CommunityTab() {
-  const [autoFound, setAutoFound] = useState<CommunityItem[]>([]);
-  const [approved, setApproved] = useState<SubmittedPost[]>([]);
-  const [creators, setCreators] = useState<CreatorRank[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
-
-  const [form, setForm] = useState({ url: "", title: "", creatorName: "", xHandle: "", note: "" });
-  const [submitting, setSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState<{ type: "ok" | "error"; text: string } | null>(null);
-
-  const load = async () => {
-    try {
-      const res = await fetch("/api/community");
-      const data = await res.json();
-      setAutoFound(data.autoFound ?? []);
-      setApproved(data.approved ?? []);
-      setCreators(data.creators ?? []);
-    } catch {
-      /* show empty state */
-    } finally {
-      setLoaded(true);
-    }
-  };
-
-  useEffect(() => {
-    (async () => { await load(); })();
-  }, []);
-
-  const visibleApproved = selectedCreator
-    ? approved.filter((p) => (p.xHandle || p.creatorName).toLowerCase() === selectedCreator)
-    : approved;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setSubmitMessage(null);
-    try {
-      const res = await fetch("/api/community", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setSubmitMessage({ type: "error", text: data.error || "Submission failed." });
-        return;
-      }
-      setSubmitMessage({ type: "ok", text: "Submitted for review. It'll show up here with a Verified badge once approved." });
-      setForm({ url: "", title: "", creatorName: "", xHandle: "", note: "" });
-    } catch {
-      setSubmitMessage({ type: "error", text: "Submission failed. Please try again." });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-text">Verified creators</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted">
-            Verified posts are submitted by their creators and manually reviewed before getting a badge. Auto-found
-            posts below come straight from dev.to and Medium and aren&apos;t reviewed, so treat them as unverified
-            leads rather than confirmed Arc content.
-          </p>
-
-          <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
-            {!loaded ? (
-              <div className="flex flex-col gap-3 p-4">
-                {[0, 1].map((i) => <div key={i} className="h-14 animate-pulse rounded-md bg-accent-dim" />)}
-              </div>
-            ) : visibleApproved.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-muted">No verified posts yet. Be the first to submit one.</p>
-            ) : (
-              visibleApproved.map((post) => <CommunityRow key={post.id} post={post} verified />)
-            )}
-          </div>
-
-          <p className="mt-8 text-sm font-medium text-text">Auto-found</p>
-          <p className="mt-1 text-xs text-muted">Pulled from dev.to and Medium. Not yet reviewed.</p>
-          <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
-            {!loaded ? (
-              <div className="flex flex-col gap-3 p-4">
-                {[0, 1].map((i) => <div key={i} className="h-14 animate-pulse rounded-md bg-accent-dim" />)}
-              </div>
-            ) : autoFound.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-muted">Nothing auto-found right now.</p>
-            ) : (
-              autoFound.slice(0, 20).map((item) => <AutoFoundRow key={item.id} item={item} />)
-            )}
-          </div>
-        </div>
-
-        <aside className="flex flex-col gap-6">
-          <div>
-            <p className="flex items-center gap-1.5 text-sm font-medium text-text">
-              <Users className="size-3.5" aria-hidden="true" /> Top Arc creators
-            </p>
-            <div className="mt-3 flex flex-col gap-0.5">
-              {creators.length === 0 ? (
-                <p className="text-xs text-muted">No verified creators yet.</p>
-              ) : (
-                creators.map((c) => {
-                  const key = (c.xHandle || c.name).toLowerCase();
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setSelectedCreator(selectedCreator === key ? null : key)}
-                      className={`flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition ${
-                        selectedCreator === key ? "bg-accent-dim text-accent-text" : "text-muted hover:bg-surface hover:text-text"
-                      }`}
-                    >
-                      <span className="flex min-w-0 items-center gap-1.5 truncate">
-                        <BadgeCheck className="size-3.5 shrink-0 text-success" aria-hidden="true" />
-                        <span className="truncate">{c.name}</span>
-                      </span>
-                      <span className="font-mono text-xs">{c.verifiedCount}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="rounded-lg border border-border bg-surface p-4">
-            <p className="text-sm font-semibold text-text">Submit your content</p>
-            <div className="mt-3 flex flex-col gap-2.5">
-              <input
-                type="url"
-                required
-                placeholder="Link (x.com, medium.com, dev.to...)"
-                value={form.url}
-                onChange={(e) => setForm((f) => ({ ...f, url: e.target.value }))}
-                className="rounded-md border border-border bg-space px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none"
-              />
-              <input
-                type="text"
-                required
-                placeholder="Title"
-                value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                className="rounded-md border border-border bg-space px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none"
-              />
-              <input
-                type="text"
-                required
-                placeholder="Your name"
-                value={form.creatorName}
-                onChange={(e) => setForm((f) => ({ ...f, creatorName: e.target.value }))}
-                className="rounded-md border border-border bg-space px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none"
-              />
-              <input
-                type="text"
-                placeholder="X handle (optional)"
-                value={form.xHandle}
-                onChange={(e) => setForm((f) => ({ ...f, xHandle: e.target.value }))}
-                className="rounded-md border border-border bg-space px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none"
-              />
-              <textarea
-                rows={2}
-                placeholder="Note (optional)"
-                value={form.note}
-                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-                className="resize-none rounded-md border border-border bg-space px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Send className="size-3.5" aria-hidden="true" />
-                {submitting ? "Submitting..." : "Submit"}
-              </button>
-              {submitMessage && (
-                <p className={`text-xs ${submitMessage.type === "ok" ? "text-success" : "text-danger"}`}>{submitMessage.text}</p>
-              )}
-            </div>
-          </form>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function CommunityRow({ post, verified }: { post: SubmittedPost; verified: boolean }) {
-  return (
-    <motion.a
-      href={post.url}
-      target="_blank"
-      rel="noreferrer"
-      whileHover={{ y: -2, backgroundColor: "rgba(255,255,255,0.03)" }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-      className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 no-underline last:border-b-0"
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          {verified && (
-            <span className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[9px] font-medium text-success" style={{ background: "rgba(61,214,140,0.12)", border: "1px solid rgba(61,214,140,0.3)" }}>
-              <BadgeCheck className="size-2.5" aria-hidden="true" /> Verified
-            </span>
-          )}
-          <span className="truncate text-sm font-medium text-text">{post.title}</span>
-        </div>
-        <p className="mt-0.5 text-xs text-muted">by {post.creatorName}</p>
-      </div>
-      <ExternalLink className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
-    </motion.a>
-  );
-}
-
-function AutoFoundRow({ item }: { item: CommunityItem }) {
-  return (
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noreferrer"
-      className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 no-underline last:border-b-0 transition hover:bg-white/[0.03]"
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="rounded px-1.5 py-0.5 font-mono text-[9px] text-muted" style={{ background: "rgba(133,146,168,0.12)", border: "1px solid rgba(133,146,168,0.3)" }}>
-            Auto-found
-          </span>
-          <span className="truncate text-sm font-medium text-text">{item.title}</span>
-        </div>
-        <p className="mt-0.5 text-xs text-muted">{item.creatorName} · {item.source}</p>
-      </div>
-      <ExternalLink className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
-    </a>
   );
 }
