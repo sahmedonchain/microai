@@ -2,8 +2,11 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Search, SlidersHorizontal, MessageSquare } from "lucide-react";
+import { Search, SlidersHorizontal, MessageSquare, ExternalLink } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { timeAgo } from "@/lib/format";
+import type { AchSwapOnchainPayload } from "@/app/api/achswap-onchain/route";
+import { SCAN_WINDOW_LABEL } from "@/app/api/achswap-onchain/route";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -276,6 +279,9 @@ export default function BuildStatusPage() {
             </div>
           </div>
 
+          {/* ACHSWAP: on-chain proof, GitHub org is private */}
+          <AchSwapCard />
+
           <p className="mt-3 text-xs text-muted">
             {filtered.length === 0
               ? `No results${search ? ` for "${search}"` : ""}`
@@ -440,6 +446,114 @@ export default function BuildStatusPage() {
       <style>{`
         select { color-scheme: dark; }
       `}</style>
+    </div>
+  );
+}
+
+const ACHSWAP_EXPLORER_BASE = "https://arc.etherscan.io/address/";
+
+function AchSwapCard() {
+  const [data, setData] = useState<AchSwapOnchainPayload | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/achswap-onchain");
+        const json = await res.json();
+        setData(json);
+      } catch {
+        setFailed(true);
+      }
+    })();
+  }, []);
+
+  const unavailable = failed || data?.unavailable;
+
+  // Names the exact contract the swap-activity log was found on (currently
+  // always AchRouteExecutor -- neither native adapter has emitted its own
+  // log in any scan so far) rather than implying all three swap-role
+  // contracts show activity.
+  const contractNameFor = (address: string | null) =>
+    address ? data?.contracts.find((c) => c.address.toLowerCase() === address.toLowerCase())?.name ?? null : null;
+  const swapSourceName = contractNameFor(data?.swap.lastActivityAddress ?? null);
+
+  return (
+    <div className="mt-6 rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-text">AchSwap</p>
+          <p className="mt-0.5 text-xs text-muted">On-chain activity (Arc Mainnet) &middot; GitHub: not public</p>
+        </div>
+        <a
+          href="https://trade.achswap.app/"
+          target="_blank"
+          rel="noreferrer"
+          className="shrink-0 font-mono text-[11px] font-medium text-accent-text"
+        >
+          Visit &rarr;
+        </a>
+      </div>
+
+      {data === null && !failed ? (
+        <div className="mt-3 h-20 animate-pulse rounded-md bg-accent-dim" />
+      ) : unavailable ? (
+        <p className="mt-3 text-sm text-danger">On-chain data unavailable</p>
+      ) : (
+        <>
+          <div className="mt-3 flex flex-wrap gap-4">
+            <div>
+              <p className="text-xs text-muted">Contracts verified</p>
+              <p className="mt-0.5 font-mono text-sm text-text">
+                {data!.verifiedCount}/{data!.totalCount}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted">
+                Swap activity{swapSourceName ? ` (${swapSourceName})` : ""}
+              </p>
+              <p className="mt-0.5 font-mono text-sm text-text">
+                {data!.swap.lastActivityAt
+                  ? timeAgo(data!.swap.lastActivityAt)
+                  : `No activity found in the last ${SCAN_WINDOW_LABEL}`}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted">Liquidity activity</p>
+              <p className="mt-0.5 font-mono text-sm text-text">
+                {data!.liquidity.lastActivityAt
+                  ? timeAgo(data!.liquidity.lastActivityAt)
+                  : `No activity found in the last ${SCAN_WINDOW_LABEL}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {data!.contracts.map((c) => (
+              <a
+                key={c.address}
+                href={`${ACHSWAP_EXPLORER_BASE}${c.address}`}
+                target="_blank"
+                rel="noreferrer"
+                title={c.address}
+                className="flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[9px] font-medium transition hover:brightness-110"
+                style={
+                  c.hasCode
+                    ? { background: "rgba(61,214,140,0.1)", border: "1px solid rgba(61,214,140,0.3)", color: "#3dd68c" }
+                    : { background: "rgba(242,85,90,0.1)", border: "1px solid rgba(242,85,90,0.3)", color: "#f2555a" }
+                }
+              >
+                {c.name}
+                <ExternalLink className="size-2.5" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+
+          <p className="mt-3 text-[10px] text-muted">
+            Contract addresses from AchSwap docs, verified on-chain by MicroAI.
+          </p>
+        </>
+      )}
     </div>
   );
 }
