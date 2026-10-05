@@ -517,6 +517,15 @@ const projects: Project[] = [
     logoColor: "#f87171",
   },
   {
+    name: "Argus",
+    desc: "Permissionless token launchpad on Arc, powered by Uniswap v4 hooks with fixed-at-launch taxes and native USDC revenue distribution to creators and holders.",
+    category: "DEX & LIQUIDITY",
+    tags: ["Launchpad", "Uniswap v4", "USDC"],
+    url: "https://argus.world/",
+    logo: "AR",
+    logoColor: "#fb923c",
+  },
+  {
     name: "Phantom",
     desc: "Multi-chain wallet supporting Arc MAINNET for USDC and EVM assets.",
     category: "WALLETS",

@@ -5,7 +5,7 @@ import { getArcTvlForProject } from "@/lib/ecosystemEnrichment";
 // (see lib/ecosystemEnrichment.ts). Keeping the list here too, rather than
 // querying every ecosystem project, avoids wasted lookups for the ~76
 // projects that were never going to match.
-const ENRICHABLE_PROJECTS = ["Morpho", "Aave", "Aerodrome / Velodrome", "Synthra"];
+const ENRICHABLE_PROJECTS = ["Morpho", "Aave", "Aerodrome / Velodrome", "Synthra", "Argus"];
 
 export async function GET() {
   const entries = await Promise.all(

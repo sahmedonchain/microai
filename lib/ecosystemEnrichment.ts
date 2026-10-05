@@ -13,6 +13,7 @@ const PROJECT_TO_DEFILLAMA_SLUG: Record<string, string> = {
   "aave": "aave-v4",
   "aerodrome / velodrome": "aerodrome-slipstream",
   "synthra": "synthra-v3",
+  "argus": "argus-world",
 };
 
 let redisClient: Redis | null = null;
