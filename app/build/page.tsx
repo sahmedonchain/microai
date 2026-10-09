@@ -4,7 +4,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { WalletModal } from "@/app/components/WalletModal";
-import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { Navbar } from "@/app/components/Navbar";
 
 interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -228,36 +228,7 @@ export default function BuildPage() {
         <WalletModal onConnect={handleWalletConnect} onClose={() => setShowWalletModal(false)} />
       )}
 
-      <header className="sticky top-0 z-40 border-b border-border bg-space/90 backdrop-blur-md">
-        <div className="flex h-14 items-center gap-4 px-4 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <LogoMark className="size-6" />
-            <span className="text-sm font-semibold">MicroAI</span>
-          </Link>
-          <Link href="/chat" className="text-sm text-muted transition hover:text-text">
-            Chat
-          </Link>
-          <div className="ml-auto flex items-center gap-3">
-            {credit !== null && authed && (
-              <span className="rounded-full border border-border bg-surface px-3 py-1 font-mono text-xs text-muted">
-                <span className="text-text">{credit}</span> credits
-              </span>
-            )}
-            {wallet ? (
-              <span className="rounded-sm border border-border bg-surface px-3 py-1 font-mono text-xs text-muted">
-                {wallet.slice(0, 6)}...{wallet.slice(-4)}
-              </span>
-            ) : (
-              <button
-                onClick={() => setShowWalletModal(true)}
-                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:brightness-110"
-              >
-                Connect wallet
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <div className="flex flex-1">
         <aside className="hidden w-72 shrink-0 border-r border-border bg-surface p-6 lg:block">
