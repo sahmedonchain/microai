@@ -150,6 +150,8 @@ export function HomeTab() {
   useEffect(() => {
     try {
       setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+      const saved = localStorage.getItem("microai_active_tab") as TabId | null;
+      if (saved) setActivePanel(saved);
     } catch { /* localStorage unavailable — keep default expanded */ }
   }, []);
 
@@ -436,8 +438,13 @@ export function HomeTab() {
     ? (stats?.recentTransactions ?? []).filter((tx) => tx.from.toLowerCase() === wallet.toLowerCase())
     : [];
 
+  const goToPanel = (tab: TabId) => {
+    setActivePanel(tab);
+    try { localStorage.setItem("microai_active_tab", tab); } catch { /* ignore */ }
+  };
+
   return (
-    <TabNavContext.Provider value={setActivePanel}>
+    <TabNavContext.Provider value={goToPanel}>
     <div className="relative flex h-screen overflow-hidden bg-space font-sans text-text">
       {/* LEFT SIDEBAR */}
       <motion.aside
@@ -478,7 +485,7 @@ export function HomeTab() {
                 aria-label={label}
                 aria-current={active ? "page" : undefined}
                 onClick={() => {
-                  setActivePanel(id);
+                  goToPanel(id);
                   if (id === "home") inputRef.current?.focus();
                 }}
                 className={`flex items-center rounded-lg border-l-2 py-2 text-sm transition ${
