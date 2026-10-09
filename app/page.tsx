@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  Bug,
   Check,
   ChevronDown,
   ChevronRight,
@@ -26,6 +27,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
+  Wallet,
   Wrench,
 } from "lucide-react";
 import { WalletModal } from "@/app/components/WalletModal";
@@ -70,6 +72,17 @@ const NAV_ITEMS = [
   { label: "Build status", href: "/build-status", icon: Hammer },
   { label: "Stats", href: "/stats", icon: BarChart3 },
   { label: "News", href: "/news", icon: Newspaper },
+  { label: "Copilot", href: "/build", icon: Code2 },
+  { label: "Wallet", href: "/wallet", icon: Wallet },
+  { label: "Debug", href: "/debug", icon: Bug },
+  { label: "Credits", href: "/credits", icon: Coins },
+];
+
+const NEW_FEATURES = [
+  { title: "AI Developer Copilot", href: "/build", icon: Code2, desc: "Describe your idea. MicroAI builds, integrates, tests and deploys it on Arc." },
+  { title: "Wallet Intelligence", href: "/wallet", icon: Wallet, desc: "AI-powered wallet analysis, risk signals, and portfolio overview." },
+  { title: "Transaction Debugger", href: "/debug", icon: Bug, desc: "Paste any TX hash. Get full AI breakdown, function decode, and fix suggestions." },
+  { title: "Credits & Payments", href: "/credits", icon: Coins, desc: "View your USDC payment history and credit balance." },
 ];
 
 const DEV_RESOURCES = [
@@ -692,6 +705,30 @@ export default function Home() {
                       </div>
                       <ChevronRight className="mt-1 size-4 shrink-0 text-muted transition group-hover:text-accent-text" aria-hidden="true" />
                     </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {messages.length === 0 && (
+              <section className="mt-6 w-full" aria-labelledby="new-features-heading">
+                <h2 id="new-features-heading" className="text-sm font-medium text-text">What&apos;s new</h2>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {NEW_FEATURES.map(({ title, href, icon: Icon, desc }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="group flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 no-underline transition hover:border-accent/40 hover:bg-surface-raised"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-dim text-accent-text">
+                          <Icon className="size-4" aria-hidden="true" />
+                        </div>
+                        <p className="text-sm font-medium text-text">{title}</p>
+                      </div>
+                      <p className="flex-1 text-xs leading-relaxed text-muted">{desc}</p>
+                      <span className="text-xs font-medium text-accent-text">Open →</span>
+                    </Link>
                   ))}
                 </div>
               </section>
