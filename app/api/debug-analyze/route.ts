@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { explorerFetch } from "@/lib/arcExplorer";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const ARC_CHAIN_ID = 5042;
-
-const EXPLORER_TIMEOUT_MS = 5000;
 
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
@@ -75,18 +73,8 @@ function buildCorrectedFlow(txData: TxData): string[] {
 // Explorer sub-resources are best-effort: a failure here must not fail the
 // whole analysis, so it degrades to an empty list.
 async function fetchItems(txHash: string, path: string): Promise<Record<string, any>[]> { // eslint-disable-line @typescript-eslint/no-explicit-any
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), EXPLORER_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${ARC_EXPLORER_API}/transactions/${txHash}/${path}`, { cache: "no-store", signal: controller.signal });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return Array.isArray(data?.items) ? data.items : [];
-  } catch {
-    return [];
-  } finally {
-    clearTimeout(timer);
-  }
+  const res = await explorerFetch<{ items?: Record<string, any>[] }>(`/transactions/${txHash}/${path}`, { timeoutMs: 5000 }); // eslint-disable-line @typescript-eslint/no-explicit-any
+  return res.ok && Array.isArray(res.data?.items) ? res.data.items : [];
 }
 
 function formatUnits(value: unknown, decimals: unknown): string {
@@ -187,17 +175,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid transaction hash. Must be 0x followed by 64 hex characters." }, { status: 400 });
   }
 
-  let txData: TxData;
-  try {
-    const res = await fetch(`${ARC_EXPLORER_API}/transactions/${txHash}`, { cache: "no-store" });
-    const data = await res.json();
-    if (!res.ok || data.errors || !data.hash) {
-      return NextResponse.json({ error: "Transaction not found on Arc MAINNET. Check the hash and try again." }, { status: 404 });
+  const txRes = await explorerFetch<TxData>(`/transactions/${txHash}`);
+  if (!txRes.ok) {
+    if (txRes.kind === "not_found") {
+      return NextResponse.json({ error: "Transaction not found on Arc Mainnet. Check the hash and try again." }, { status: 404 });
     }
-    txData = data as TxData;
-  } catch (err) {
-    console.error("Explorer fetch error:", err);
-    return NextResponse.json({ error: "Failed to fetch transaction. Arc Explorer may be temporarily unavailable." }, { status: 502 });
+    return NextResponse.json({ error: "Arc Explorer is unreachable right now. Try again in a moment." }, { status: 502 });
+  }
+  const txData = txRes.data;
+  if (!txData?.hash) {
+    return NextResponse.json({ error: "Transaction not found on Arc Mainnet. Check the hash and try again." }, { status: 404 });
   }
 
   const [transferItems, internalItems] = await Promise.all([
