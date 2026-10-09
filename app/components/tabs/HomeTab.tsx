@@ -186,7 +186,7 @@ export function HomeTab() {
   const [context, setContext] = useState("");
   const [activeCategory, setActiveCategory] = useState("Arc Ecosystem");
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchCredit = useCallback(async () => {
     try {
@@ -273,7 +273,10 @@ export function HomeTab() {
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Scroll the message area itself: scrollIntoView would also scroll the
+    // overflow-hidden ancestors and push the pinned input out of view.
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
   useEffect(() => {
@@ -445,7 +448,7 @@ export function HomeTab() {
 
   return (
     <TabNavContext.Provider value={goToPanel}>
-    <div className="relative flex h-screen overflow-hidden bg-space font-sans text-text">
+    <div className="relative flex h-dvh overflow-hidden bg-space font-sans text-text">
       {/* LEFT SIDEBAR */}
       <motion.aside
         initial={false}
@@ -634,8 +637,10 @@ export function HomeTab() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="mx-auto flex w-full max-w-3xl min-w-0 flex-1 flex-col items-center overflow-y-auto px-6 py-14"
+            className="mx-auto flex w-full max-w-3xl min-w-0 flex-1 flex-col overflow-hidden"
           >
+            {/* Only this region scrolls; the input below stays pinned. */}
+            <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pb-6 pt-14">
             <LogoMark className="size-12" />
             <h1 className="mt-5 text-center text-3xl font-semibold leading-[1.1] text-text sm:text-4xl">
               Ask, Build, Ship on <span className="text-accent-text">Arc</span>
@@ -713,7 +718,6 @@ export function HomeTab() {
                     </div>
                   </div>
                 )}
-                <div ref={bottomRef} />
               </div>
             )}
 
@@ -801,7 +805,9 @@ export function HomeTab() {
               </section>
             )}
 
-            <div className="mt-auto w-full pt-10">
+            </div>
+
+            <div className="w-full shrink-0 bg-space px-6 pb-6 pt-3">
               <div className="w-full rounded-lg border border-border bg-surface p-4">
                 <div className="flex items-start gap-2">
                   <button
