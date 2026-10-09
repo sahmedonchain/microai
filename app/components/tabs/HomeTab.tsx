@@ -141,24 +141,35 @@ async function waitForReceipt(
   return false;
 }
 
-const SIDEBAR_COLLAPSED_KEY = "microai_sidebar_collapsed";
+// UI state lives in cookies, not localStorage, so app/page.tsx can read it on
+// the server and the very first paint already shows the right panel and
+// sidebar width. Restoring it after mount made the highlight (and the
+// sidebar) visibly jump on reload.
+const ACTIVE_PANEL_COOKIE = "microai_active_tab";
+const SIDEBAR_COLLAPSED_COOKIE = "microai_sidebar_collapsed";
 
-export function HomeTab() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activePanel, setActivePanel] = useState<TabId>("home");
+function saveUiCookie(name: string, value: string) {
+  document.cookie = `${name}=${value}; path=/; max-age=31536000; samesite=lax`;
+}
 
-  useEffect(() => {
-    try {
-      setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
-      const saved = localStorage.getItem("microai_active_tab") as TabId | null;
-      if (saved) setActivePanel(saved);
-    } catch { /* localStorage unavailable — keep default expanded */ }
-  }, []);
+function parsePanel(value: string | undefined): TabId {
+  return NAV_ITEMS.find((i) => i.id === value)?.id ?? "home";
+}
+
+export function HomeTab({
+  initialPanel,
+  initialSidebarCollapsed = false,
+}: {
+  initialPanel?: string;
+  initialSidebarCollapsed?: boolean;
+}) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(initialSidebarCollapsed);
+  const [activePanel, setActivePanel] = useState<TabId>(() => parsePanel(initialPanel));
 
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
-      try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+      saveUiCookie(SIDEBAR_COLLAPSED_COOKIE, next ? "1" : "0");
       return next;
     });
   };
@@ -443,7 +454,7 @@ export function HomeTab() {
 
   const goToPanel = (tab: TabId) => {
     setActivePanel(tab);
-    try { localStorage.setItem("microai_active_tab", tab); } catch { /* ignore */ }
+    saveUiCookie(ACTIVE_PANEL_COOKIE, tab);
   };
 
   return (
