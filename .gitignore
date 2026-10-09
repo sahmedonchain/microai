@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 .env.local
 *.env*
+
+# separate project with its own repo
+/buildorbit-portfolio/
