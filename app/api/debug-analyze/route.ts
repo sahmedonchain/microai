@@ -151,7 +151,19 @@ If the transaction succeeded, set severity to "low" and explain what it did.
 If it failed, identify the root cause from: insufficient USDC balance, wrong chain, gas limit too low, contract revert, invalid input, nonce issue, or other.`;
 }
 
-export const POST = withApi({ name: "debug-analyze", auth: "optional", limits: [{ limit: 10, windowSec: 60 }] }, async ({ req, log }) => {
+// Public AI endpoint: strict per-minute and per-day limits for each caller
+// (wallet if signed in, otherwise IP) plus one shared daily budget for the route.
+export const POST = withApi(
+  {
+    name: "debug-analyze",
+    auth: "optional",
+    limits: [
+      { limit: 5, windowSec: 60 },
+      { limit: 40, windowSec: 86_400 },
+      { limit: 2000, windowSec: 86_400, scope: "global" },
+    ],
+  },
+  async ({ req, log }) => {
   // This endpoint only ever accepts a tx hash (validated by the schema), never
   // an arbitrary message, so it cannot be used as a free general-purpose chat route.
   const { txHash } = await parseJson(req, debugAnalyzeBody);
@@ -201,4 +213,5 @@ export const POST = withApi({ name: "debug-analyze", auth: "optional", limits: [
     log.error("Debug analysis error", { err });
     throw apiErrors.internal("Analysis failed. Please try again.");
   }
-});
+  }
+);

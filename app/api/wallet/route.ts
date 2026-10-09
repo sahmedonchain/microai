@@ -46,7 +46,19 @@ function computeRiskSignals(txs: ExplorerTx[]) {
   return { hasUnlimitedApproval, highValueTx, newContract, frequentSmallTx: recentCount > 10 };
 }
 
-export const POST = withApi({ name: "wallet", auth: "optional", limits: [{ limit: 10, windowSec: 60 }] }, async ({ req, log }) => {
+// Public AI endpoint: strict per-minute and per-day limits for each caller
+// (wallet if signed in, otherwise IP) plus one shared daily budget for the route.
+export const POST = withApi(
+  {
+    name: "wallet",
+    auth: "optional",
+    limits: [
+      { limit: 5, windowSec: 60 },
+      { limit: 40, windowSec: 86_400 },
+      { limit: 2000, windowSec: 86_400, scope: "global" },
+    ],
+  },
+  async ({ req, log }) => {
   const { address } = await parseJson(req, walletBody);
 
   const [profileRes, txRes, tokenRes, countersRes] = await Promise.all([
@@ -109,4 +121,5 @@ Risk signals detected: ${JSON.stringify(riskSignals)}`,
     riskSignals,
     aiSummary: aiSummary || "AI summary is unavailable right now.",
   };
-});
+  }
+);
