@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { TabLink as Link } from "@/app/components/tabs/TabNav";
-import Script from "next/script";
 import { motion } from "framer-motion";
 import { Search, ExternalLink, RefreshCw } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
@@ -42,11 +41,11 @@ export function NewsTab() {
   const [tagFilter, setTagFilter] = useState<NewsTag | null>(null);
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const prevIdsRef = useRef<Set<string> | null>(null);
-  const xSidebarRef = useRef<HTMLDivElement>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchNews = async () => {
+  const fetchNews = async (forceRefresh = false) => {
     try {
-      const res = await fetch("/api/news");
+      const res = await fetch(forceRefresh ? "/api/news?refresh=1" : "/api/news", { cache: "no-store" });
       const data: NewsPayload = await res.json();
       setFailed(false);
 
@@ -63,7 +62,7 @@ export function NewsTab() {
 
   useEffect(() => {
     (async () => { await fetchNews(); })();
-    const interval = setInterval(fetchNews, POLL_INTERVAL_MS);
+    const interval = setInterval(() => fetchNews(), POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -92,11 +91,15 @@ export function NewsTab() {
     return counts;
   }, [items]);
 
-  const handleFilterClick = (f: NewsFilter) => {
-    setFilter(f);
-    if (f === "x") {
-      xSidebarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+  const handleFilterClick = (f: NewsFilter) => setFilter(f);
+
+  // Manual refresh bypasses the server cache; the spinner shows for at least
+  // 500ms so it is visible even when the response is fast.
+  const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    await Promise.all([fetchNews(true), new Promise((r) => setTimeout(r, 500))]);
+    setRefreshing(false);
   };
 
   return (
@@ -135,11 +138,12 @@ export function NewsTab() {
             </div>
             <button
               type="button"
-              onClick={fetchNews}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-muted transition hover:text-text"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-muted transition hover:text-text disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <RefreshCw className="size-3.5" aria-hidden="true" />
-              Refresh
+              <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" />
+              {refreshing ? "Refreshing…" : "Refresh"}
             </button>
           </div>
 
@@ -195,7 +199,7 @@ export function NewsTab() {
           <div className="mt-4 overflow-hidden rounded-lg border border-border bg-surface">
             {payload === null ? (
               failed ? (
-                <p className="px-4 py-8 text-center text-sm text-muted">Could not load news. <button onClick={fetchNews} className="text-accent-text hover:underline">Retry</button></p>
+                <p className="px-4 py-8 text-center text-sm text-muted">Could not load news. <button onClick={() => fetchNews()} className="text-accent-text hover:underline">Retry</button></p>
               ) : (
                 <div className="flex flex-col gap-3 p-4">
                   {[0, 1, 2, 3].map((i) => (
@@ -213,9 +217,7 @@ export function NewsTab() {
           </div>
         </div>
 
-        <aside ref={xSidebarRef} className="flex w-full shrink-0 flex-col gap-6 lg:w-72">
-          <XTimelinePanel />
-
+        <aside className="flex w-full shrink-0 flex-col gap-6 lg:w-72">
           <div>
             <p className="text-sm font-medium text-text">Links</p>
             <div className="mt-3 flex flex-col gap-0.5">
@@ -333,74 +335,5 @@ function NewsRow({ item, isNew }: { item: NewsItem; isNew: boolean }) {
         </div>
       )}
     </motion.a>
-  );
-}
-
-function XTimelinePanel() {
-  const [handle, setHandle] = useState<"arc" | "circle">("arc");
-  const [widgetLoaded, setWidgetLoaded] = useState(false);
-  const [showFallback, setShowFallback] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    (() => setShowFallback(false))();
-    const timer = setTimeout(() => {
-      const hasIframe = containerRef.current?.querySelector("iframe");
-      if (!hasIframe) setShowFallback(true);
-    }, 8000);
-
-    const win = window as unknown as { twttr?: { widgets?: { load: (el?: HTMLElement) => void } } };
-    if (widgetLoaded && win.twttr?.widgets && containerRef.current) {
-      win.twttr.widgets.load(containerRef.current);
-    }
-
-    return () => clearTimeout(timer);
-  }, [handle, widgetLoaded]);
-
-  return (
-    <div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-text">On X</p>
-        <div className="flex rounded-lg border border-border bg-surface p-0.5">
-          {(["arc", "circle"] as const).map((h) => (
-            <button
-              key={h}
-              type="button"
-              onClick={() => setHandle(h)}
-              className={`rounded-md px-2.5 py-1 text-xs transition ${
-                handle === h ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
-              }`}
-            >
-              @{h}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div ref={containerRef} className="mt-3 overflow-hidden rounded-lg border border-border" style={{ minHeight: showFallback ? "auto" : 400 }}>
-        {showFallback ? (
-          <a
-            href={`https://x.com/${handle}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-center gap-1.5 bg-surface px-4 py-8 text-sm text-accent-text no-underline hover:underline"
-          >
-            View @{handle} on X <ExternalLink className="size-3.5" aria-hidden="true" />
-          </a>
-        ) : (
-          <a
-            key={handle}
-            className="twitter-timeline"
-            data-theme="dark"
-            data-chrome="noheader nofooter noborders transparent"
-            href={`https://twitter.com/${handle}`}
-          >
-            Tweets by {handle}
-          </a>
-        )}
-      </div>
-
-      <Script src="https://platform.twitter.com/widgets.js" strategy="afterInteractive" onLoad={() => setWidgetLoaded(true)} />
-    </div>
   );
 }

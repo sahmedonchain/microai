@@ -463,12 +463,14 @@ async function fetchAllSources(): Promise<{ items: NewsItem[]; sources: SourceSt
   return { items: dedupeAndSort(allItems), sources: Array.from(statusByName.values()) };
 }
 
-export async function getNewsPayload(): Promise<NewsPayload> {
-  try {
-    const cached = await getRedis().get<NewsPayload>(NEWS_CACHE_KEY);
-    if (cached) return cached;
-  } catch {
-    /* Redis unreachable, fall through to a live fetch */
+export async function getNewsPayload(options: { forceRefresh?: boolean } = {}): Promise<NewsPayload> {
+  if (!options.forceRefresh) {
+    try {
+      const cached = await getRedis().get<NewsPayload>(NEWS_CACHE_KEY);
+      if (cached) return cached;
+    } catch {
+      /* Redis unreachable, fall through to a live fetch */
+    }
   }
 
   const { items, sources } = await fetchAllSources();
