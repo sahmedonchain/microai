@@ -1,6 +1,15 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { TabLink as Link } from "@/app/components/tabs/TabNav";
+import { TabLink as Link, TabNavContext, type TabId } from "@/app/components/tabs/TabNav";
+import { EcosystemTab } from "@/app/components/tabs/EcosystemTab";
+import { GrantsTab } from "@/app/components/tabs/GrantsTab";
+import { BuildStatusTab } from "@/app/components/tabs/BuildStatusTab";
+import { StatsTab } from "@/app/components/tabs/StatsTab";
+import { NewsTab } from "@/app/components/tabs/NewsTab";
+import { CopilotTab } from "@/app/components/tabs/CopilotTab";
+import { WalletTab } from "@/app/components/tabs/WalletTab";
+import { DebuggerTab } from "@/app/components/tabs/DebuggerTab";
+import { CreditsTab } from "@/app/components/tabs/CreditsTab";
 import { AnimatePresence, motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -65,17 +74,17 @@ interface StatsPayload {
   recentTransactions: RecentTransaction[];
 }
 
-const NAV_ITEMS = [
-  { label: "Chat", href: "/", icon: MessageSquare },
-  { label: "Ecosystem", href: "/ecosystem", icon: Compass },
-  { label: "Grants", href: "/grants", icon: Gift },
-  { label: "Build status", href: "/build-status", icon: Hammer },
-  { label: "Stats", href: "/stats", icon: BarChart3 },
-  { label: "News", href: "/news", icon: Newspaper },
-  { label: "Copilot", href: "/build", icon: Code2 },
-  { label: "Wallet", href: "/wallet", icon: Wallet },
-  { label: "Debug", href: "/debug", icon: Bug },
-  { label: "Credits", href: "/credits", icon: Coins },
+const NAV_ITEMS: { label: string; id: TabId; icon: typeof MessageSquare }[] = [
+  { label: "Chat", id: "home", icon: MessageSquare },
+  { label: "Ecosystem", id: "ecosystem", icon: Compass },
+  { label: "Grants", id: "grants", icon: Gift },
+  { label: "Build status", id: "build-status", icon: Hammer },
+  { label: "Stats", id: "stats", icon: BarChart3 },
+  { label: "News", id: "news", icon: Newspaper },
+  { label: "Copilot", id: "copilot", icon: Code2 },
+  { label: "Wallet", id: "wallet", icon: Wallet },
+  { label: "Debug", id: "debugger", icon: Bug },
+  { label: "Credits", id: "credits", icon: Coins },
 ];
 
 const NEW_FEATURES = [
@@ -136,6 +145,7 @@ const SIDEBAR_COLLAPSED_KEY = "microai_sidebar_collapsed";
 
 export function HomeTab() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activePanel, setActivePanel] = useState<TabId>("home");
 
   useEffect(() => {
     try {
@@ -427,64 +437,66 @@ export function HomeTab() {
     : [];
 
   return (
-    <div className="relative flex h-[calc(100vh-4rem)] overflow-hidden bg-space font-sans text-text">
+    <TabNavContext.Provider value={setActivePanel}>
+    <div className="relative flex h-screen overflow-hidden bg-space font-sans text-text">
       {/* LEFT SIDEBAR */}
-      {sidebarCollapsed && (
-        <button
-          type="button"
-          onClick={toggleSidebar}
-          aria-label="Expand sidebar"
-          className="absolute left-4 top-4 z-30 flex size-9 items-center justify-center rounded-lg border border-border bg-surface text-muted shadow-lg transition hover:text-text"
-        >
-          <PanelLeftOpen className="size-4" aria-hidden="true" />
-        </button>
-      )}
       <motion.aside
         initial={false}
-        animate={{ width: sidebarCollapsed ? 0 : 256 }}
+        animate={{ width: sidebarCollapsed ? 52 : 256 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className={`flex shrink-0 overflow-hidden bg-surface ${sidebarCollapsed ? "" : "border-r border-border"}`}
+        className="flex shrink-0 overflow-hidden border-r border-border bg-surface"
       >
-        <div className="flex w-64 shrink-0 flex-col">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-5">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
-            <LogoMark className="size-8 shrink-0" />
-            <span className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold text-text">MicroAI</span>
-              <span className="text-xs text-muted">Build on Arc</span>
-            </span>
-          </Link>
+        <div className="flex w-full min-w-0 shrink-0 flex-col">
+        <div className={`flex items-center border-b border-border ${sidebarCollapsed ? "justify-center px-2 py-5" : "justify-between gap-2 px-5 py-5"}`}>
+          {!sidebarCollapsed && (
+            <Link href="/" className="flex min-w-0 items-center gap-3">
+              <LogoMark className="size-8 shrink-0" />
+              <span className="flex flex-col leading-tight">
+                <span className="text-sm font-semibold text-text">MicroAI</span>
+                <span className="text-xs text-muted">Build on Arc</span>
+              </span>
+            </Link>
+          )}
           <button
             type="button"
             onClick={toggleSidebar}
-            aria-label="Collapse sidebar"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="shrink-0 rounded-md p-1.5 text-muted transition hover:bg-surface-raised hover:text-text"
           >
-            <PanelLeftClose className="size-4" aria-hidden="true" />
+            {sidebarCollapsed ? <PanelLeftOpen className="size-4" aria-hidden="true" /> : <PanelLeftClose className="size-4" aria-hidden="true" />}
           </button>
         </div>
 
-        <nav className="flex flex-col gap-1 px-3 py-4">
-          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-            const active = href === "/";
+        <nav className={`flex flex-col gap-1 py-4 ${sidebarCollapsed ? "px-1.5" : "px-3"}`} aria-label="Sections">
+          {NAV_ITEMS.map(({ label, id, icon: Icon }) => {
+            const active = activePanel === id;
             return (
-              <Link
-                key={label}
-                href={href}
-                onClick={() => { if (href === "/") inputRef.current?.focus(); }}
-                className={`flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-sm transition ${
+              <button
+                key={id}
+                type="button"
+                title={sidebarCollapsed ? label : undefined}
+                aria-label={label}
+                aria-current={active ? "page" : undefined}
+                onClick={() => {
+                  setActivePanel(id);
+                  if (id === "home") inputRef.current?.focus();
+                }}
+                className={`flex items-center rounded-lg border-l-2 py-2 text-sm transition ${
+                  sidebarCollapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
+                } ${
                   active
                     ? "border-accent bg-accent-dim text-accent-text"
                     : "border-transparent text-muted hover:bg-surface-raised hover:text-text"
                 }`}
               >
                 <Icon className="size-4 shrink-0" aria-hidden="true" />
-                {label}
-              </Link>
+                {!sidebarCollapsed && label}
+              </button>
             );
           })}
         </nav>
 
+        {!sidebarCollapsed && (
         <div className="border-t border-border px-5 pt-4">
           <p className="text-xs font-medium tracking-wide text-muted">Developer resources</p>
           <div className="mt-3 flex flex-col gap-0.5">
@@ -505,9 +517,11 @@ export function HomeTab() {
             ))}
           </div>
         </div>
+        )}
 
         <div className="flex-1" />
 
+        {!sidebarCollapsed && (
         <div className="m-4 rounded-lg border border-accent/20 bg-accent-dim p-4">
           <LogoMark className="size-6" />
           <p className="mt-2 text-sm font-semibold text-text">Explore. Build. Earn.</p>
@@ -518,6 +532,7 @@ export function HomeTab() {
             Learn more <ChevronRight className="size-3" aria-hidden="true" />
           </Link>
         </div>
+        )}
         </div>
       </motion.aside>
 
@@ -591,6 +606,21 @@ export function HomeTab() {
           </div>
         </header>
 
+        {activePanel !== "home" && (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {activePanel === "ecosystem" && <EcosystemTab />}
+            {activePanel === "grants" && <GrantsTab />}
+            {activePanel === "build-status" && <BuildStatusTab />}
+            {activePanel === "stats" && <StatsTab />}
+            {activePanel === "news" && <NewsTab />}
+            {activePanel === "copilot" && <CopilotTab />}
+            {activePanel === "wallet" && <WalletTab />}
+            {activePanel === "debugger" && <DebuggerTab />}
+            {activePanel === "credits" && <CreditsTab />}
+          </div>
+        )}
+
+        {activePanel === "home" && (
         <div className="flex min-h-0 flex-1">
           {/* CENTER COLUMN */}
           <motion.main
@@ -942,6 +972,7 @@ export function HomeTab() {
             </aside>
           )}
         </div>
+        )}
       </div>
 
       <AnimatePresence>
@@ -1030,5 +1061,6 @@ export function HomeTab() {
         )}
       </AnimatePresence>
     </div>
+    </TabNavContext.Provider>
   );
 }

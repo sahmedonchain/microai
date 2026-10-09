@@ -113,7 +113,7 @@ export function WalletTab() {
   const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString() : "—");
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-space font-sans text-text">
+    <div className="min-h-full bg-space font-sans text-text">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 className="text-2xl font-semibold leading-tight text-text">Wallet intelligence</h1>
         <p className="mt-2 text-sm text-muted">AI-powered wallet analysis on Arc Mainnet</p>

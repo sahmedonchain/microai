@@ -1,5 +1,5 @@
-import { TabShell } from "@/app/components/TabShell";
+import { HomeTab } from "@/app/components/tabs/HomeTab";
 
 export default function Page() {
-  return <TabShell />;
+  return <HomeTab />;
 }

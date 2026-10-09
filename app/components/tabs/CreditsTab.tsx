@@ -47,7 +47,7 @@ export function CreditsTab() {
   const totalSpent = receipts.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-space font-sans text-text">
+    <div className="min-h-full bg-space font-sans text-text">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 className="text-2xl font-semibold leading-tight text-text">Credits &amp; payments</h1>
         <p className="mt-2 text-sm text-muted">Your USDC payment history on Arc Mainnet</p>

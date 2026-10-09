@@ -1,9 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { WalletModal } from "@/app/components/WalletModal";
-import { truncateAddress } from "@/lib/format";
 import { PaymentReceipt } from "@/app/components/PaymentReceipt";
 
 interface EthereumProvider {
@@ -20,19 +18,6 @@ interface Receipt {
 }
 
 type State = "loading" | "unauthenticated" | "ready" | "error";
-
-const NAV_LINKS = [
-  { label: "Home", href: "/" },
-  { label: "Ecosystem", href: "/ecosystem" },
-  { label: "Grants", href: "/grants" },
-  { label: "Build status", href: "/build-status" },
-  { label: "Stats", href: "/stats" },
-  { label: "News", href: "/news" },
-  { label: "Copilot", href: "/build" },
-  { label: "Wallet", href: "/wallet" },
-  { label: "Debugger", href: "/debug" },
-  { label: "Credits", href: "/credits" },
-];
 
 export default function CreditsPage() {
   const [state, setState] = useState<State>("loading");
@@ -81,54 +66,6 @@ export default function CreditsPage() {
 
   return (
     <div className="min-h-screen bg-space font-sans text-text">
-      {/* NAV */}
-      <header className="sticky top-0 z-50 border-b border-border bg-space/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5">
-            <LogoMark className="size-7" />
-            <span className="text-sm font-semibold text-text">MicroAI</span>
-          </Link>
-
-          <nav className="hidden items-center gap-1 md:flex overflow-x-auto">
-            {NAV_LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`rounded-md px-3 py-1.5 text-sm transition whitespace-nowrap ${
-                  l.href === "/credits" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="ml-auto flex shrink-0 items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
-              <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
-                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
-              </span>
-              Arc Mainnet
-            </span>
-
-            {connectedWallet ? (
-              <span className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-xs text-text sm:inline-flex">
-                <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
-                {truncateAddress(connectedWallet)}
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setWalletModalOpen(true)}
-                className="rounded-lg bg-accent px-3.5 py-2 text-xs font-medium text-white transition hover:brightness-110"
-              >
-                Connect wallet
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
 
       {/* PAGE HEADER */}
       <section className="border-b border-border">

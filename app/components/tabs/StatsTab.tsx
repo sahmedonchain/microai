@@ -384,7 +384,7 @@ export function StatsTab() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-space font-sans text-text">
+    <div className="min-h-full bg-space font-sans text-text">
 
       {/* HERO */}
       <section className="border-b border-border">

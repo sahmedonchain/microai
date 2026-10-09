@@ -124,7 +124,7 @@ export function DebuggerTab() {
   const ok = result?.txData.result === "success";
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-space font-sans text-text">
+    <div className="min-h-full bg-space font-sans text-text">
       <section className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h1 className="text-2xl font-semibold leading-tight text-text">Transaction debugger</h1>
         <p className="mt-2 max-w-xl text-sm text-muted">

@@ -222,7 +222,7 @@ export function CopilotTab() {
   const shown = history.slice(-MAX_SHOWN);
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-space font-sans text-text">
+    <div className="flex min-h-full flex-col bg-space font-sans text-text">
       {showWalletModal && (
         <WalletModal onConnect={handleWalletConnect} onClose={() => setShowWalletModal(false)} />
       )}
