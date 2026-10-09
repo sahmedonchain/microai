@@ -22,13 +22,33 @@ interface TxData {
   timestamp?: string;
 }
 
+interface TokenTransfer {
+  symbol: string;
+  from: string;
+  to: string;
+  value: string;
+}
+
+interface InternalTx {
+  from: string;
+  to: string;
+  value: string;
+  type: string;
+}
+
 interface DebugResult {
   summary: string;
   rootCause: string;
   solution: string;
   severity: "high" | "medium" | "low";
   txData: TxData;
+  tokenTransfers: TokenTransfer[];
+  internalTxs: InternalTx[];
+  decodedFunction: string;
+  correctedFlow: string[];
 }
+
+const shortAddr = (a: string) => (a ? `${a.slice(0, 8)}...${a.slice(-6)}` : "—");
 
 function severity_color(s: string) {
   if (s === "high") return "#f87171";
@@ -79,6 +99,10 @@ export default function DebugPage() {
         solution: data.solution,
         severity: data.severity,
         txData: data.txData,
+        tokenTransfers: data.tokenTransfers ?? [],
+        internalTxs: data.internalTxs ?? [],
+        decodedFunction: data.decodedFunction ?? "unknown",
+        correctedFlow: data.correctedFlow ?? [],
       });
       setHistory((prev) => [hash, ...prev.slice(0, 4)]);
       setStatus("done");
@@ -204,6 +228,13 @@ export default function DebugPage() {
               </div>
             </div>
 
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.1em" }}>FUNCTION DECODED</span>
+              <span style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(52,211,153,0.25)", background: "rgba(16,185,129,0.08)", color: result.decodedFunction === "unknown" ? "#64748b" : "#34d399", fontSize: 12, fontWeight: 700, fontFamily: "monospace", wordBreak: "break-all" }}>
+                {result.decodedFunction}
+              </span>
+            </div>
+
             <div style={{ padding: "18px", borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
               <div style={{ fontSize: 9, color: severity_color(result.severity), fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 8 }}>
                 ROOT CAUSE · {result.severity.toUpperCase()} SEVERITY
@@ -247,6 +278,58 @@ export default function DebugPage() {
               >
                 VIEW ON ARC EXPLORER ↗
               </a>
+            </div>
+
+            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
+                TOKEN MOVEMENTS
+              </div>
+              {result.tokenTransfers.length === 0 ? (
+                <div style={{ fontSize: 12, color: "#475569" }}>No token transfers</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {result.tokenTransfers.map((t, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontFamily: "monospace", fontSize: 11 }}>
+                      <span style={{ color: "#34d399", fontWeight: 700 }}>{t.value} {t.symbol}</span>
+                      <span style={{ color: "#64748b" }}>{shortAddr(t.from)} → {shortAddr(t.to)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
+              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
+                INTERNAL TRANSACTIONS
+              </div>
+              {result.internalTxs.length === 0 ? (
+                <div style={{ fontSize: 12, color: "#475569" }}>No internal transactions</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {result.internalTxs.map((t, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontFamily: "monospace", fontSize: 11 }}>
+                      <span style={{ color: "#94a3b8" }}>{t.type}</span>
+                      <span style={{ color: "#64748b" }}>{shortAddr(t.from)} → {shortAddr(t.to)}</span>
+                      <span style={{ color: "#34d399" }}>{t.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
+              <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
+                CORRECTED FLOW
+              </div>
+              <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                {result.correctedFlow.map((step, i) => (
+                  <li key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "#94a3b8", fontFamily: "monospace" }}>
+                    <span style={{ color: "#34d399", fontWeight: 700 }}>{i + 1}.</span>
+                    <span style={{ color: "#34d399" }}>→</span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
             </div>
           </div>
         )}
