@@ -25,7 +25,6 @@ import remarkGfm from "remark-gfm";
 import {
   BarChart3,
   Bell,
-  Bug,
   Check,
   ChevronDown,
   ChevronRight,
@@ -37,12 +36,10 @@ import {
   FileText,
   Link2,
   Menu,
-  MessageSquare,
   Paperclip,
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
-  Wallet,
   Wrench,
   X,
 } from "lucide-react";
@@ -50,7 +47,6 @@ import { WalletModal } from "@/app/components/WalletModal";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { PRICE_PER_QUERY, MIN_QUERIES, MAX_QUERIES, formatUsdc } from "@/lib/pricing";
 import { timeAgo, truncateAddress } from "@/lib/format";
-import type { NewsItem } from "@/lib/news";
 
 const ARC_CHAIN_ID = ARC_MAINNET.chainIdHex;
 const USDC_CONTRACT = USDC_ADDRESS;
@@ -80,13 +76,6 @@ interface StatsPayload {
   uniqueWallets: number;
   recentTransactions: RecentTransaction[];
 }
-
-const NEW_FEATURES = [
-  { title: "AI Developer Copilot", href: "/build", icon: Code2, desc: "Describe your idea. MicroAI builds, integrates, tests and deploys it on Arc." },
-  { title: "Wallet Intelligence", href: "/wallet", icon: Wallet, desc: "AI-powered wallet analysis, risk signals, and portfolio overview." },
-  { title: "Transaction Debugger", href: "/debug", icon: Bug, desc: "Paste any TX hash. Get full AI breakdown, function decode, and fix suggestions." },
-  { title: "Credits & Payments", href: "/credits", icon: Coins, desc: "View your USDC payment history and credit balance." },
-];
 
 const CATEGORY_PILLS = [
   { label: "Smart Contracts", icon: Code2, prompt: "Show me a sample Solidity contract for USDC transfers on Arc." },
@@ -193,7 +182,6 @@ export function HomeTab({
   const [txStep, setTxStep] = useState("");
 
   const [stats, setStats] = useState<StatsPayload | null>(null);
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -279,19 +267,10 @@ export function HomeTab({
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/news")
-      .then((res) => res.json())
-      .then((data) => { if (!cancelled && Array.isArray(data.items)) setNewsItems(data.items.slice(0, 4)); })
-      .catch(() => { /* news teaser is optional enrichment */ });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
     // Scroll the message area itself: scrollIntoView would also scroll the
     // overflow-hidden ancestors and push the pinned input out of view.
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    if (el && messages.length > 0) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
   useEffect(() => {
@@ -569,12 +548,12 @@ export function HomeTab({
             <LogoMark className="size-7 shrink-0" />
             <span className="flex flex-col leading-tight">
               <span className="text-sm font-semibold text-text">MicroAI</span>
-              <span className="text-xs text-muted">AI assistant for the Arc ecosystem</span>
+              <span className="hidden text-xs text-muted sm:block">AI assistant for the Arc ecosystem</span>
             </span>
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+            <span className="hidden items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text sm:inline-flex">
               <span className="relative flex size-1.5">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
                 <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
@@ -655,18 +634,24 @@ export function HomeTab({
             className="mx-auto flex w-full max-w-3xl min-w-0 flex-1 flex-col overflow-hidden"
           >
             {/* Only this region scrolls; the input below stays pinned. */}
-            <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 pb-6 pt-14">
-            <LogoMark className="size-12" />
-            <h1 className="mt-5 text-center text-3xl font-semibold leading-[1.1] text-text sm:text-4xl">
+            <div
+              ref={scrollRef}
+              className={`flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 sm:px-6 ${messages.length === 0 ? "py-6" : "pb-6 pt-14"}`}
+            >
+            {/* Welcome state: my-auto centres the block vertically when there is room and
+                lets it scroll from the top when there is not. */}
+            <div className={`flex w-full flex-col items-center ${messages.length === 0 ? "my-auto" : ""}`}>
+            <LogoMark className="size-10" />
+            <h1 className="mt-3 text-center text-3xl font-semibold leading-[1.1] text-text sm:text-4xl">
               Ask, Build, Ship on <span className="text-accent-text">Arc</span>
             </h1>
-            <p className="mt-4 max-w-[52ch] text-center text-base leading-relaxed text-muted">
+            <p className="mt-3 max-w-[52ch] text-center text-sm leading-relaxed text-muted sm:text-base">
               Get fast, accurate answers about Arc, Circle, USDC, and on-chain development.
               <br />
               From smart contracts to integrations, I&apos;m here to help you build.
             </p>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
               {CATEGORY_PILLS.map(({ label, icon: Icon, prompt }) => {
                 const active = activeCategory === label;
                 return (
@@ -686,27 +671,6 @@ export function HomeTab({
                 );
               })}
             </div>
-
-            {!wallet && (
-              <div className="mt-6 flex w-full flex-col items-center gap-3 rounded-lg border border-border bg-surface p-5 sm:flex-row sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-dim text-accent-text">
-                    <MessageSquare className="size-5" aria-hidden="true" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text">Connect your wallet to start chatting</p>
-                    <p className="text-xs text-muted">Each message is paid for with prepaid credits (USDC).</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setWalletModalOpen(true)}
-                  className="w-full shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110 sm:w-auto"
-                >
-                  Connect wallet
-                </button>
-              </div>
-            )}
 
             {messages.length > 0 && (
               <div className="mt-8 flex w-full flex-col gap-4">
@@ -737,20 +701,20 @@ export function HomeTab({
             )}
 
             {messages.length === 0 && (
-              <section className="mt-10 w-full" aria-labelledby="popular-heading">
+              <section className="mt-5 w-full" aria-labelledby="popular-heading">
                 <div className="flex items-center justify-between">
                   <h2 id="popular-heading" className="text-sm font-medium text-text">Popular questions</h2>
                   <Link href="/ecosystem" className="text-xs font-medium text-accent-text hover:underline">
                     View all
                   </Link>
                 </div>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   {POPULAR_PROMPTS.map(({ icon: Icon, title, desc }) => (
                     <button
                       key={title}
                       type="button"
                       onClick={() => fillPrompt(title)}
-                      className="group flex items-start gap-3 rounded-lg border border-border bg-surface p-4 text-left transition hover:border-accent/40 hover:bg-surface-raised"
+                      className="group flex items-start gap-3 rounded-lg border border-border bg-surface p-3 text-left transition hover:border-accent/40 hover:bg-surface-raised"
                     >
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-dim text-accent-text">
                         <Icon className="size-4" aria-hidden="true" />
@@ -766,60 +730,7 @@ export function HomeTab({
               </section>
             )}
 
-            {messages.length === 0 && (
-              <section className="mt-6 w-full" aria-labelledby="new-features-heading">
-                <h2 id="new-features-heading" className="text-sm font-medium text-text">What&apos;s new</h2>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {NEW_FEATURES.map(({ title, href, icon: Icon, desc }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className="group flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 no-underline transition hover:border-accent/40 hover:bg-surface-raised"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-dim text-accent-text">
-                          <Icon className="size-4" aria-hidden="true" />
-                        </div>
-                        <p className="text-sm font-medium text-text">{title}</p>
-                      </div>
-                      <p className="flex-1 text-xs leading-relaxed text-muted">{desc}</p>
-                      <span className="text-xs font-medium text-accent-text">Open →</span>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {messages.length === 0 && newsItems.length > 0 && (
-              <section className="mt-6 w-full" aria-labelledby="news-heading">
-                <div className="flex items-center justify-between">
-                  <h2 id="news-heading" className="text-sm font-medium text-text">Latest on Arc</h2>
-                  <Link href="/news" className="text-xs font-medium text-accent-text hover:underline">
-                    All news
-                  </Link>
-                </div>
-                <div className="mt-4 flex flex-col gap-2">
-                  {newsItems.map((item) => (
-                    <a
-                      key={item.id}
-                      href={item.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3 text-left no-underline transition hover:border-accent/40 hover:bg-surface-raised"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-text">{item.title}</p>
-                        <p className="mt-0.5 text-xs text-muted">
-                          {item.source}{item.publishedAt ? ` · ${timeAgo(item.publishedAt)}` : ""}
-                        </p>
-                      </div>
-                      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden="true" />
-                    </a>
-                  ))}
-                </div>
-              </section>
-            )}
-
+            </div>
             </div>
 
             <div className="w-full shrink-0 bg-space px-6 pb-6 pt-3">
