@@ -3,24 +3,39 @@ import { getRedis } from "./redis";
 // Prepaid query credit ledger, keyed by wallet address (never trust an
 // address from a request body — callers must derive it from the verified
 // session). Stored in Redis so credit survives across serverless instances.
-const TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
+//
+// Purchased credits never expire. Balances written before this change carried
+// a 30-day TTL; they are made permanent when touched (read, spend, top-up) and
+// in bulk by scripts/persist-credits.ts.
 
 const getClient = getRedis;
 
-function creditKey(address: string): string {
+export function creditKey(address: string): string {
   return `microai:credit:${address.toLowerCase()}`;
 }
 
-export async function getCredit(address: string): Promise<number> {
-  const value = await getClient().get<number>(creditKey(address));
-  return typeof value === "number" ? value : 0;
+// Removes any leftover expiry. Failure is not fatal: the next touch retries.
+async function keepForever(key: string): Promise<void> {
+  try {
+    await getClient().persist(key);
+  } catch {
+    /* best effort */
+  }
 }
 
-// Adds `queries` credit and refreshes the 30-day TTL. Returns the new total.
+export async function getCredit(address: string): Promise<number> {
+  const key = creditKey(address);
+  const value = await getClient().get<number>(key);
+  if (typeof value !== "number") return 0;
+  if (value > 0) await keepForever(key);
+  return value;
+}
+
+// Adds `queries` credit. Returns the new total.
 export async function addCredit(address: string, queries: number): Promise<number> {
   const key = creditKey(address);
   const newTotal = await getClient().incrby(key, queries);
-  await getClient().expire(key, TTL_SECONDS);
+  await keepForever(key);
   return newTotal;
 }
 
@@ -35,5 +50,6 @@ export async function spendCredit(address: string): Promise<number | null> {
     await getClient().incr(key);
     return null;
   }
+  if (remaining > 0) await keepForever(key);
   return remaining;
 }

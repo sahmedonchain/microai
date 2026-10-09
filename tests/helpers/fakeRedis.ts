@@ -82,6 +82,16 @@ export class FakeRedis {
     return e.expiresAt === null ? -1 : Math.ceil((e.expiresAt - Date.now()) / 1000);
   }
 
+  async scan(cursor: string | number, opts: { match?: string; count?: number } = {}) {
+    const pattern = new RegExp("^" + (opts.match ?? "*").replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$");
+    const all = [...this.store.keys()].filter((k) => this.live(k) && pattern.test(k));
+    const start = Number(cursor);
+    const count = opts.count ?? 10;
+    const page = all.slice(start, start + count);
+    const next = start + count >= all.length ? "0" : String(start + count);
+    return [next, page] as [string, string[]];
+  }
+
   async zadd(key: string, entry: { score: number; member: string }) {
     const z = this.liveZ(key) ?? new Map<string, number>();
     z.set(entry.member, entry.score);
