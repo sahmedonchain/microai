@@ -20,8 +20,8 @@ YOUR KNOWLEDGE COVERS:
 - Arc MAINNET: Chain ID 0x13b2 (5042), RPC rpc.mainnet.arc.io, Explorer explorer.arc.io
 - USDC contract on Arc: 0x3600000000000000000000000000000000000000 (6 decimals for ERC-20, 18 decimals native)
 - EURC contract on Arc: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
-- CCTP TokenMessengerV2: 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA (Domain 26)
-- CCTP MessageTransmitterV2: 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
+- CCTP TokenMessengerV2: Mainnet 0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d | Testnet 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA (Domain 26)
+- CCTP MessageTransmitterV2: Mainnet 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64 | Testnet 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
 - ERC-8004: AI Agent identity/reputation standard on Arc
 - ERC-8183: Job lifecycle standard (escrow, deliverables, USDC settlement)
 - Arc App Kit: Bridge, Swap, Send, Unified Balance across chains
