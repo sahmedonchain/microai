@@ -1,7 +1,26 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Navbar } from "@/app/components/Navbar";
+import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { WalletModal } from "@/app/components/WalletModal";
+import { truncateAddress } from "@/lib/format";
+
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Ecosystem", href: "/ecosystem" },
+  { label: "Grants", href: "/grants" },
+  { label: "Build status", href: "/build-status" },
+  { label: "Stats", href: "/stats" },
+  { label: "News", href: "/news" },
+  { label: "Copilot", href: "/build" },
+  { label: "Wallet", href: "/wallet" },
+  { label: "Debugger", href: "/debug" },
+  { label: "Credits", href: "/credits" },
+];
 
 type TxStatus = "idle" | "analyzing" | "done" | "error";
 
@@ -50,10 +69,10 @@ interface DebugResult {
 
 const shortAddr = (a: string) => (a ? `${a.slice(0, 8)}...${a.slice(-6)}` : "—");
 
-function severity_color(s: string) {
-  if (s === "high") return "#f87171";
-  if (s === "medium") return "#f59e0b";
-  return "#34d399";
+function severityClass(s: string) {
+  if (s === "high") return "text-danger";
+  if (s === "medium") return "text-warning";
+  return "text-success";
 }
 
 export default function DebugPage() {
@@ -62,6 +81,8 @@ export default function DebugPage() {
   const [result, setResult] = useState<DebugResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [history, setHistory] = useState<string[]>([]);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
 
   const isValidHash = (h: string) => /^0x([A-Fa-f0-9]{64})$/.test(h.trim());
 
@@ -77,8 +98,6 @@ export default function DebugPage() {
     setResult(null);
 
     try {
-      // Free, no-session endpoint: only ever accepts a tx hash, fetches the
-      // real Explorer data and runs the AI analysis entirely server-side.
       const res = await fetch("/api/debug-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -113,306 +132,310 @@ export default function DebugPage() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#010503",
-        color: "#e2e8f0",
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
-      }}
-    >
-      <Navbar />
+    <div className="min-h-screen bg-space font-sans text-text">
+      {/* NAV */}
+      <header className="sticky top-0 z-50 border-b border-border bg-space/85 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <LogoMark className="size-7" />
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+          </Link>
 
-      {/* HERO */}
-      <section style={{ padding: "48px 20px 32px", textAlign: "center", borderBottom: "1px solid rgba(16,185,129,0.06)" }}>
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "5px 14px", borderRadius: 20, border: "1px solid rgba(16,185,129,0.15)", background: "rgba(3,17,10,0.6)", marginBottom: 20 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399", display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace" }}>ARC MAINNET · LIVE DEBUGGER</span>
+          <nav className="hidden items-center gap-1 md:flex overflow-x-auto">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 text-sm transition whitespace-nowrap ${
+                  l.href === "/debug" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+              </span>
+              Arc Mainnet
+            </span>
+
+            {connectedWallet ? (
+              <span className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-xs text-text sm:inline-flex">
+                <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+                {truncateAddress(connectedWallet)}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setWalletModalOpen(true)}
+                className="rounded-lg bg-accent px-3.5 py-2 text-xs font-medium text-white transition hover:brightness-110"
+              >
+                Connect wallet
+              </button>
+            )}
+          </div>
         </div>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,3.2rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 14px", background: "linear-gradient(180deg,#fff 0%,rgba(148,163,184,0.5) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
-          Transaction Debugger
-        </h1>
-        <p style={{ fontSize: "clamp(12px,3vw,14px)", color: "#94a3b8", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
-          Paste any Arc MAINNET transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened, and how to fix it.
-        </p>
+      </header>
+
+      {/* PAGE HEADER */}
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+          <p className="text-xs text-muted">
+            <Link href="/" className="hover:text-text">Home</Link> / Debugger
+          </p>
+          <div className="mt-4 flex items-center gap-2">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+            </span>
+            <span className="font-mono text-xs text-accent-text">Arc Mainnet · Live debugger</span>
+          </div>
+          <h1 className="mt-3 text-3xl font-semibold leading-tight text-text sm:text-4xl">
+            Transaction Debugger
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted">
+            Paste any Arc Mainnet transaction hash. MicroAI fetches the data from Arc Explorer and explains exactly what happened, and how to fix it.
+          </p>
+        </div>
       </section>
 
       {/* MAIN */}
-      <section style={{ padding: "32px 16px 60px", maxWidth: 760, margin: "0 auto" }}>
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-3xl space-y-4">
+          {/* Input */}
+          <div className="rounded-lg border border-border bg-surface p-6">
+            <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-muted">Paste transaction hash</p>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                value={txHash}
+                onChange={(e) => setTxHash(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && analyze()}
+                placeholder="0x..."
+                className="flex-1 min-w-0 rounded-lg border border-border bg-space px-4 py-2.5 font-mono text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+              <button
+                onClick={analyze}
+                disabled={status === "analyzing"}
+                className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {status === "analyzing" ? "Analyzing..." : "Debug"}
+              </button>
+            </div>
 
-        {/* Input */}
-        <div style={{ background: "rgba(3,17,10,0.2)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 16, padding: "20px", marginBottom: 20 }}>
-          <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
-            PASTE TRANSACTION HASH
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <input
-              type="text"
-              value={txHash}
-              onChange={(e) => setTxHash(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && analyze()}
-              placeholder="0x..."
-              style={{
-                flex: 1,
-                minWidth: 0,
-                background: "rgba(0,0,0,0.4)",
-                border: "1px solid rgba(16,185,129,0.15)",
-                borderRadius: 10,
-                padding: "12px 14px",
-                fontSize: 12,
-                color: "#fff",
-                outline: "none",
-                fontFamily: "monospace",
-              }}
-            />
-            <button
-              onClick={analyze}
-              disabled={status === "analyzing"}
-              style={{
-                padding: "12px 24px",
-                borderRadius: 10,
-                border: "none",
-                background: status === "analyzing" ? "rgba(16,185,129,0.1)" : "linear-gradient(135deg,#10b981,#059669)",
-                color: status === "analyzing" ? "#34d399" : "#000",
-                fontSize: 12,
-                fontWeight: 800,
-                letterSpacing: "0.06em",
-                cursor: status === "analyzing" ? "not-allowed" : "pointer",
-                whiteSpace: "nowrap",
-                fontFamily: "monospace",
-              }}
-            >
-              {status === "analyzing" ? "ANALYZING..." : "DEBUG →"}
-            </button>
+            {errorMsg && (
+              <div className="mt-3 rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 font-mono text-xs text-danger">
+                {errorMsg}
+              </div>
+            )}
+
+            {status === "analyzing" && (
+              <div className="mt-3 flex items-center gap-2" role="status">
+                <span className="inline-flex gap-1" aria-hidden="true">
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} className="size-1.5 animate-bounce rounded-full bg-accent-text" style={{ animationDelay: `${i * 200}ms` }} />
+                  ))}
+                </span>
+                <span className="font-mono text-xs text-muted">Fetching transaction and analyzing...</span>
+              </div>
+            )}
           </div>
 
-          {errorMsg && (
-            <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)", fontSize: 11, color: "#f87171", fontFamily: "monospace" }}>
-              {errorMsg}
+          {/* Result */}
+          {result && status === "done" && (
+            <div className="space-y-3">
+              {/* Status banner */}
+              <div className={`flex items-center gap-3 rounded-lg border p-4 ${result.txData.result === "success" ? "border-success/25 bg-success/10" : "border-danger/25 bg-danger/10"}`}>
+                <div className={`size-2.5 shrink-0 rounded-full ${result.txData.result === "success" ? "bg-success" : "bg-danger"}`} />
+                <div>
+                  <p className={`text-sm font-semibold ${result.txData.result === "success" ? "text-success" : "text-danger"}`}>
+                    {result.txData.result === "success" ? "Transaction successful" : "Transaction failed"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted">{result.summary}</p>
+                </div>
+              </div>
+
+              {/* Decoded function */}
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+                <span className="font-mono text-xs text-muted">Function decoded</span>
+                <span className={`rounded-full border px-3 py-1 font-mono text-xs font-semibold ${result.decodedFunction === "unknown" ? "border-border text-muted" : "border-accent/30 bg-accent-dim text-accent-text"}`}>
+                  {result.decodedFunction}
+                </span>
+              </div>
+
+              {/* Root cause */}
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <p className={`mb-3 font-mono text-xs font-semibold uppercase tracking-widest ${severityClass(result.severity)}`}>
+                  Root cause · {result.severity} severity
+                </p>
+                <p className="text-sm leading-relaxed text-muted">{result.rootCause}</p>
+              </div>
+
+              {/* Solution */}
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-widest text-accent-text">How to fix</p>
+                <p className="text-sm leading-relaxed text-muted">{result.solution}</p>
+              </div>
+
+              {/* TX details */}
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-muted">Transaction details</p>
+                <div className="space-y-2">
+                  {[
+                    { label: "Hash", value: result.txData.hash.slice(0, 20) + "..." },
+                    { label: "From", value: result.txData.from?.hash?.slice(0, 20) + "..." },
+                    { label: "To", value: result.txData.to?.hash ? result.txData.to.hash.slice(0, 20) + "..." : "Contract creation" },
+                    { label: "Gas used", value: result.txData.gas_used },
+                    { label: "Gas limit", value: result.txData.gas_limit },
+                    { label: "Block", value: result.txData.block_number?.toString() || "Pending" },
+                    { label: "Fee (USDC)", value: result.txData.fee?.value ? (parseInt(result.txData.fee.value) / 1e6).toFixed(6) : "N/A" },
+                  ].map((row) => (
+                    <div key={row.label} className="flex items-center justify-between gap-4">
+                      <span className="font-mono text-xs text-muted">{row.label}</span>
+                      <span className="break-all text-right font-mono text-xs text-text">{row.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <a
+                  href={`https://explorer.arc.io/tx/${result.txData.hash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-block font-mono text-xs text-accent-text hover:underline"
+                >
+                  View on Arc Explorer ↗
+                </a>
+              </div>
+
+              {/* Token movements */}
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-muted">Token movements</p>
+                {result.tokenTransfers.length === 0 ? (
+                  <p className="text-xs text-muted">No token transfers</p>
+                ) : (
+                  <div className="space-y-2">
+                    {result.tokenTransfers.map((t, i) => (
+                      <div key={i} className="flex flex-wrap justify-between gap-2 font-mono text-xs">
+                        <span className="font-semibold text-accent-text">{t.value} {t.symbol}</span>
+                        <span className="text-muted">{shortAddr(t.from)} → {shortAddr(t.to)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Internal transactions */}
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-muted">Internal transactions</p>
+                {result.internalTxs.length === 0 ? (
+                  <p className="text-xs text-muted">No internal transactions</p>
+                ) : (
+                  <div className="space-y-2">
+                    {result.internalTxs.map((t, i) => (
+                      <div key={i} className="flex flex-wrap justify-between gap-2 font-mono text-xs">
+                        <span className="text-text">{t.type}</span>
+                        <span className="text-muted">{shortAddr(t.from)} → {shortAddr(t.to)}</span>
+                        <span className="text-accent-text">{t.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Corrected flow */}
+              <div className="rounded-lg border border-border bg-surface p-6">
+                <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-accent-text">Corrected flow</p>
+                <ol className="space-y-2">
+                  {result.correctedFlow.map((step, i) => (
+                    <li key={i} className="flex items-start gap-2 font-mono text-xs">
+                      <span className="shrink-0 font-semibold text-accent-text">{i + 1}.</span>
+                      <span className="text-muted">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           )}
 
-          {status === "analyzing" && (
-            <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ display: "flex", gap: 4 }}>
-                {[0, 1, 2].map((i) => (
-                  <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", animation: "bounce 1.2s infinite", animationDelay: `${i * 0.2}s` }} />
+          {/* Recent hashes */}
+          {history.length > 0 && (
+            <div className="rounded-lg border border-border bg-surface p-6">
+              <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-widest text-muted">Recent hashes</p>
+              <div className="space-y-1.5">
+                {history.map((h, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setTxHash(h); setStatus("idle"); setResult(null); }}
+                    className="w-full rounded-lg border border-border bg-space px-3 py-2 text-left font-mono text-xs text-muted transition hover:text-text"
+                  >
+                    {h.slice(0, 30)}...
+                  </button>
                 ))}
               </div>
-              <span style={{ fontSize: 10, color: "#475569", fontFamily: "monospace" }}>
-                Fetching transaction and analyzing...
-              </span>
             </div>
           )}
-        </div>
 
-        {/* Result */}
-        {result && status === "done" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-            <div style={{
-              padding: "14px 18px",
-              borderRadius: 12,
-              background: result.txData.result === "success" ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)",
-              border: `1px solid ${result.txData.result === "success" ? "rgba(52,211,153,0.2)" : "rgba(239,68,68,0.2)"}`,
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: result.txData.result === "success" ? "#34d399" : "#f87171", flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: result.txData.result === "success" ? "#34d399" : "#f87171" }}>
-                  {result.txData.result === "success" ? "Transaction Successful" : "Transaction Failed"}
-                </div>
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>{result.summary}</div>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.1em" }}>FUNCTION DECODED</span>
-              <span style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(52,211,153,0.25)", background: "rgba(16,185,129,0.08)", color: result.decodedFunction === "unknown" ? "#64748b" : "#34d399", fontSize: 12, fontWeight: 700, fontFamily: "monospace", wordBreak: "break-all" }}>
-                {result.decodedFunction}
-              </span>
-            </div>
-
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
-              <div style={{ fontSize: 9, color: severity_color(result.severity), fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 8 }}>
-                ROOT CAUSE · {result.severity.toUpperCase()} SEVERITY
-              </div>
-              <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>{result.rootCause}</p>
-            </div>
-
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
-              <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 8 }}>
-                HOW TO FIX
-              </div>
-              <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>{result.solution}</p>
-            </div>
-
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
-                TRANSACTION DETAILS
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* What this detects */}
+          {status === "idle" && !result && (
+            <div className="rounded-lg border border-border bg-surface p-6">
+              <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-muted">What this debugger detects</p>
+              <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  { label: "HASH", value: result.txData.hash.slice(0, 20) + "..." },
-                  { label: "FROM", value: result.txData.from?.hash?.slice(0, 20) + "..." },
-                  { label: "TO", value: result.txData.to?.hash ? result.txData.to.hash.slice(0, 20) + "..." : "Contract Creation" },
-                  { label: "GAS USED", value: result.txData.gas_used },
-                  { label: "GAS LIMIT", value: result.txData.gas_limit },
-                  { label: "BLOCK", value: result.txData.block_number?.toString() || "Pending" },
-                  { label: "FEE (USDC)", value: result.txData.fee?.value ? (parseInt(result.txData.fee.value) / 1e6).toFixed(6) : "N/A" },
-                ].map((row) => (
-                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 9, color: "#334155", fontFamily: "monospace", fontWeight: 700, letterSpacing: "0.1em", flexShrink: 0 }}>{row.label}</span>
-                    <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", textAlign: "right", wordBreak: "break-all" }}>{row.value}</span>
+                  { icon: "⚡", label: "Insufficient USDC", desc: "Wallet didn't have enough USDC for gas or payment" },
+                  { icon: "🔗", label: "Wrong chain", desc: "Transaction sent on wrong network, not Arc Mainnet" },
+                  { icon: "⛽", label: "Gas limit too low", desc: "Gas ran out before transaction could complete" },
+                  { icon: "↩️", label: "Contract revert", desc: "Smart contract rejected the call with a reason" },
+                  { icon: "📋", label: "Invalid input", desc: "Wrong function selector or malformed calldata" },
+                  { icon: "🔢", label: "Nonce issues", desc: "Transaction nonce conflict or out-of-order submission" },
+                ].map((tip) => (
+                  <div key={tip.label} className="rounded-lg border border-border bg-space p-4">
+                    <div className="mb-2 text-base">{tip.icon}</div>
+                    <p className="text-sm font-medium text-text">{tip.label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted">{tip.desc}</p>
                   </div>
                 ))}
               </div>
-
-              <a
-                href={`https://explorer.arc.io/tx/${result.txData.hash}`}
-                target="_blank"
-                rel="noreferrer"
-                style={{ display: "inline-block", marginTop: 14, fontSize: 10, color: "#34d399", fontFamily: "monospace", fontWeight: 700, textDecoration: "none", letterSpacing: "0.08em" }}
-              >
-                VIEW ON ARC EXPLORER ↗
-              </a>
             </div>
-
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
-                TOKEN MOVEMENTS
-              </div>
-              {result.tokenTransfers.length === 0 ? (
-                <div style={{ fontSize: 12, color: "#475569" }}>No token transfers</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {result.tokenTransfers.map((t, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontFamily: "monospace", fontSize: 11 }}>
-                      <span style={{ color: "#34d399", fontWeight: 700 }}>{t.value} {t.symbol}</span>
-                      <span style={{ color: "#64748b" }}>{shortAddr(t.from)} → {shortAddr(t.to)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
-                INTERNAL TRANSACTIONS
-              </div>
-              {result.internalTxs.length === 0 ? (
-                <div style={{ fontSize: 12, color: "#475569" }}>No internal transactions</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {result.internalTxs.map((t, i) => (
-                    <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontFamily: "monospace", fontSize: 11 }}>
-                      <span style={{ color: "#94a3b8" }}>{t.type}</span>
-                      <span style={{ color: "#64748b" }}>{shortAddr(t.from)} → {shortAddr(t.to)}</span>
-                      <span style={{ color: "#34d399" }}>{t.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding: "18px", borderRadius: 14, background: "rgba(16,185,129,0.04)", border: "1px solid rgba(52,211,153,0.1)" }}>
-              <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
-                CORRECTED FLOW
-              </div>
-              <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
-                {result.correctedFlow.map((step, i) => (
-                  <li key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 12, color: "#94a3b8", fontFamily: "monospace" }}>
-                    <span style={{ color: "#34d399", fontWeight: 700 }}>{i + 1}.</span>
-                    <span style={{ color: "#34d399" }}>→</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        )}
-
-        {history.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 10 }}>
-              RECENT HASHES
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {history.map((h, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setTxHash(h); setStatus("idle"); setResult(null); }}
-                  style={{
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background: "rgba(0,0,0,0.2)",
-                    border: "1px solid rgba(255,255,255,0.04)",
-                    color: "#475569",
-                    fontSize: 11,
-                    fontFamily: "monospace",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  {h.slice(0, 30)}...
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {status === "idle" && !result && (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 }}>
-              WHAT THIS DEBUGGER DETECTS
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
-              {[
-                { icon: "⚡", label: "Insufficient USDC", desc: "Wallet didn't have enough USDC for gas or payment" },
-                { icon: "🔗", label: "Wrong Chain", desc: "Transaction sent on wrong network, not Arc MAINNET" },
-                { icon: "⛽", label: "Gas Limit Too Low", desc: "Gas ran out before transaction could complete" },
-                { icon: "↩️", label: "Contract Revert", desc: "Smart contract rejected the call with a reason" },
-                { icon: "📋", label: "Invalid Input", desc: "Wrong function selector or malformed calldata" },
-                { icon: "🔢", label: "Nonce Issues", desc: "Transaction nonce conflict or out-of-order submission" },
-              ].map((tip) => (
-                <div key={tip.label} style={{ padding: "14px", borderRadius: 12, background: "rgba(3,17,10,0.15)", border: "1px solid rgba(16,185,129,0.06)" }}>
-                  <div style={{ fontSize: 16, marginBottom: 6 }}>{tip.icon}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", marginBottom: 4 }}>{tip.label}</div>
-                  <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5 }}>{tip.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
 
       {/* CTA */}
-      <section style={{ borderTop: "1px solid rgba(16,185,129,0.06)", padding: "36px 16px", textAlign: "center", background: "rgba(2,11,6,0.4)" }}>
-        <div style={{ fontSize: 9, color: "#34d399", fontWeight: 700, letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>NEED MORE HELP?</div>
-        <h2 style={{ fontSize: "clamp(1.1rem,4vw,1.8rem)", fontWeight: 900, color: "#fff", margin: "0 0 10px" }}>Ask MicroAI</h2>
-        <p style={{ fontSize: 13, color: "#64748b", maxWidth: 360, margin: "0 auto 20px", lineHeight: 1.65 }}>
-          Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
-        </p>
-        <Link href="/chat" style={{ display: "inline-block", padding: "12px 28px", borderRadius: 12, background: "#10b981", color: "#000", fontSize: 13, fontWeight: 800, letterSpacing: "0.06em", textDecoration: "none" }}>
-          LAUNCH CHAT TERMINAL →
-        </Link>
+      <section className="border-t border-border bg-surface/40">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
+          <p className="font-mono text-xs text-accent-text">Need more help?</p>
+          <h2 className="mt-2 text-2xl font-semibold text-text">Ask MicroAI</h2>
+          <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
+            Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
+          </p>
+          <Link
+            href="/chat"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
+          >
+            Launch chat terminal
+          </Link>
+        </div>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ borderTop: "1px solid rgba(16,185,129,0.08)", background: "#010402", padding: "22px 16px" }}>
-        <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 9, color: "#1e3a29", fontFamily: "monospace", letterSpacing: "0.1em" }}>MICROAI · ARC & CIRCLE INTELLIGENCE HUB</div>
-          <div style={{ display: "flex", gap: 16 }}>
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <LogoMark className="size-5" />
+            <span className="text-xs text-muted">MicroAI · The Arc &amp; Circle hub</span>
+          </div>
+          <div className="flex flex-wrap gap-5">
             {[
-              { l: "ECOSYSTEM", h: "/ecosystem" },
-              { l: "GRANTS", h: "/grants" },
-              { l: "CHAT", h: "/chat" },
-              { l: "EXPLORER", h: "https://explorer.arc.io" },
+              { l: "Ecosystem", h: "/ecosystem" },
+              { l: "Grants", h: "/grants" },
+              { l: "Chat", h: "/chat" },
+              { l: "Explorer", h: "https://explorer.arc.io" },
             ].map((link) => (
-              <Link key={link.l} href={link.h} style={{ fontSize: 9, color: "#1e3a29", fontWeight: 700, letterSpacing: "0.12em", fontFamily: "monospace", textDecoration: "none" }}>
+              <Link key={link.l} href={link.h} className="text-xs text-muted transition hover:text-text">
                 {link.l}
               </Link>
             ))}
@@ -420,14 +443,13 @@ export default function DebugPage() {
         </div>
       </footer>
 
+      {walletModalOpen && (
+        <WalletModal onConnect={(addr) => { setConnectedWallet(addr); setWalletModalOpen(false); }} onClose={() => setWalletModalOpen(false)} />
+      )}
+
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
-        html, body { background: #010503; margin: 0; overflow-x: hidden; scrollbar-width: none; }
-        ::-webkit-scrollbar { display: none; }
-        * { box-sizing: border-box; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        input::placeholder { color: #334155; }
+        @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
       `}</style>
     </div>
   );

@@ -1,8 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Navbar } from "@/app/components/Navbar";
+import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { WalletModal } from "@/app/components/WalletModal";
+import { truncateAddress } from "@/lib/format";
 import { PaymentReceipt } from "@/app/components/PaymentReceipt";
+
+interface EthereumProvider {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
 
 interface Receipt {
   txHash: string;
@@ -15,14 +21,26 @@ interface Receipt {
 
 type State = "loading" | "unauthenticated" | "ready" | "error";
 
-const card = { padding: 20, borderRadius: 14, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" } as const;
-const label = { fontSize: 9, color: "#475569", fontWeight: 700, letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 12 } as const;
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Ecosystem", href: "/ecosystem" },
+  { label: "Grants", href: "/grants" },
+  { label: "Build status", href: "/build-status" },
+  { label: "Stats", href: "/stats" },
+  { label: "News", href: "/news" },
+  { label: "Copilot", href: "/build" },
+  { label: "Wallet", href: "/wallet" },
+  { label: "Debugger", href: "/debug" },
+  { label: "Credits", href: "/credits" },
+];
 
 export default function CreditsPage() {
   const [state, setState] = useState<State>("loading");
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [credits, setCredits] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -48,91 +66,169 @@ export default function CreditsPage() {
     })();
   }, []);
 
+  useEffect(() => {
+    const eth = (window as unknown as { ethereum?: EthereumProvider }).ethereum;
+    if (!eth) return;
+    (async () => {
+      try {
+        const accounts = (await eth.request({ method: "eth_accounts" })) as string[];
+        if (accounts?.[0]) setConnectedWallet(accounts[0]);
+      } catch { /* user can connect manually */ }
+    })();
+  }, []);
+
   const totalSpent = receipts.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#010503", color: "#e2e8f0", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-      <Navbar />
+    <div className="min-h-screen bg-space font-sans text-text">
+      {/* NAV */}
+      <header className="sticky top-0 z-50 border-b border-border bg-space/85 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <LogoMark className="size-7" />
+            <span className="text-sm font-semibold text-text">MicroAI</span>
+          </Link>
 
-      <section style={{ padding: "48px 20px 32px", borderBottom: "1px solid rgba(16,185,129,0.06)", maxWidth: 760, margin: "0 auto" }}>
-        <h1 style={{ fontSize: "clamp(1.6rem,6vw,2.6rem)", fontWeight: 900, lineHeight: 1.1, margin: "0 0 12px", color: "#fff", letterSpacing: "-0.02em" }}>
-          Credits &amp; Payments
-        </h1>
-        <p style={{ fontSize: 14, color: "#94a3b8", margin: 0, lineHeight: 1.7 }}>Your USDC payment history on Arc Mainnet</p>
+          <nav className="hidden items-center gap-1 md:flex overflow-x-auto">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`rounded-md px-3 py-1.5 text-sm transition whitespace-nowrap ${
+                  l.href === "/credits" ? "bg-accent-dim text-accent-text" : "text-muted hover:text-text"
+                }`}
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-dim px-3 py-1.5 text-xs text-accent-text">
+              <span className="relative flex size-1.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent-text opacity-75" aria-hidden="true" />
+                <span className="relative inline-flex size-1.5 rounded-full bg-accent-text" aria-hidden="true" />
+              </span>
+              Arc Mainnet
+            </span>
+
+            {connectedWallet ? (
+              <span className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 font-mono text-xs text-text sm:inline-flex">
+                <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+                {truncateAddress(connectedWallet)}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setWalletModalOpen(true)}
+                className="rounded-lg bg-accent px-3.5 py-2 text-xs font-medium text-white transition hover:brightness-110"
+              >
+                Connect wallet
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* PAGE HEADER */}
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+          <p className="text-xs text-muted">
+            <Link href="/" className="hover:text-text">Home</Link> / Credits
+          </p>
+          <h1 className="mt-4 text-3xl font-semibold leading-tight text-text sm:text-4xl">
+            Credits &amp; Payments
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted">Your USDC payment history on Arc Mainnet</p>
+        </div>
       </section>
 
-      <section style={{ padding: "32px 16px 60px", maxWidth: 760, margin: "0 auto" }}>
-        {state === "loading" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }} role="status">
-            <div style={{ display: "flex", gap: 4 }} aria-hidden="true">
-              {[0, 1, 2].map((i) => (
-                <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#34d399", animation: "bounce 1.2s infinite", animationDelay: `${i * 0.2}s` }} />
-              ))}
+      {/* MAIN */}
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-3xl">
+          {state === "loading" && (
+            <div className="flex items-center gap-2" role="status">
+              <span className="inline-flex gap-1" aria-hidden="true">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className="size-1.5 animate-bounce rounded-full bg-accent-text" style={{ animationDelay: `${i * 200}ms` }} />
+                ))}
+              </span>
+              <span className="font-mono text-xs text-muted">Loading payment history...</span>
             </div>
-            <span style={{ fontSize: 12, color: "#64748b", fontFamily: "monospace" }}>Loading payment history...</span>
-          </div>
-        )}
+          )}
 
-        {state === "unauthenticated" && (
-          <div style={card}>
-            <p style={{ margin: "0 0 14px", fontSize: 14, color: "#94a3b8" }}>Connect wallet to view your credits</p>
-            <Link href="/chat" style={{ display: "inline-block", padding: "10px 20px", borderRadius: 10, background: "#10b981", color: "#000", fontSize: 12, fontWeight: 800, textDecoration: "none" }}>
-              Connect wallet
-            </Link>
-          </div>
-        )}
-
-        {state === "error" && (
-          <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.12)", fontSize: 12, color: "#f87171", fontFamily: "monospace" }}>
-            {errorMsg}
-          </div>
-        )}
-
-        {state === "ready" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ ...card, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-              <div>
-                <div style={label}>CREDITS</div>
-                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-                  <span style={{ fontSize: 40, fontWeight: 600, color: "#fff", fontFamily: "monospace", lineHeight: 1 }}>{credits}</span>
-                  <span style={{ fontSize: 13, color: "#64748b" }}>queries remaining</span>
-                </div>
-              </div>
-              <Link href="/chat" style={{ padding: "12px 24px", borderRadius: 10, background: "linear-gradient(135deg,#10b981,#059669)", color: "#000", fontSize: 12, fontWeight: 800, textDecoration: "none", whiteSpace: "nowrap" }}>
-                Buy More Credits
+          {state === "unauthenticated" && (
+            <div className="rounded-lg border border-border bg-surface p-6">
+              <p className="mb-4 text-sm text-muted">Connect your wallet to view your credits</p>
+              <Link
+                href="/chat"
+                className="inline-block rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:brightness-110"
+              >
+                Connect wallet
               </Link>
             </div>
+          )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-              <div style={card}>
-                <div style={label}>TOTAL PAYMENTS</div>
-                <div style={{ fontSize: 24, fontWeight: 600, color: "#e2e8f0", fontFamily: "monospace" }}>{receipts.length}</div>
-              </div>
-              <div style={card}>
-                <div style={label}>TOTAL USDC SPENT</div>
-                <div style={{ fontSize: 24, fontWeight: 600, color: "#34d399", fontFamily: "monospace" }}>{totalSpent.toFixed(3)}</div>
-              </div>
+          {state === "error" && (
+            <div className="rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 font-mono text-xs text-danger">
+              {errorMsg}
             </div>
+          )}
 
-            <div>
-              <div style={label}>PAYMENT HISTORY</div>
-              {receipts.length === 0 ? (
-                <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>No USDC payments found for this wallet</p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {receipts.map((r) => (
-                    <PaymentReceipt key={r.txHash + r.from + r.to} {...r} />
-                  ))}
+          {state === "ready" && (
+            <div className="space-y-4">
+              {/* Credit balance */}
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-surface p-6">
+                <div>
+                  <p className="font-mono text-xs font-semibold uppercase tracking-widest text-muted">Credits</p>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className="font-mono text-5xl font-semibold text-text leading-none">{credits}</span>
+                    <span className="text-sm text-muted">queries remaining</span>
+                  </div>
                 </div>
-              )}
+                <Link
+                  href="/chat"
+                  className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110 whitespace-nowrap"
+                >
+                  Buy more credits
+                </Link>
+              </div>
+
+              {/* Stats */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-surface p-6">
+                  <p className="font-mono text-xs font-semibold uppercase tracking-widest text-muted">Total payments</p>
+                  <p className="mt-2 font-mono text-3xl font-semibold text-text">{receipts.length}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-surface p-6">
+                  <p className="font-mono text-xs font-semibold uppercase tracking-widest text-muted">Total USDC spent</p>
+                  <p className="mt-2 font-mono text-3xl font-semibold text-accent-text">{totalSpent.toFixed(3)}</p>
+                </div>
+              </div>
+
+              {/* Payment history */}
+              <div>
+                <p className="mb-3 font-mono text-xs font-semibold uppercase tracking-widest text-muted">Payment history</p>
+                {receipts.length === 0 ? (
+                  <p className="text-sm text-muted">No USDC payments found for this wallet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {receipts.map((r) => (
+                      <PaymentReceipt key={r.txHash + r.from + r.to} {...r} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
 
+      {walletModalOpen && (
+        <WalletModal onConnect={(addr) => { setConnectedWallet(addr); setWalletModalOpen(false); }} onClose={() => setWalletModalOpen(false)} />
+      )}
+
       <style>{`
-        html, body { background: #010503; margin: 0; overflow-x: hidden; }
-        * { box-sizing: border-box; }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
         @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
       `}</style>
