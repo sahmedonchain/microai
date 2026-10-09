@@ -39,7 +39,7 @@ export type NavItem = {
 export const NAV_GROUPS: readonly NavGroup[] = [
   { id: "build", label: "Build", icon: Wrench },
   { id: "analyze", label: "Analyze", icon: Activity },
-  { id: "ecosystem", label: "Ecosystem", icon: Globe },
+  { id: "ecosystem", label: "Explore", icon: Globe },
   { id: "account", label: "Account", icon: User },
   { id: "developer", label: "Developer resources", icon: BookOpen },
 ];

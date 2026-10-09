@@ -20,7 +20,7 @@ describe("menu config", () => {
       "Chat",
       "Build: Copilot, Debug",
       "Analyze: Wallet, Stats",
-      "Ecosystem: Ecosystem, Grants, News, Build status",
+      "Explore: Ecosystem, Grants, News, Build status",
       "Account: Credits",
       "Developer resources: Arc Developer Docs, Circle Documentation, USDC Resources",
     ]);
