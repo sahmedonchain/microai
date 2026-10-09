@@ -148,7 +148,7 @@ export function CopilotTab() {
       const res = await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address, signature }),
+        body: JSON.stringify({ address, signature, message }),
       });
       return res.ok;
     } catch {

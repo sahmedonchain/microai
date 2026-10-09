@@ -1,77 +1,71 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { ethers } from "ethers";
+import { ApiError, apiErrors, parseJson, withApi } from "@/lib/api";
+import { ARC_MAINNET } from "@/lib/arcConfig";
 import { consumeNonce } from "@/lib/nonce";
-import { buildAuthMessage } from "@/lib/siwe";
-import { issueSessionToken, verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { sessionPostBody } from "@/lib/schemas";
+import { issueSessionToken, SESSION_COOKIE } from "@/lib/session";
+import { parseSiweMessage, siweContext, validateSiweFields } from "@/lib/siwe";
 
 const isProd = process.env.NODE_ENV === "production";
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
-export async function GET() {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  const session = token ? verifySessionToken(token) : null;
+export const GET = withApi({ name: "session-get", auth: "optional", limits: [{ limit: 60, windowSec: 60 }] }, async ({ session }) => {
+  if (!session) return { authenticated: false };
+  return { authenticated: true, address: session.sub, expiresAt: session.exp * 1000 };
+});
 
-  if (!session) {
-    return NextResponse.json({ authenticated: false });
+export const POST = withApi({ name: "session-create", limits: [{ limit: 10, windowSec: 60 }] }, async ({ req, log }) => {
+  const { address, signature, message } = await parseJson(req, sessionPostBody);
+
+  const fields = parseSiweMessage(message);
+  if (!fields) throw apiErrors.badRequest("Invalid sign-in message.");
+
+  // Consume first: a nonce is spent by any attempt, valid or not.
+  const stored = await consumeNonce(fields.nonce);
+  if (!stored) throw apiErrors.badRequest("Signing request expired or already used. Please try again.");
+
+  const context = siweContext(req);
+  const problem = validateSiweFields(fields, { ...context, chainId: ARC_MAINNET.chainId });
+  if (problem) throw apiErrors.badRequest(problem);
+
+  // The message must be byte-for-byte the one we issued for this wallet.
+  if (
+    message !== stored.message ||
+    fields.address.toLowerCase() !== stored.address ||
+    address.toLowerCase() !== stored.address
+  ) {
+    throw apiErrors.badRequest("Sign-in message does not match the request.");
   }
-  return NextResponse.json({ authenticated: true, address: session.sub, expiresAt: session.exp * 1000 });
-}
 
-export async function POST(req: Request) {
+  let recovered: string;
   try {
-    const { address, signature } = await req.json();
-
-    if (!address || !ethers.isAddress(address) || typeof signature !== "string") {
-      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-    }
-
-    const stored = await consumeNonce(address);
-    if (!stored) {
-      return NextResponse.json({ error: "Signing request expired. Please try again." }, { status: 400 });
-    }
-
-    if (new Date(stored.expiresAt).getTime() < Date.now()) {
-      return NextResponse.json({ error: "Signing request expired. Please try again." }, { status: 400 });
-    }
-
-    const message = buildAuthMessage(address, stored.nonce, stored.expiresAt);
-
-    let recovered: string;
-    try {
-      recovered = ethers.verifyMessage(message, signature);
-    } catch {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-
-    if (recovered.toLowerCase() !== address.toLowerCase()) {
-      return NextResponse.json({ error: "Signature does not match address" }, { status: 401 });
-    }
-
-    const token = issueSessionToken(address);
-    const res = NextResponse.json({
-      ok: true,
-      address: address.toLowerCase(),
-      expiresAt: Date.now() + 60 * 60 * 24 * 1000,
-    });
-
-    res.cookies.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24,
-    });
-
-    return res;
-  } catch (err: unknown) {
-    console.error("Session creation error:", err);
-    return NextResponse.json({ error: "Session creation failed" }, { status: 500 });
+    recovered = ethers.verifyMessage(message, signature);
+  } catch {
+    throw new ApiError(401, "session_required", "Invalid signature");
   }
-}
+  if (recovered.toLowerCase() !== stored.address) {
+    log.warn("sign-in signature did not match the address");
+    throw new ApiError(401, "session_required", "Signature does not match address");
+  }
 
-export async function DELETE() {
+  const res = NextResponse.json({
+    ok: true,
+    address: stored.address,
+    expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
+  });
+  res.cookies.set(SESSION_COOKIE, issueSessionToken(stored.address), {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  });
+  return res;
+});
+
+export const DELETE = withApi({ name: "session-delete", limits: [{ limit: 30, windowSec: 60 }] }, async () => {
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
   return res;
-}
+});

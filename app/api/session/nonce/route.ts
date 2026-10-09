@@ -1,27 +1,38 @@
-import { NextResponse } from "next/server";
-import { ethers } from "ethers";
 import crypto from "crypto";
+import { ethers } from "ethers";
+import { apiErrors, parseQuery, withApi } from "@/lib/api";
+import { ARC_MAINNET } from "@/lib/arcConfig";
 import { storeNonce } from "@/lib/nonce";
-import { buildAuthMessage } from "@/lib/siwe";
+import { consume } from "@/lib/rateLimit";
+import { nonceQuery } from "@/lib/schemas";
+import { buildSiweMessage, siweContext, SIWE_STATEMENT, SIWE_TTL_MS } from "@/lib/siwe";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const address = searchParams.get("address");
+// Public by necessity (it starts the sign-in), so it is rate-limited per IP
+// and per address.
+export const GET = withApi({ name: "session-nonce", limits: [{ limit: 10, windowSec: 60 }] }, async ({ req }) => {
+  const { address } = parseQuery(req, nonceQuery);
+  const checksummed = ethers.getAddress(address);
 
-  if (!address || !ethers.isAddress(address)) {
-    return NextResponse.json({ error: "Invalid address" }, { status: 400 });
-  }
+  const perAddress = await consume(`session-nonce:addr:${checksummed.toLowerCase()}`, 5, 60_000);
+  if (!perAddress.ok) throw apiErrors.tooMany(perAddress.retryAfterSec);
 
+  const now = Date.now();
   const nonce = crypto.randomBytes(16).toString("hex");
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+  const expiresAt = new Date(now + SIWE_TTL_MS).toISOString();
+  const { domain, uri } = siweContext(req);
 
-  try {
-    await storeNonce(address, nonce, expiresAt);
-  } catch (err) {
-    console.error("Nonce store error:", err);
-    return NextResponse.json({ error: "Could not start signing request" }, { status: 500 });
-  }
+  const message = buildSiweMessage({
+    domain,
+    address: checksummed,
+    statement: SIWE_STATEMENT,
+    uri,
+    version: "1",
+    chainId: ARC_MAINNET.chainId,
+    nonce,
+    issuedAt: new Date(now).toISOString(),
+    expirationTime: expiresAt,
+  });
 
-  const message = buildAuthMessage(address, nonce, expiresAt);
-  return NextResponse.json({ message });
-}
+  await storeNonce(nonce, { address: checksummed.toLowerCase(), message, expiresAt });
+  return { message };
+});

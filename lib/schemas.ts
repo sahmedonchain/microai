@@ -41,5 +41,5 @@ export const nonceQuery = z.object({ address: EVM_ADDRESS });
 export const sessionPostBody = z.object({
   address: EVM_ADDRESS,
   signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/, "Invalid signature format."),
-  message: z.string().min(1).max(2000).optional(),
+  message: z.string().min(1, "Sign-in message is required. Reload the page and sign in again.").max(2000),
 });
