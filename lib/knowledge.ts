@@ -1,3 +1,5 @@
+import { describeAddress, describeAddresses, getAddress as getAddr } from "./arcAddresses";
+
 export const knowledgeBase = [
 
   // ============================================================
@@ -251,14 +253,8 @@ COMPLETE NETWORK DETAILS:
 - Currency symbol: USDC
 - Block Explorer: https://explorer.arc.io
 
-CONTRACT ADDRESSES (MAINNET):
-- USDC: 0x3600000000000000000000000000000000000000
-- EURC: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
-- CCTP TokenMessengerV2: Mainnet 0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d | Testnet 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA
-- CCTP MessageTransmitterV2: Mainnet 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64 | Testnet 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
-- Gateway: 0x0077777d7EBA4688BDeF3E311b846F25870A19B9
-- ERC-8004 IdentityRegistry: 0x8004A818BFB912233c491871b3d84c89A494BD9e
-- ERC-8183 AgenticCommerce: 0x0747EEf0706327138c69792bF28Cd525089e4583
+CONTRACT ADDRESSES (each labelled with its network):
+${describeAddresses(["usdc", "eurc", "tokenMessengerV2", "messageTransmitterV2", "gatewayWallet", "gatewayMinter", "erc8004Identity", "erc8183AgenticCommerce"])}
 
 SOURCE:
 docs.arc.io/arc/references/connect-to-arc.md
@@ -492,19 +488,8 @@ docs.arc.io/arc/references/gas-and-fees.md
 SHORT_ANSWER:
 USDC Contract on Arc MAINNET: 0x3600000000000000000000000000000000000000 (6 decimals for ERC-20 interface)
 
-ALL CONTRACT ADDRESSES (Arc MAINNET):
-- USDC: 0x3600000000000000000000000000000000000000
-- EURC: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
-- USYC: 0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C
-- CCTP TokenMessengerV2: Mainnet 0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d | Testnet 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA
-- CCTP MessageTransmitterV2: Mainnet 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64 | Testnet 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
-- Gateway Wallet: 0x0077777d7EBA4688BDeF3E311b846F25870A19B9
-- StableFX Escrow: 0x867650F5eAe8df91445971f14d89fd84F0C9a9f8
-- ERC-8004 IdentityRegistry: 0x8004A818BFB912233c491871b3d84c89A494BD9e
-- ERC-8183 AgenticCommerce: 0x0747EEf0706327138c69792bF28Cd525089e4583
-- Multicall3: 0xcA11bde05977b3631167028862bE2a173976CA11
-- Permit2: 0x000000000022D473030F116dDEE9F6B43aC78BA3
-- CREATE2 Factory: 0x4e59b44847b379578588920cA78FbF26c0B4956C
+ALL VERIFIED CONTRACT ADDRESSES (each labelled with its network; "not published" means the Arc docs list no address for that network):
+${describeAddresses(["usdc", "eurc", "usyc", "tokenMessengerV2", "messageTransmitterV2", "gatewayWallet", "gatewayMinter", "fxEscrow", "erc8004Identity", "erc8004Reputation", "erc8004Validation", "erc8183AgenticCommerce", "multicall3", "permit2"])}
 
 IMPORTANT: USDC uses 6 decimals for ERC-20 interface, 18 decimals for native gas accounting. Use ERC-20 interface (6 decimals) for application-level transfers.
 
@@ -944,8 +929,8 @@ Step 2: Upload to IPFS (Pinata)
 Step 3: Register using Circle SDK
 const tx = await client.createContractExecutionTransaction({
   walletAddress: ownerWalletAddress,
-  blockchain: "ARC-MAINNET",
-  contractAddress: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  blockchain: "ARC-TESTNET", // the registry address below is published for Arc Testnet only
+  contractAddress: "${getAddr("erc8004Identity", "testnet")}", // Arc Testnet IdentityRegistry
   abiFunctionSignature: "register(string)",
   abiParameters: ["ipfs://YOUR_CID"],
   fee: { type: "level", config: { feeLevel: "MEDIUM" } },
@@ -955,10 +940,8 @@ Step 4: Get your Agent ID
 // Listen for Transfer event to get tokenId (your Agent ID)
 // Or check your wallet on explorer.arc.io
 
-CONTRACT ADDRESSES:
-- IdentityRegistry: 0x8004A818BFB912233c491871b3d84c89A494BD9e
-- ReputationRegistry: 0x8004B663056A597Dffe9eCcC1965A193B7388713
-- ValidationRegistry: 0x8004Cb1BF31DAf7788923b405b754f57acEB4272
+CONTRACT ADDRESSES (the Arc docs publish these for Testnet only):
+${describeAddresses(["erc8004Identity", "erc8004Reputation", "erc8004Validation"])}
 
 SOURCE:
 docs.arc.io/arc/tutorials/register-your-first-ai-agent.md
@@ -978,13 +961,13 @@ Client creates job → Provider sets budget → Client approves + funds USDC esc
 
 COMPLETE GUIDE:
 
-CONTRACT: 0x0747EEf0706327138c69792bF28Cd525089e4583
+CONTRACT: ${describeAddress("erc8183AgenticCommerce")}
 
 Step 1: Create job (client wallet)
 const tx = await client.createContractExecutionTransaction({
   walletAddress: clientWalletAddress,
-  blockchain: "ARC-MAINNET",
-  contractAddress: "0x0747EEf0706327138c69792bF28Cd525089e4583",
+  blockchain: "ARC-TESTNET", // the AgenticCommerce address below is published for Arc Testnet only
+  contractAddress: "${getAddr("erc8183AgenticCommerce", "testnet")}", // Arc Testnet AgenticCommerce
   abiFunctionSignature: "createJob(address,address,uint256,string,address)",
   abiParameters: [
     providerAddress,           // who does the work
@@ -1106,9 +1089,7 @@ Step 4: Call receiveMessage on MessageTransmitterV2 (Arc)
 
 ARC CCTP CONTRACTS:
 - Domain: 26
-- TokenMessengerV2: Mainnet 0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d | Testnet 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA
-- MessageTransmitterV2: Mainnet 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64 | Testnet 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
-- TokenMinterV2: 0xb43db544E2c27092c107639Ad201b3dEfAbcF192
+${describeAddresses(["tokenMessengerV2", "messageTransmitterV2"])}
 
 SUPPORTED CHAINS: Ethereum, Base, Arbitrum, Optimism, Polygon, Solana, Avalanche, and more
 
@@ -2476,10 +2457,8 @@ Step 3: Once approved, go to USYC Portal (usyc.dev.hashnote.com)
 Step 4: Deposit MAINNET USDC to receive USYC
 Step 5: Or call the USYC Teller contract directly
 
-USYC CONTRACT ADDRESSES (Arc MAINNET):
-- USYC: 0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C
-- Entitlements: 0xcc205224862c7641930c87679e98999d23c26113
-- Teller: 0x9fdF14c5B14173D74C08Af27AebFf39240dC105A
+USYC CONTRACT ADDRESSES (each labelled with its network):
+${describeAddresses(["usyc", "usycTeller", "usycEntitlements"])}
 
 MAINNET RESTRICTIONS:
 - Only for institutions outside the US
@@ -2508,9 +2487,9 @@ HOW IT WORKS:
 5. No slippage risk — price locked at quote time
 
 STABLEFX CONTRACTS (Arc MAINNET):
-- FxEscrow: 0x867650F5eAe8df91445971f14d89fd84F0C9a9f8
+${describeAddresses(["fxEscrow"])}
 - Requires Permit2 for USDC approval
-- Permit2: 0x000000000022D473030F116dDEE9F6B43aC78BA3
+${describeAddresses(["permit2"])}
 
 USE CASES:
 - Treasury management (convert USDC to EURC for EU operations)
@@ -2565,9 +2544,7 @@ Uses 6 decimals. Acquire EURC via exchange withdrawal or CCTP bridge (no faucet 
     content: `
 SHORT_ANSWER:
 Circle Cross-Chain Transfer Protocol (CCTP) contracts on Arc MAINNET (Domain 26):
-- TokenMessengerV2: Mainnet 0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d | Testnet 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA
-- MessageTransmitterV2: Mainnet 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64 | Testnet 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
-- TokenMinterV2: 0xb43db544E2c27092c107639Ad201b3dEfAbcF192
+${describeAddresses(["tokenMessengerV2", "messageTransmitterV2"])}
 - Arc CCTP Domain ID: 26
 
 HOW CCTP WORKS:
@@ -2585,9 +2562,8 @@ No wrapped tokens — fully native USDC on both sides.
     content: `
 SHORT_ANSWER:
 USYC is Circle's yield-bearing tokenized money market fund on Arc.
-- USYC: 0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C
-- Teller (mint/redeem): 0x9fdF14c5B14173D74C08Af27AebFf39240dC105A
-- Entitlements (access control): 0xcc205224862c7641930c87679e98999d23c26113
+${describeAddresses(["usyc", "usycTeller", "usycEntitlements"])}
+(Teller mints and redeems; Entitlements handles allowlisted access.)
 
 IMPORTANT: Only accessible to institutions outside the US. Minimum $100K USD. Requires allowlisting by Circle Support.
 `,

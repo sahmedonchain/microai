@@ -9,6 +9,13 @@
 // Re-check those pages before editing a value; anything not on them must stay
 // out of the prompt (the model is told to say "verify in Arc docs" instead).
 
+import { describeAddresses, networkSummary, type AddressKey } from "./arcAddresses";
+
+const PROMPT_ADDRESS_KEYS: readonly AddressKey[] = [
+  "usdc", "eurc", "usyc", "tokenMessengerV2", "messageTransmitterV2", "gatewayWallet", "gatewayMinter", "multicall3", "permit2", "fxEscrow",
+  "erc8004Identity", "erc8004Reputation", "erc8004Validation", "erc8183AgenticCommerce",
+];
+
 export type Mode =
   | "ARCHITECT"
   | "CONTRACT"
@@ -69,20 +76,12 @@ Gas and units
 - Arc docs do not pin a Solidity compiler version: tell the user to verify the supported version in the Arc docs.
 
 Networks
-- Arc Mainnet: chain ID 5042 (0x13b2). RPC https://rpc.mainnet.arc.io. Explorer https://explorer.arc.io.
-- Arc Testnet: chain ID 5042002 (0x4cef52). RPC https://rpc.testnet.arc.io. Explorer https://explorer.testnet.arc.io. Faucet https://faucet.circle.com.
+${networkSummary()}
 - Other documented RPC providers exist (Blockdaemon, dRPC, QuickNode, Alchemy); for anything beyond the primary RPCs above say "see docs.arc.io/arc/references/connect-to-arc".
 
-Addresses (6 decimals unless noted)
-- USDC (ERC-20 interface): 0x3600000000000000000000000000000000000000 on Mainnet AND Testnet.
-- EURC: Mainnet 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1 | Testnet 0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a.
-- USYC: Mainnet 0x8a5D989Bbb96929F689B0200f435f53dA42bF490 | Testnet 0xe9185F0c5F296Ed1797AaE4238D26CCaBEadb86C.
-- CCTP TokenMessengerV2 (domain 26): Mainnet 0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d | Testnet 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA.
-- CCTP MessageTransmitterV2 (domain 26): Mainnet 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64 | Testnet 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275.
-- GatewayWallet (domain 26): Mainnet 0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE | Testnet 0x0077777d7EBA4688BDeF3E311b846F25870A19B9.
-- GatewayMinter (domain 26): Mainnet 0x2222222d7164433c4C09B0b0D809a9b52C04C205 | Testnet 0x0022222ABE238Cc2C7Bb1f21003F0a260052475B.
-- Multicall3: 0xcA11bde05977b3631167028862bE2a173976CA11 (Mainnet and Testnet). Permit2: 0x000000000022D473030F116dDEE9F6B43aC78BA3 (Mainnet and Testnet).
-- Always name the network next to an address. The Mainnet and Testnet addresses differ for EURC, USYC, CCTP and Gateway.
+Addresses (6 decimals unless noted; every address names its network)
+${describeAddresses(PROMPT_ADDRESS_KEYS)}
+- Always name the network next to an address. Mainnet and Testnet addresses differ for EURC, USYC, CCTP and Gateway. Where an entry says "Mainnet not published", do not invent one.
 
 Standards: ERC-8004 (AI agent identity and reputation) and ERC-8183 (job lifecycle: escrow, deliverables, USDC settlement).
 

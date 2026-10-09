@@ -1,21 +1,11 @@
-import { Redis } from "@upstash/redis";
+import { getRedis } from "./redis";
 
 // Prepaid query credit ledger, keyed by wallet address (never trust an
 // address from a request body — callers must derive it from the verified
 // session). Stored in Redis so credit survives across serverless instances.
 const TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
 
-let client: Redis | null = null;
-
-function getClient(): Redis {
-  if (!client) {
-    client = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-  }
-  return client;
-}
+const getClient = getRedis;
 
 function creditKey(address: string): string {
   return `microai:credit:${address.toLowerCase()}`;

@@ -1,11 +1,8 @@
-import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { apiErrors, parseJson, withApi } from "@/lib/api";
+import { z } from "zod";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const RATE_LIMIT = 20; // requests
-const RATE_WINDOW_MS = 60_000; // per minute, per IP
 
 const MAX_QUERY_LENGTH = 300;
 const MAX_PROJECTS = 500;
@@ -14,37 +11,16 @@ const MAX_NAME_LENGTH = 80;
 // lib/ecosystemEnrichment only exports TVL helpers; the project directory
 // itself lives in the ecosystem page, so the page sends its project names
 // with the query. They are bounded and only ever used as a candidate list.
-export async function POST(req: Request) {
-  const ip = getClientIp(req);
-  if (!checkRateLimit(`ecosystem-search:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) {
-    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
-  }
+const body = z.object({
+  query: z.string().trim().min(1, "Query is required.").max(MAX_QUERY_LENGTH, `Query must be ${MAX_QUERY_LENGTH} characters or fewer.`),
+  projects: z.array(z.string()).max(MAX_PROJECTS).optional(),
+});
 
-  let query: string;
-  let names: string[];
-  try {
-    const body = await req.json();
-    query = typeof body?.query === "string" ? body.query.trim() : "";
-    names = Array.isArray(body?.projects)
-      ? body.projects
-          .filter((n: unknown): n is string => typeof n === "string")
-          .map((n: string) => n.trim().slice(0, MAX_NAME_LENGTH))
-          .filter(Boolean)
-          .slice(0, MAX_PROJECTS)
-      : [];
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
-
-  if (!query) {
-    return NextResponse.json({ error: "Query is required." }, { status: 400 });
-  }
-  if (query.length > MAX_QUERY_LENGTH) {
-    return NextResponse.json({ error: `Query must be ${MAX_QUERY_LENGTH} characters or fewer.` }, { status: 400 });
-  }
-  if (names.length === 0) {
-    return NextResponse.json({ error: "No projects provided to search." }, { status: 400 });
-  }
+export const POST = withApi({ name: "ecosystem-search", limits: [{ limit: 20, windowSec: 60 }] }, async ({ req, log }) => {
+  const parsed = await parseJson(req, body);
+  const query = parsed.query;
+  const names = (parsed.projects ?? []).map((n) => n.trim().slice(0, MAX_NAME_LENGTH)).filter(Boolean);
+  if (names.length === 0) throw apiErrors.badRequest("No projects provided to search.");
 
   try {
     const completion = await groq.chat.completions.create({
@@ -62,9 +38,9 @@ export async function POST(req: Request) {
     });
 
     const answer = completion.choices[0]?.message?.content?.trim() || "No answer could be generated.";
-    return NextResponse.json({ answer, query });
+    return { answer, query };
   } catch (err) {
-    console.error("Ecosystem search error:", err);
-    return NextResponse.json({ error: "Search failed. Please try again." }, { status: 500 });
+    log.error("Ecosystem search error", { err });
+    throw apiErrors.internal("Search failed. Please try again.");
   }
-}
+});

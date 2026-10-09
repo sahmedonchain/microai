@@ -1,17 +1,14 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { ApiError, apiErrors, parseJson, withApi } from "@/lib/api";
 import { claimTxHash, releaseTxHash } from "@/lib/usedTx";
 import { addCredit } from "@/lib/credits";
-import { isValidQueryCount, computeBundleAmount } from "@/lib/pricing";
+import { computeBundleAmount } from "@/lib/pricing";
+import { rpcCall } from "@/lib/arcRpc";
+import { ERC20_TRANSFER_TOPIC, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
+import { purchaseBody } from "@/lib/schemas";
 
-const ARC_RPC = "https://rpc.mainnet.arc.io";
-const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const RECEIVER = "0x78C144A76614A8674285129810555C8bCa78f044";
-
-const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
-// keccak256("Transfer(address,address,uint256)")
-const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const USDC_CONTRACT = USDC_ADDRESS;
+const RECEIVER = PAYMENT_RECEIVER;
+const TRANSFER_TOPIC = ERC20_TRANSFER_TOPIC;
 const MAX_TX_AGE_MS = 10 * 60 * 1000;
 
 class PaymentVerificationError extends Error {}
@@ -20,23 +17,11 @@ function topicToAddress(topic: string): string {
   return "0x" + topic.slice(-40);
 }
 
-async function rpcCall(method: string, params: unknown[]) {
-  const res = await fetch(ARC_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    cache: "no-store",
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  return data.result;
-}
-
 // Verifies txHash is a real, recent, exact transfer of `expectedAmount` USDC
 // units from walletAddress (the session-verified address, never a
 // client-supplied one) to RECEIVER, then atomically marks it spent.
 async function verifyPurchase(txHash: string, walletAddress: string, expectedAmount: number): Promise<void> {
-  const receipt = await rpcCall("eth_getTransactionReceipt", [txHash]);
+  const receipt = await rpcCall<{ status?: string; logs?: unknown[]; blockNumber: string } | null>("eth_getTransactionReceipt", [txHash]);
   if (!receipt) {
     throw new PaymentVerificationError("Transaction not found on Arc MAINNET.");
   }
@@ -69,7 +54,7 @@ async function verifyPurchase(txHash: string, walletAddress: string, expectedAmo
     throw new PaymentVerificationError("Transfer sender does not match your session wallet.");
   }
 
-  const block = await rpcCall("eth_getBlockByNumber", [receipt.blockNumber, false]);
+  const block = await rpcCall<{ timestamp: string }>("eth_getBlockByNumber", [receipt.blockNumber, false]);
   const blockTimeMs = parseInt(block.timestamp, 16) * 1000;
   if (Date.now() - blockTimeMs > MAX_TX_AGE_MS) {
     throw new PaymentVerificationError("Transaction is too old.");
@@ -81,25 +66,11 @@ async function verifyPurchase(txHash: string, walletAddress: string, expectedAmo
   }
 }
 
-export async function POST(req: Request) {
-  try {
-    const store = await cookies();
-    const token = store.get(SESSION_COOKIE)?.value;
-    const session = token ? verifySessionToken(token) : null;
-
-    if (!session) {
-      return NextResponse.json({ error: "session_required" }, { status: 401 });
-    }
-    const walletAddress = session.sub;
-
-    const { txHash, queries } = await req.json();
-
-    if (typeof txHash !== "string" || !TX_HASH_RE.test(txHash)) {
-      return NextResponse.json({ error: "Invalid or missing transaction hash." }, { status: 400 });
-    }
-    if (!isValidQueryCount(queries)) {
-      return NextResponse.json({ error: "queries must be an integer between 1 and 1000." }, { status: 400 });
-    }
+export const POST = withApi(
+  { name: "credits-purchase", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
+  async ({ req, session, log }) => {
+    const walletAddress = session!.sub;
+    const { txHash, queries } = await parseJson(req, purchaseBody);
 
     // The expected charge is always computed here from the fixed per-query
     // price — the client's `queries` value is only ever used to derive what
@@ -110,8 +81,8 @@ export async function POST(req: Request) {
       await verifyPurchase(txHash, walletAddress, expectedAmount);
     } catch (err) {
       const message = err instanceof PaymentVerificationError ? err.message : "Payment verification failed.";
-      console.error("Credit purchase verification error:", err);
-      return NextResponse.json({ error: message }, { status: 402 });
+      log.error("credit purchase verification error", { err });
+      throw new ApiError(402, "payment_invalid", message);
     }
 
     // verifyPurchase() already claimed txHash (atomic NX) to block concurrent
@@ -122,19 +93,13 @@ export async function POST(req: Request) {
     try {
       newTotal = await addCredit(walletAddress, queries);
     } catch (err) {
-      console.error("addCredit failed after claiming txHash, releasing claim:", err);
+      log.error("addCredit failed after claiming txHash, releasing claim", { err });
       await releaseTxHash(txHash).catch((releaseErr) => {
-        console.error("Failed to release txHash after addCredit failure:", releaseErr);
+        log.error("failed to release txHash after addCredit failure", { err: releaseErr });
       });
-      return NextResponse.json(
-        { error: "Payment verified but crediting failed. Please retry with the same transaction." },
-        { status: 500 }
-      );
+      throw apiErrors.internal("Payment verified but crediting failed. Please retry with the same transaction.");
     }
 
-    return NextResponse.json({ ok: true, credits: newTotal, txHash });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Server error occurred." }, { status: 500 });
+    return { ok: true, credits: newTotal, txHash };
   }
-}
+);

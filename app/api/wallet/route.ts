@@ -1,14 +1,9 @@
-import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { apiErrors, parseJson, withApi } from "@/lib/api";
 import { explorerFetch } from "@/lib/arcExplorer";
+import { walletBody } from "@/lib/schemas";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
-
-const RATE_LIMIT = 10; // requests
-const RATE_WINDOW_MS = 60_000; // per minute, per IP
 
 const MAX_UINT_SUFFIX = "f".repeat(64);
 // Arc's native USDC uses 18 decimals, and TX `value` is denominated in them.
@@ -51,22 +46,8 @@ function computeRiskSignals(txs: ExplorerTx[]) {
   return { hasUnlimitedApproval, highValueTx, newContract, frequentSmallTx: recentCount > 10 };
 }
 
-export async function POST(req: Request) {
-  const ip = getClientIp(req);
-  if (!checkRateLimit(`wallet:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) {
-    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
-  }
-
-  let address: string;
-  try {
-    const body = await req.json();
-    address = typeof body?.address === "string" ? body.address.trim() : "";
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
-  if (!ADDRESS_RE.test(address)) {
-    return NextResponse.json({ error: "Invalid address. Must be 0x followed by 40 hex characters." }, { status: 400 });
-  }
+export const POST = withApi({ name: "wallet", auth: "optional", limits: [{ limit: 10, windowSec: 60 }] }, async ({ req, log }) => {
+  const { address } = await parseJson(req, walletBody);
 
   const [profileRes, txRes, tokenRes, countersRes] = await Promise.all([
     explorerFetch<object>(`/addresses/${address}`),
@@ -75,14 +56,9 @@ export async function POST(req: Request) {
     explorerFetch<{ transactions_count?: string }>(`/addresses/${address}/counters`),
   ]);
 
-  if (!profileRes.ok && profileRes.kind === "not_found") {
-    return NextResponse.json({ error: "Address not found on Arc Mainnet." }, { status: 404 });
-  }
+  if (!profileRes.ok && profileRes.kind === "not_found") throw apiErrors.notFound("Address not found on Arc Mainnet.");
   if (!profileRes.ok || !txRes.ok || !tokenRes.ok) {
-    return NextResponse.json(
-      { error: "Arc Explorer is unreachable right now. Try again in a moment." },
-      { status: 502 }
-    );
+    throw apiErrors.upstream("Arc Explorer is unreachable right now. Try again in a moment.");
   }
 
   const profile = profileRes.data;
@@ -123,14 +99,14 @@ Risk signals detected: ${JSON.stringify(riskSignals)}`,
     });
     aiSummary = completion.choices[0]?.message?.content?.trim() || "";
   } catch (err) {
-    console.error("Wallet AI summary error:", err);
+    log.error("Wallet AI summary error", { err });
   }
 
-  return NextResponse.json({
+  return {
     profile: { ...profile, tx_count: txCount },
     transactions,
     tokenBalances,
     riskSignals,
     aiSummary: aiSummary || "AI summary is unavailable right now.",
-  });
-}
+  };
+});

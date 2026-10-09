@@ -1,11 +1,13 @@
 "use client";
+import { USDC_ADDRESS } from "@/lib/arcConfig";
+import { ARC_ADDRESSES } from "@/lib/arcAddresses";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WalletModal } from "@/app/components/WalletModal";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
-const USDC = "0x3600000000000000000000000000000000000000";
-const EURC = "0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1";
+const USDC = USDC_ADDRESS;
+const EURC = ARC_ADDRESSES.eurc.mainnet.toLowerCase();
 
 interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;

@@ -1,17 +1,13 @@
-import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { apiErrors, parseJson, withApi } from "@/lib/api";
 import { explorerFetch } from "@/lib/arcExplorer";
+import { debugAnalyzeBody } from "@/lib/schemas";
+import { ARC_MAINNET, USDC_ADDRESS } from "@/lib/arcConfig";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const ARC_CHAIN_ID = 5042;
-
-const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
-
-const RATE_LIMIT = 10; // requests
-const RATE_WINDOW_MS = 60_000; // per minute, per IP
+const USDC_CONTRACT = USDC_ADDRESS;
+const ARC_CHAIN_ID = ARC_MAINNET.chainId;
 
 interface TxData {
   hash: string;
@@ -155,37 +151,18 @@ If the transaction succeeded, set severity to "low" and explain what it did.
 If it failed, identify the root cause from: insufficient USDC balance, wrong chain, gas limit too low, contract revert, invalid input, nonce issue, or other.`;
 }
 
-export async function POST(req: Request) {
-  const ip = getClientIp(req);
-  if (!checkRateLimit(`debug-analyze:${ip}`, RATE_LIMIT, RATE_WINDOW_MS)) {
-    return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
-  }
-
-  let txHash: string;
-  try {
-    const body = await req.json();
-    txHash = typeof body?.txHash === "string" ? body.txHash.trim() : "";
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
-
-  // Strict format check — this endpoint only ever accepts a tx hash, never
-  // an arbitrary message, so it can't be used as a free general-purpose chat route.
-  if (!TX_HASH_RE.test(txHash)) {
-    return NextResponse.json({ error: "Invalid transaction hash. Must be 0x followed by 64 hex characters." }, { status: 400 });
-  }
+export const POST = withApi({ name: "debug-analyze", auth: "optional", limits: [{ limit: 10, windowSec: 60 }] }, async ({ req, log }) => {
+  // This endpoint only ever accepts a tx hash (validated by the schema), never
+  // an arbitrary message, so it cannot be used as a free general-purpose chat route.
+  const { txHash } = await parseJson(req, debugAnalyzeBody);
 
   const txRes = await explorerFetch<TxData>(`/transactions/${txHash}`);
   if (!txRes.ok) {
-    if (txRes.kind === "not_found") {
-      return NextResponse.json({ error: "Transaction not found on Arc Mainnet. Check the hash and try again." }, { status: 404 });
-    }
-    return NextResponse.json({ error: "Arc Explorer is unreachable right now. Try again in a moment." }, { status: 502 });
+    if (txRes.kind === "not_found") throw apiErrors.notFound("Transaction not found on Arc Mainnet. Check the hash and try again.");
+    throw apiErrors.upstream("Arc Explorer is unreachable right now. Try again in a moment.");
   }
   const txData = txRes.data;
-  if (!txData?.hash) {
-    return NextResponse.json({ error: "Transaction not found on Arc Mainnet. Check the hash and try again." }, { status: 404 });
-  }
+  if (!txData?.hash) throw apiErrors.notFound("Transaction not found on Arc Mainnet. Check the hash and try again.");
 
   const [transferItems, internalItems] = await Promise.all([
     fetchItems(txHash, "token-transfers"),
@@ -219,9 +196,9 @@ export async function POST(req: Request) {
       };
     }
 
-    return NextResponse.json({ ...parsed, txData, tokenTransfers, internalTxs, decodedFunction, correctedFlow });
+    return { ...parsed, txData, tokenTransfers, internalTxs, decodedFunction, correctedFlow };
   } catch (err) {
-    console.error("Debug analysis error:", err);
-    return NextResponse.json({ error: "Analysis failed. Please try again." }, { status: 500 });
+    log.error("Debug analysis error", { err });
+    throw apiErrors.internal("Analysis failed. Please try again.");
   }
-}
+});

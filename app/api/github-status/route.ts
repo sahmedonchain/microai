@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
-import { isTrackedRepo } from "@/lib/trackedRepos";
+import { getRedis } from "@/lib/redis";
+import { ApiError, apiErrors, parseQuery, withApi } from "@/lib/api";
+import { githubStatusQuery } from "@/lib/schemas";
+import { createLogger } from "@/lib/logger";
 
 const CACHE_TTL_SECONDS = 12 * 60; // 12 min, within the requested 10-15 min window
 const FETCH_TIMEOUT_MS = 5000;
@@ -11,17 +12,6 @@ interface GithubStatusPayload {
   stars: number;
   forks: number;
   name: string;
-}
-
-let redisClient: Redis | null = null;
-function getRedis(): Redis {
-  if (!redisClient) {
-    redisClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-  }
-  return redisClient;
 }
 
 function cacheKey(repo: string) {
@@ -58,7 +48,7 @@ async function fetchGithub(repo: string): Promise<GithubStatusPayload> {
   // fall back to unauthenticated access (lower rate limit, same data) so the
   // page still works until the token is replaced.
   if (res.status === 401 && token) {
-    console.error("GITHUB_TOKEN was rejected by GitHub (401 Bad credentials). Replace it; falling back to unauthenticated requests.");
+    log.error("GITHUB_TOKEN was rejected by GitHub (401 Bad credentials). Replace it; falling back to unauthenticated requests.");
     res = await requestRepo(repo, undefined);
   }
 
@@ -88,26 +78,18 @@ async function fetchGithubWithRetry(repo: string): Promise<GithubStatusPayload> 
   }
 }
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const repo = searchParams.get("repo");
+// The error strings are the literal values the Build status UI matches on.
+const log = createLogger({ route: "github-status" });
 
-  if (!repo) {
-    return NextResponse.json({ error: "Missing repo" }, { status: 400 });
-  }
-  if (!isTrackedRepo(repo)) {
-    return NextResponse.json({ error: "Repo not tracked" }, { status: 400 });
-  }
-
+export const GET = withApi({ name: "github-status", limits: [{ limit: 60, windowSec: 60 }] }, async ({ req }) => {
+  const { repo } = parseQuery(req, githubStatusQuery);
   const key = cacheKey(repo);
 
   // Redis-cached fast path — instant load, avoids hammering the GitHub API
   // (and its rate limit) on every page view/refresh across every visitor.
   try {
     const cached = await getRedis().get<GithubStatusPayload>(key);
-    if (cached) {
-      return NextResponse.json({ ...cached, cached: true });
-    }
+    if (cached) return { ...cached, cached: true };
   } catch {
     /* Redis unreachable — fall through to a live fetch */
   }
@@ -119,15 +101,11 @@ export async function GET(req: Request) {
     } catch {
       /* Redis write failure shouldn't fail the request — still return live data */
     }
-    return NextResponse.json({ ...data, cached: false });
+    return { ...data, cached: false };
   } catch (err: unknown) {
-    console.error(`GitHub status error for ${repo}:`, err);
-    if (err instanceof GithubError && err.kind === "not_found") {
-      return NextResponse.json({ error: "not_found" }, { status: 404 });
-    }
-    if (err instanceof GithubError && err.kind === "rate_limited") {
-      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
-    }
-    return NextResponse.json({ error: "api_error" }, { status: 502 });
+    log.error("GitHub status error", { repo, err });
+    if (err instanceof GithubError && err.kind === "not_found") throw new ApiError(404, "not_found", "not_found");
+    if (err instanceof GithubError && err.kind === "rate_limited") throw apiErrors.tooMany(60, "rate_limited");
+    throw apiErrors.upstream("api_error");
   }
-}
+});

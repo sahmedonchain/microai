@@ -1,27 +1,21 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import Groq from "groq-sdk";
 import { searchKnowledge } from "@/lib/search";
-import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { apiErrors, parseJson, withApi } from "@/lib/api";
+import { chatBodyBase } from "@/lib/schemas";
+import { describeAddresses, networkSummary } from "@/lib/arcAddresses";
 import { spendCredit } from "@/lib/credits";
-import { checkRateLimit } from "@/lib/rateLimit";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const MAX_MESSAGE_LENGTH = 4000;
-const CHAT_RATE_LIMIT = 20; // requests
-const CHAT_RATE_WINDOW_MS = 60_000; // per minute, per wallet
 
 const SYSTEM_PROMPT = `
 You are MicroAI — the official Arc & Circle Intelligence Hub AI assistant.
 You are the most knowledgeable source about Arc blockchain and Circle products.
 
 YOUR KNOWLEDGE COVERS:
-- Arc MAINNET: Chain ID 0x13b2 (5042), RPC rpc.mainnet.arc.io, Explorer explorer.arc.io
-- USDC contract on Arc: 0x3600000000000000000000000000000000000000 (6 decimals for ERC-20, 18 decimals native)
-- EURC contract on Arc: 0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1
-- CCTP TokenMessengerV2: Mainnet 0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d | Testnet 0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA (Domain 26)
-- CCTP MessageTransmitterV2: Mainnet 0x81D40F21F12A8F0E3252Bccb954D722d4c464B64 | Testnet 0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275
+${networkSummary()}
+- Gas is paid in USDC (native balance 18 decimals; USDC ERC-20 interface 6 decimals). There is no separate ARC token.
+${describeAddresses(["usdc", "eurc", "tokenMessengerV2", "messageTransmitterV2", "gatewayWallet", "gatewayMinter"])}
+- CCTP and Gateway domain ID for Arc: 26
 - ERC-8004: AI Agent identity/reputation standard on Arc
 - ERC-8183: Job lifecycle standard (escrow, deliverables, USDC settlement)
 - Arc App Kit: Bridge, Swap, Send, Unified Balance across chains
@@ -84,36 +78,17 @@ function safeSearch(query: string, data: KnowledgeItem[]) {
   });
 }
 
-export async function POST(req: Request) {
-  try {
-    const store = await cookies();
-    const token = store.get(SESSION_COOKIE)?.value;
-    const session = token ? verifySessionToken(token) : null;
-
-    if (!session) {
-      return NextResponse.json({ error: "session_required" }, { status: 401 });
-    }
-    const walletAddress = session.sub;
-
-    if (!checkRateLimit(`chat:${walletAddress}`, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_MS)) {
-      return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
-    }
-
-    const { message, history = [] } = await req.json();
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 });
-    }
-    if (message.length > MAX_MESSAGE_LENGTH) {
-      return NextResponse.json({ error: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.` }, { status: 400 });
-    }
+export const POST = withApi(
+  { name: "chat", auth: "required", limits: [{ limit: 20, windowSec: 60 }] },
+  async ({ req, session, log }) => {
+    const walletAddress = session!.sub;
+    const { message, history } = await parseJson(req, chatBodyBase);
 
     // Prepaid credit is checked and spent atomically here — never a
     // per-request txHash. Credit was only ever added via the verified
     // on-chain purchase in /api/credits/purchase.
     const remaining = await spendCredit(walletAddress);
-    if (remaining === null) {
-      return NextResponse.json({ error: "no_credits" }, { status: 402 });
-    }
+    if (remaining === null) throw apiErrors.noCredits();
 
     // Credit is already spent at this point — from here on we always
     // return the remaining credit so the UI stays in sync even if the AI
@@ -132,47 +107,34 @@ export async function POST(req: Request) {
           : "NO DIRECT MATCH — use your built-in Arc & Circle knowledge to answer accurately.";
 
       // STEP 2: CALL AI
+      const pastMessages = (Array.isArray(history) ? history : []) as { role: string; content: string }[];
       const completion = await groq.chat.completions.create({
         model: "openai/gpt-oss-120b",
         messages: [
-          {
-            role: "system",
-            content: SYSTEM_PROMPT,
-          },
+          { role: "system", content: SYSTEM_PROMPT },
           {
             role: "system",
             content: `[ARC & CIRCLE KNOWLEDGE BASE CONTEXT]\n\n${context}\n\nUse this context to give accurate, grounded answers. For addresses and chain IDs always use verified data only.`,
           },
-          ...history.slice(-8).map((h: { role: string; content: string }) => ({
+          ...pastMessages.slice(-8).map((h) => ({
             role: h.role as "user" | "assistant",
             content: h.content,
           })),
-          {
-            role: "user",
-            content: message,
-          },
+          { role: "user", content: message },
         ],
         temperature: 0.1,
         max_tokens: 1500,
       });
 
-      const reply =
-        completion.choices[0]?.message?.content ||
-        "Could not generate response.";
+      const reply = completion.choices[0]?.message?.content || "Could not generate response.";
 
-      return NextResponse.json({ reply, credits: remaining });
+      return { reply, credits: remaining };
     } catch (err) {
-      console.error("AI generation error (credit already spent):", err);
-      return NextResponse.json({
+      log.error("AI generation error (credit already spent)", { err });
+      return {
         reply: "Your credit was used, but the response could not be generated. Please contact support.",
         credits: remaining,
-      });
+      };
     }
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { reply: "Server error occurred." },
-      { status: 500 }
-    );
   }
-}
+);

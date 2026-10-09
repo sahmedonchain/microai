@@ -1,21 +1,16 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { randomUUID } from "crypto";
 import Groq from "groq-sdk";
-import { Redis } from "@upstash/redis";
-import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { ApiError, apiErrors, parseJson, withApi } from "@/lib/api";
+import { getRedis } from "@/lib/redis";
 import { getCredit, spendCredit } from "@/lib/credits";
-import { checkRateLimit } from "@/lib/rateLimit";
-import { buildSystemPrompt, detectMode, isMode, type Mode } from "@/lib/copilotPrompt";
+import { buildSystemPrompt, detectMode, type Mode } from "@/lib/copilotPrompt";
+import { copilotBody } from "@/lib/schemas";
+import { createLogger } from "@/lib/logger";
 
 // A full contract + deploy + frontend answer takes 20-40s to generate.
 export const maxDuration = 60;
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const MAX_MESSAGE_LENGTH = 4000;
-const COPILOT_RATE_LIMIT = 10; // requests
-const COPILOT_RATE_WINDOW_MS = 60_000; // per minute, per wallet
 
 // gpt-oss is a reasoning model: reasoning tokens count against the output
 // limit. The old 2000-token cap cut long answers off mid-sentence
@@ -34,17 +29,6 @@ interface ContinuationState {
   message: string;
   reply: string; // everything generated so far for this answer
   n: number; // continuations already used
-}
-
-let redisClient: Redis | null = null;
-function getRedis(): Redis {
-  if (!redisClient) {
-    redisClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-  }
-  return redisClient;
 }
 
 function continuationKey(id: string) {
@@ -76,36 +60,22 @@ async function saveContinuation(state: ContinuationState): Promise<string | unde
     await getRedis().set(continuationKey(id), state, { ex: CONTINUATION_TTL_SECONDS });
     return id;
   } catch (err) {
-    console.error("Copilot continuation save failed:", err);
+    createLogger({ route: "copilot" }).error("continuation save failed", { err });
     return undefined;
   }
 }
 
-export async function POST(req: Request) {
-  try {
-    const store = await cookies();
-    const token = store.get(SESSION_COOKIE)?.value;
-    const session = token ? verifySessionToken(token) : null;
-
-    if (!session) {
-      return NextResponse.json({ error: "session_required" }, { status: 401 });
-    }
-    const walletAddress = session.sub;
-
-    if (!checkRateLimit(`copilot:${walletAddress}`, COPILOT_RATE_LIMIT, COPILOT_RATE_WINDOW_MS)) {
-      return NextResponse.json(
-        { error: "Too many requests. Please slow down and try again shortly." },
-        { status: 429 }
-      );
-    }
-
-    const body = await req.json();
+export const POST = withApi(
+  { name: "copilot", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
+  async ({ req, session, log }) => {
+    const walletAddress = session!.sub;
+    const body = await parseJson(req, copilotBody);
 
     // --- Continue a cut-off answer: no credit is spent -------------------
-    if (typeof body?.continueId === "string") {
+    if ("continueId" in body) {
       const state = await getRedis().getdel<ContinuationState>(continuationKey(body.continueId));
       if (!state || state.wallet !== walletAddress) {
-        return NextResponse.json({ error: "This answer can no longer be continued. Ask again." }, { status: 410 });
+        throw apiErrors.gone("This answer can no longer be continued. Ask again.");
       }
       try {
         const { text, truncated } = await generate([
@@ -121,43 +91,28 @@ export async function POST(req: Request) {
         const continueId = truncated
           ? await saveContinuation({ ...state, reply: state.reply + text, n: state.n + 1 })
           : undefined;
-        return NextResponse.json({
+        return {
           reply: text,
           credits: await getCredit(walletAddress),
           mode: state.mode,
           truncated,
           continueId,
-        });
+        };
       } catch (err) {
-        console.error("Copilot continuation error:", err);
+        log.error("continuation error", { err });
         // Give the user another try with the same state; nothing was charged.
         const continueId = await saveContinuation(state);
-        return NextResponse.json(
-          { error: "Could not continue the answer. Try again.", continueId },
-          { status: 502 }
-        );
+        throw new ApiError(502, "upstream_unavailable", "Could not continue the answer. Try again.", { extra: { continueId } });
       }
     }
 
     // --- New request: spends one credit ----------------------------------
-    const message = body?.message;
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 });
-    }
-    if (message.length > MAX_MESSAGE_LENGTH) {
-      return NextResponse.json(
-        { error: `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.` },
-        { status: 400 }
-      );
-    }
-
+    const { message } = body;
     const remaining = await spendCredit(walletAddress);
-    if (remaining === null) {
-      return NextResponse.json({ error: "no_credits" }, { status: 402 });
-    }
+    if (remaining === null) throw apiErrors.noCredits();
 
     // An explicit mode from the UI wins; keyword detection is the fallback.
-    const mode: Mode = isMode(body?.mode) ? body.mode : detectMode(message);
+    const mode: Mode = body.mode ?? detectMode(message);
 
     // Credit is already spent — always return remaining credit and mode so
     // the UI stays in sync even if the AI call fails.
@@ -167,23 +122,20 @@ export async function POST(req: Request) {
         { role: "user", content: message },
       ]);
       const continueId = truncated ? await saveContinuation({ wallet: walletAddress, mode, message, reply: text, n: 0 }) : undefined;
-      return NextResponse.json({
+      return {
         reply: text || "Could not generate response.",
         credits: remaining,
         mode,
         truncated,
         continueId,
-      });
+      };
     } catch (err) {
-      console.error("Copilot AI generation error (credit already spent):", err);
-      return NextResponse.json({
+      log.error("AI generation error (credit already spent)", { err });
+      return {
         reply: "Your credit was used, but the response could not be generated. Please contact support.",
         credits: remaining,
         mode,
-      });
+      };
     }
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ reply: "Server error occurred." }, { status: 500 });
   }
-}
+);

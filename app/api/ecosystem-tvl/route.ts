@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { withApi } from "@/lib/api";
 import { getArcTvlForProject } from "@/lib/ecosystemEnrichment";
 
 // Only these project names have a verified DeFiLlama Arc-chain TVL mapping
@@ -7,7 +7,7 @@ import { getArcTvlForProject } from "@/lib/ecosystemEnrichment";
 // projects that were never going to match.
 const ENRICHABLE_PROJECTS = ["Morpho", "Aave", "Aerodrome / Velodrome", "Synthra", "Argus"];
 
-export async function GET() {
+export const GET = withApi({ name: "ecosystem-tvl", limits: [{ limit: 30, windowSec: 60 }] }, async () => {
   const entries = await Promise.all(
     ENRICHABLE_PROJECTS.map(async (name) => [name, await getArcTvlForProject(name)] as const)
   );
@@ -17,5 +17,5 @@ export async function GET() {
     if (value !== null) tvl[name] = value;
   }
 
-  return NextResponse.json({ tvl });
-}
+  return { tvl };
+});

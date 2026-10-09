@@ -1,4 +1,5 @@
 "use client";
+import { ARC_MAINNET } from "@/lib/arcConfig";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
@@ -17,13 +18,13 @@ declare global {
   }
 }
 
-const ARC_CHAIN_ID = "0x13b2";
+const ARC_CHAIN_ID = ARC_MAINNET.chainIdHex;
 const ARC_CHAIN_PARAMS = {
   chainId: ARC_CHAIN_ID,
   chainName: "Arc MAINNET",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-  rpcUrls: ["https://rpc.mainnet.arc.io"],
-  blockExplorerUrls: ["https://explorer.arc.io"],
+  nativeCurrency: ARC_MAINNET.nativeCurrency,
+  rpcUrls: [ARC_MAINNET.rpcUrl],
+  blockExplorerUrls: [ARC_MAINNET.explorerUrl],
 };
 
 type WalletOption = {

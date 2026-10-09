@@ -6,7 +6,11 @@
 // Sending a Referer is what the explorer's own frontend does and is enough
 // to be served the JSON. If Cloudflare tightens the rule, requests surface
 // here as kind "unavailable" with the real status logged server-side.
-export const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
+import { ARC_MAINNET } from "@/lib/arcConfig";
+import { createLogger } from "@/lib/logger";
+
+export const ARC_EXPLORER_API = ARC_MAINNET.explorerApiUrl;
+const log = createLogger({ lib: "arcExplorer" });
 
 const REQUEST_HEADERS = {
   Accept: "application/json",
@@ -41,20 +45,18 @@ async function attempt<T>(path: string, timeoutMs: number): Promise<ExplorerResu
     if (!res.ok) {
       const body = (await res.text().catch(() => "")).slice(0, 200).replace(/\s+/g, " ");
       const challenged = res.headers.get("cf-mitigated") === "challenge";
-      console.error(
-        `Arc Explorer ${path} -> HTTP ${res.status}${challenged ? " (Cloudflare challenge)" : ""}: ${body}`
-      );
+      log.error("explorer request failed", { path, status: res.status, cloudflareChallenge: challenged, body });
       return { ok: false, kind: "unavailable", status: res.status, retryable: res.status >= 500 || res.status === 429 };
     }
 
     try {
       return { ok: true, data: (await res.json()) as T };
     } catch {
-      console.error(`Arc Explorer ${path} -> HTTP ${res.status} but body was not JSON`);
+      log.error("explorer response was not JSON", { path, status: res.status });
       return { ok: false, kind: "unavailable", status: res.status };
     }
   } catch (err) {
-    console.error(`Arc Explorer ${path} -> ${err instanceof Error ? err.name : "error"}: ${err instanceof Error ? err.message : err}`);
+    log.error("explorer request error", { path, err });
     return { ok: false, kind: "unavailable", retryable: true }; // timeout or network error
   } finally {
     clearTimeout(timer);

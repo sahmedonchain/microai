@@ -1,16 +1,17 @@
-import { NextResponse } from "next/server";
+import { withApi, parseQuery } from "@/lib/api";
 import { getNewsPayload } from "@/lib/news";
-import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { consume } from "@/lib/rateLimit";
+import { newsQuery } from "@/lib/schemas";
 
 const REFRESH_LIMIT = 6; // forced refreshes
 const REFRESH_WINDOW_MS = 60_000; // per minute, per IP
 
-export async function GET(req: Request) {
+export const GET = withApi({ name: "news", limits: [{ limit: 60, windowSec: 60 }] }, async ({ req, ip }) => {
   // ?refresh=1 skips the shared 30-minute cache and re-pulls every source.
   // Rate-limited so it cannot be used to hammer the upstream feeds.
-  const wantsRefresh = new URL(req.url).searchParams.get("refresh") === "1";
-  const forceRefresh = wantsRefresh && checkRateLimit(`news-refresh:${getClientIp(req)}`, REFRESH_LIMIT, REFRESH_WINDOW_MS);
+  const wantsRefresh = parseQuery(req, newsQuery).refresh === "1";
+  const forceRefresh = wantsRefresh && (await consume(`news-refresh:${ip}`, REFRESH_LIMIT, REFRESH_WINDOW_MS)).ok;
 
   const payload = await getNewsPayload({ forceRefresh });
-  return NextResponse.json(payload, { headers: { "Cache-Control": "no-store" } });
-}
+  return Response.json(payload, { headers: { "Cache-Control": "no-store" } });
+});

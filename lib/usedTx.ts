@@ -1,4 +1,4 @@
-import { Redis } from "@upstash/redis";
+import { getRedis } from "./redis";
 
 // Marks a payment txHash as spent so it can't be replayed to get more than
 // one AI response. Backed by Redis (not in-memory) because serverless
@@ -6,17 +6,7 @@ import { Redis } from "@upstash/redis";
 // set would fail to catch replays that land on a different instance.
 const TTL_SECONDS = 60 * 60; // generous vs. the 5-minute tx-age window we enforce separately
 
-let client: Redis | null = null;
-
-function getClient(): Redis {
-  if (!client) {
-    client = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-  }
-  return client;
-}
+const getClient = getRedis;
 
 function txKey(txHash: string): string {
   return `microai:usedtx:${txHash.toLowerCase()}`;

@@ -1,4 +1,5 @@
 "use client";
+import { ARC_MAINNET, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
@@ -13,10 +14,10 @@ const NAV_LINKS = [
   { label: "News", href: "/news" },
 ];
 
-const ARC_RPC = "https://rpc.mainnet.arc.io";
-const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
+const ARC_RPC = ARC_MAINNET.rpcUrl;
+const USDC_CONTRACT = USDC_ADDRESS;
 const EURC_CONTRACT = "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1";
-const RECEIVER_WALLET = "0x78C144A76614A8674285129810555C8bCa78f044";
+const RECEIVER_WALLET = PAYMENT_RECEIVER;
 const FETCH_TIMEOUT_MS = 5000;
 const RETRY_DELAY_MS = 3000;
 

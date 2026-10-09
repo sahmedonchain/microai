@@ -1,4 +1,5 @@
 "use client";
+import { ARC_MAINNET, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
@@ -6,9 +7,9 @@ import remarkGfm from "remark-gfm";
 import { WalletModal } from "@/app/components/WalletModal";
 import { PRICE_PER_QUERY, MIN_QUERIES, MAX_QUERIES } from "@/lib/pricing";
 
-const ARC_CHAIN_ID = "0x13b2";
-const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-const RECEIVER_ADDRESS = "0x78C144A76614A8674285129810555C8bCa78f044";
+const ARC_CHAIN_ID = ARC_MAINNET.chainIdHex;
+const USDC_CONTRACT = USDC_ADDRESS;
+const RECEIVER_ADDRESS = PAYMENT_RECEIVER;
 const STORAGE_KEY = "microai_chat_history";
 const DRAFT_KEY = "microai_chat_draft"; // set by the homepage launcher input
 const TRANSFER_ABI = "0xa9059cbb"; // transfer(address,uint256)

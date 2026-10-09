@@ -1,17 +1,7 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { withApi } from "@/lib/api";
 import { getCredit } from "@/lib/credits";
 
-export async function GET() {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  const session = token ? verifySessionToken(token) : null;
-
-  if (!session) {
-    return NextResponse.json({ authenticated: false, credits: 0 });
-  }
-
-  const credits = await getCredit(session.sub);
-  return NextResponse.json({ authenticated: true, address: session.sub, credits });
-}
+export const GET = withApi({ name: "credits-balance", auth: "optional", limits: [{ limit: 60, windowSec: 60 }] }, async ({ session }) => {
+  if (!session) return { authenticated: false, credits: 0 };
+  return { authenticated: true, address: session.sub, credits: await getCredit(session.sub) };
+});

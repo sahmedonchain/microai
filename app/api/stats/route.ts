@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { after } from "next/server";
+import { NextResponse, after } from "next/server";
+import { withApi } from "@/lib/api";
 import {
   CHUNK_DELAY_MS,
   CHUNK_SIZE,
@@ -52,7 +52,7 @@ async function backgroundCatchUp(fromBlock: number, toBlock: number) {
   }
 }
 
-export async function GET() {
+export const GET = withApi({ name: "stats", limits: [{ limit: 30, windowSec: 60 }] }, async () => {
   try {
     const [state, currentBlock] = await Promise.all([loadState(), getCurrentBlock()]);
     const gap = currentBlock - state.lastScannedBlock;
@@ -123,4 +123,4 @@ export async function GET() {
       });
     }
   }
-}
+});

@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
+import { getRedis } from "@/lib/redis";
+import { rpcCall } from "@/lib/arcRpc";
+import { ARC_MAINNET } from "@/lib/arcConfig";
+import { withApi } from "@/lib/api";
 
 // AchSwap's GitHub org is private (no public repo for the core app), so
 // Build Status tracks it via on-chain proof instead: real contract code on
@@ -8,9 +10,7 @@ import { Redis } from "@upstash/redis";
 // Addresses are hardcoded from AchSwap's own docs
 // (https://docs.achswap.app/technical/contract-addresses/, re-verified
 // Oct 5 2026) -- never user-supplied, never guessed.
-const ARC_RPC = "https://rpc.mainnet.arc.io";
-const ARC_CHAIN_ID_HEX = "0x13b2"; // 5042
-const FETCH_TIMEOUT_MS = 5000;
+const ARC_CHAIN_ID_HEX = ARC_MAINNET.chainIdHex; // 5042
 
 type ContractRole = "swap" | "liquidity" | "infra";
 
@@ -82,39 +82,6 @@ export interface AchSwapOnchainPayload {
   unavailable: boolean;
 }
 
-let redisClient: Redis | null = null;
-function getRedis(): Redis {
-  if (!redisClient) {
-    redisClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-  }
-  return redisClient;
-}
-
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function rpcCall(method: string, params: unknown[]): Promise<unknown> {
-  const res = await fetchWithTimeout(ARC_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    cache: "no-store",
-  });
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-  return data.result;
-}
-
 interface RawLog {
   blockNumber: string;
   transactionHash: string;
@@ -183,10 +150,10 @@ async function fetchOnchainData(): Promise<AchSwapOnchainPayload> {
   };
 }
 
-export async function GET() {
+export const GET = withApi({ name: "achswap-onchain", limits: [{ limit: 30, windowSec: 60 }] }, async ({ log }) => {
   try {
     const cached = await getRedis().get<AchSwapOnchainPayload>(CACHE_KEY);
-    if (cached) return NextResponse.json(cached);
+    if (cached) return cached;
   } catch {
     /* Redis unreachable -- fall through to a live fetch */
   }
@@ -198,10 +165,10 @@ export async function GET() {
     } catch {
       /* cache write failure shouldn't block returning the value to this request */
     }
-    return NextResponse.json(payload);
+    return payload;
   } catch (err) {
-    console.error("AchSwap on-chain fetch error:", err);
-    return NextResponse.json({
+    log.error("AchSwap on-chain fetch error", { err });
+    return {
       chainIdOk: false,
       contracts: [],
       verifiedCount: 0,
@@ -209,6 +176,6 @@ export async function GET() {
       swap: { lastActivityAt: null, lastActivityTxHash: null, lastActivityAddress: null },
       liquidity: { lastActivityAt: null, lastActivityTxHash: null, lastActivityAddress: null },
       unavailable: true,
-    } satisfies AchSwapOnchainPayload);
+    } satisfies AchSwapOnchainPayload;
   }
-}
+});

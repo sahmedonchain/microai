@@ -1,8 +1,11 @@
-import { Redis } from "@upstash/redis";
+import { ARC_MAINNET, ERC20_TRANSFER_TOPIC, PAYMENT_RECEIVER, USDC_ADDRESS } from "./arcConfig";
+import { rpcCall } from "./arcRpc";
+import { getRedis } from "./redis";
 
-export const RECEIVER = "0x78C144A76614A8674285129810555C8bCa78f044";
-export const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
-export const ARC_RPC = "https://rpc.mainnet.arc.io";
+export { getRedis };
+export const RECEIVER = PAYMENT_RECEIVER;
+export const USDC_CONTRACT = USDC_ADDRESS;
+export const ARC_RPC = ARC_MAINNET.rpcUrl;
 
 // Arc Mainnet launched 2026-09-16. Block 21239147 is the block at
 // 2026-09-17T00:00:00Z (one day of margin), found via binary search over
@@ -15,7 +18,7 @@ export const CHUNK_SIZE = 9000; // eth_getLogs range cap on Arc RPC is ~10000 bl
 export const CHUNK_DELAY_MS = 250; // spacing between eth_getLogs calls to avoid 429
 export const RPC_TIMEOUT_MS = 5000;
 
-export const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+export const TRANSFER_TOPIC = ERC20_TRANSFER_TOPIC;
 export const RECEIVER_TOPIC = "0x" + "0".repeat(24) + RECEIVER.slice(2).toLowerCase();
 
 export const STATE_KEY = "microai:stats:scanstate";
@@ -46,17 +49,6 @@ interface RawLog {
   data: string;
   blockNumber: string;
   transactionHash: string;
-}
-
-let redisClient: Redis | null = null;
-export function getRedis(): Redis {
-  if (!redisClient) {
-    redisClient = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-  }
-  return redisClient;
 }
 
 export function emptyState(): ScanState {
@@ -90,23 +82,7 @@ export async function releaseLock(): Promise<void> {
 }
 
 export async function rpc(method: string, params: unknown[]): Promise<unknown> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), RPC_TIMEOUT_MS);
-  try {
-    const res = await fetch(ARC_RPC, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }),
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    if (!res.ok) throw new Error(`RPC ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message || "RPC error");
-    return data.result;
-  } finally {
-    clearTimeout(timer);
-  }
+  return rpcCall(method, params, { timeoutMs: RPC_TIMEOUT_MS });
 }
 
 export async function getCurrentBlock(): Promise<number> {
