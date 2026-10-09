@@ -20,9 +20,11 @@ const chatMessage = z.string().trim().min(1, "Message is required").max(MAX_MESS
 
 export const debugAnalyzeBody = z.object({ txHash: TX_HASH });
 export const walletBody = z.object({ address: EVM_ADDRESS });
+// `queries` is optional: when it is omitted (payment recovery) the server works
+// out the credit count from the amount that was actually paid.
 export const purchaseBody = z.object({
   txHash: TX_HASH,
-  queries: z.number().int().min(MIN_QUERIES).max(MAX_QUERIES, `queries must be an integer between ${MIN_QUERIES} and ${MAX_QUERIES}.`),
+  queries: z.number().int().min(MIN_QUERIES).max(MAX_QUERIES, `queries must be an integer between ${MIN_QUERIES} and ${MAX_QUERIES}.`).optional(),
 });
 export const ecosystemSearchBody = z.object({
   query: z.string().trim().min(1, "Query is required.").max(300, "Query must be 300 characters or fewer."),

@@ -5,6 +5,8 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { WalletModal } from "@/app/components/WalletModal";
+import { usePendingPurchases } from "@/app/components/usePendingPurchases";
+import { createPending, savePending } from "@/lib/pendingPurchase";
 import { PRICE_PER_QUERY, MIN_QUERIES, MAX_QUERIES } from "@/lib/pricing";
 
 const ARC_CHAIN_ID = ARC_MAINNET.chainIdHex;
@@ -209,6 +211,19 @@ export default function Chat() {
     return false;
   }, [fetchCredit]);
 
+  // Purchases that were paid but not yet confirmed (slow receipt, closed tab):
+  // saved in localStorage and verified in the background until the server answers.
+  const purchases = usePendingPurchases({
+    wallet,
+    ensureSession: async () => (wallet && provider ? establishSession(wallet, provider) : false),
+    onCredited: (credits) => {
+      if (credits === null) void fetchCredit();
+      else setCredit(credits);
+      setShowBuyModal(false);
+    },
+  });
+  const resumePurchases = purchases.resume;
+
   const handleWalletConnect = useCallback(async (address: string, connectedProvider: EthereumProvider) => {
     setWallet(address);
     setProvider(connectedProvider);
@@ -216,11 +231,16 @@ export default function Chat() {
     await getBalance(address, connectedProvider);
 
     const sessionOk = await restoreSessionAndCredit(address);
-    if (!sessionOk) {
+    if (sessionOk) {
+      resumePurchases(address);
+    } else {
       const established = await establishSession(address, connectedProvider);
-      if (established) await fetchCredit();
+      if (established) {
+        await fetchCredit();
+        resumePurchases(address);
+      }
     }
-  }, [getBalance, establishSession, fetchCredit, restoreSessionAndCredit]);
+  }, [getBalance, establishSession, fetchCredit, restoreSessionAndCredit, resumePurchases]);
 
   // On page load/refresh, silently restore a previously-authorized wallet
   // (eth_accounts never prompts, unlike eth_requestAccounts) and — if a
@@ -241,10 +261,11 @@ export default function Chat() {
         await getBalance(address, eth);
 
         const sessionOk = await restoreSessionAndCredit(address);
-        if (!sessionOk) setCredit(0);
+        if (sessionOk) resumePurchases(address);
+        else setCredit(0);
       } catch { /* silent — user can connect manually */ }
     })();
-  }, [getBalance, restoreSessionAndCredit]);
+  }, [getBalance, restoreSessionAndCredit, resumePurchases]);
 
   const disconnect = () => {
     setWallet(null); setBalance(null); setProvider(null); setTxStep("");
@@ -291,32 +312,22 @@ export default function Chat() {
         params: [{ from: wallet, to: USDC_CONTRACT, data: transferData, gas: "0x186A0" }],
       }) as string;
 
+      // Save the txHash before anything else can go wrong: if the receipt is slow
+      // or the tab closes, the payment is resumed on the next visit.
+      const entry = createPending(txHash, queries, wallet);
+      savePending(entry);
+
       setTxStep("Confirming transaction...");
-      const mined = await waitForReceipt(provider, txHash);
-      if (!mined) throw new Error("Transaction did not confirm in time. Please try again.");
+      await waitForReceipt(provider, txHash); // a slow receipt is fine: verification keeps retrying
 
       setTxStep("Crediting your account...");
-
-      const doPurchase = () => fetch("/api/credits/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash, queries }),
-      });
-
-      let res = await doPurchase();
-      if (res.status === 401) {
-        const ok = await establishSession(wallet, provider);
-        if (!ok) throw new Error("Session expired. Please reconnect your wallet.");
-        res = await doPurchase();
-      }
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Purchase failed.");
-
-      setCredit(data.credits);
+      const result = await purchases.track(entry);
+      if (result?.status === "rejected") throw new Error(result.message);
       setShowBuyModal(false);
-      setCustomQueries("");
-      await getBalance(wallet, provider);
+      if (result?.status === "credited" || result?.status === "already") {
+        setCustomQueries("");
+        await getBalance(wallet, provider);
+      }
     } catch (err: unknown) {
       const error = err as { code?: number; message?: string };
       if (error?.code !== 4001) {
@@ -554,6 +565,15 @@ export default function Chat() {
           )}
         </div>
       </nav>
+
+      {/* A payment that was sent but is not credited yet: stays until it is credited or
+          definitively rejected, so the user never sees "try again" for money already paid. */}
+      {(purchases.notice || purchases.error) && (
+        <div role="status" style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 14px", fontSize: 11, fontFamily: "monospace", background: purchases.error ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)", color: purchases.error ? "#f87171" : "#f59e0b", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <span>{purchases.error || purchases.notice}{!purchases.error && purchases.pending.length > 0 && <> {purchases.pending[0].txHash.slice(0, 10)}...</>}</span>
+          {purchases.error && <button type="button" onClick={purchases.clearError} style={{ background: "none", border: "none", color: "inherit", textDecoration: "underline", cursor: "pointer", fontSize: 11 }}>Dismiss</button>}
+        </div>
+      )}
 
       {/* MESSAGES */}
       <div style={{ position: "relative", zIndex: 10, flex: 1, overflowY: "auto", padding: "0 16px", scrollbarWidth: "none" }}>

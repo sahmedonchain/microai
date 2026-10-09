@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WalletModal } from "@/app/components/WalletModal";
 import { PaymentReceipt } from "@/app/components/PaymentReceipt";
+import { RecoverPayment } from "@/app/components/RecoverPayment";
 
 interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -142,6 +143,8 @@ export default function CreditsPage() {
                   <p className="mt-2 font-mono text-3xl font-semibold text-accent-text">{totalSpent.toFixed(3)}</p>
                 </div>
               </div>
+
+              <RecoverPayment onRecovered={(c) => setCredits(c)} />
 
               {/* Payment history */}
               <div>

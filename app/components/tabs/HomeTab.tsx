@@ -13,6 +13,8 @@ import { DebuggerTab } from "@/app/components/tabs/DebuggerTab";
 import { CreditsTab } from "@/app/components/tabs/CreditsTab";
 import { AnimatePresence, motion } from "framer-motion";
 import { SidebarNav } from "@/app/components/SidebarNav";
+import { usePendingPurchases } from "@/app/components/usePendingPurchases";
+import { createPending, savePending } from "@/lib/pendingPurchase";
 import {
   NAV_GROUPS_COOKIE,
   groupOfPanel,
@@ -231,6 +233,19 @@ export function HomeTab({
     return false;
   }, [fetchCredit]);
 
+  // Purchases that were paid but not yet confirmed (slow receipt, closed tab):
+  // saved in localStorage and verified in the background until the server answers.
+  const purchases = usePendingPurchases({
+    wallet,
+    ensureSession: async () => (wallet && provider ? establishSession(wallet, provider) : false),
+    onCredited: (credits) => {
+      if (credits === null) void fetchCredit();
+      else setCredit(credits);
+      setBuyModalOpen(false);
+    },
+  });
+  const resumePurchases = purchases.resume;
+
   // Silently restore a previously-authorized wallet (eth_accounts never
   // prompts) so the page shows the real balance without a reconnect. If
   // the session cookie was cleared (e.g. "Clear site data") but the
@@ -248,14 +263,18 @@ export function HomeTab({
         setWallet(address);
         setProvider(eth);
         const ok = await restoreSession(address);
-        if (!ok) {
+        if (ok) {
+          resumePurchases(address);
+        } else {
           const established = await establishSession(address, eth);
-          if (established) await fetchCredit();
-          else setCredit(0);
+          if (established) {
+            await fetchCredit();
+            resumePurchases(address);
+          } else setCredit(0);
         }
       } catch { /* user can connect manually */ }
     })();
-  }, [restoreSession, establishSession, fetchCredit]);
+  }, [restoreSession, establishSession, fetchCredit, resumePurchases]);
 
   useEffect(() => {
     let cancelled = false;
@@ -286,10 +305,14 @@ export function HomeTab({
     setProvider(prov);
     setWalletModalOpen(false);
     const ok = await restoreSession(address);
-    if (!ok) {
+    if (ok) {
+      resumePurchases(address);
+    } else {
       const established = await establishSession(address, prov);
-      if (established) await fetchCredit();
-      else setCredit(0);
+      if (established) {
+        await fetchCredit();
+        resumePurchases(address);
+      } else setCredit(0);
     }
   };
 
@@ -329,28 +352,25 @@ export function HomeTab({
         params: [{ from: wallet, to: USDC_CONTRACT, data: transferData, gas: "0x186A0" }],
       })) as string;
 
+      // Save the txHash before anything else can go wrong: if the receipt is slow
+      // or the tab closes, the payment is resumed on the next visit.
+      const entry = createPending(txHash, queries, wallet);
+      savePending(entry);
+
       setTxStep("Confirming transaction...");
-      const mined = await waitForReceipt(provider, txHash);
-      if (!mined) throw new Error("Transaction did not confirm in time. Please try again.");
+      await waitForReceipt(provider, txHash); // a slow receipt is fine: verification keeps retrying
 
       setTxStep("Crediting your account...");
-      const doPurchase = () => fetch("/api/credits/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txHash, queries }),
-      });
-      let res = await doPurchase();
-      if (res.status === 401) {
-        const ok = await establishSession(wallet, provider);
-        if (!ok) throw new Error("Session expired. Please reconnect your wallet.");
-        res = await doPurchase();
+      const result = await purchases.track(entry);
+      if (result?.status === "rejected") throw new Error(result.message);
+      if (result?.status === "credited" || result?.status === "already") {
+        setBuyModalOpen(false);
+        setCustomQueries("");
+      } else {
+        // Still pending (needs sign-in or confirmation is slow): the notice stays
+        // visible outside the modal, the payment is not lost.
+        setBuyModalOpen(false);
       }
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Purchase failed.");
-
-      setCredit(data.credits);
-      setBuyModalOpen(false);
-      setCustomQueries("");
     } catch (err: unknown) {
       const error = err as { code?: number; message?: string };
       if (error?.code !== 4001) setBuyError(error?.message || "Purchase failed. Please try again.");
@@ -609,6 +629,39 @@ export function HomeTab({
             )}
           </div>
         </header>
+
+        {/* A payment that was sent but is not credited yet. Stays until it is
+            credited or definitively rejected, so the user never sees "try again". */}
+        {(purchases.notice || purchases.error) && (
+          <div
+            role="status"
+            className={`flex shrink-0 items-start justify-between gap-3 border-b px-4 py-2.5 text-xs md:px-6 ${
+              purchases.error ? "border-danger/30 bg-danger/10 text-danger" : "border-warning/30 bg-warning/10 text-warning"
+            }`}
+          >
+            <p className="min-w-0">
+              {purchases.error || purchases.notice}
+              {!purchases.error && purchases.pending.length > 0 && (
+                <>
+                  {" "}
+                  <a
+                    href={`${ARC_MAINNET.explorerUrl}/tx/${purchases.pending[0].txHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono underline"
+                  >
+                    {purchases.pending[0].txHash.slice(0, 10)}...
+                  </a>
+                </>
+              )}
+            </p>
+            {purchases.error && (
+              <button type="button" onClick={purchases.clearError} className="shrink-0 underline">
+                Dismiss
+              </button>
+            )}
+          </div>
+        )}
 
         {activePanel !== "home" && (
           <div className="min-h-0 flex-1 overflow-y-auto">

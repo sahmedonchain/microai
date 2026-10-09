@@ -30,10 +30,10 @@ All on 2026-10-09 against live services, using wallet `0x4fd87e600d703c0c05c0109
 | 1. AI Developer Copilot (/build) | 0 | 24 | 23 | 1 | 48 |
 | 2. Transaction Intelligence 2.0 (/debug) | 3 | 21 | 13 | 1 | 38 |
 | 3. Wallet Intelligence (/wallet) | 5 | 12 | 17 | 1 | 35 |
-| 4. USDC Payment Infrastructure | 2 | 26 | 25 | 0 | 53 |
+| 4. USDC Payment Infrastructure | 6 | 23 | 24 | 0 | 53 |
 | 5. Ecosystem Directory 2.0 (/ecosystem) | 3 | 15 | 27 | 3 | 48 |
 | 6. Cross-System Requirements | 7 | 12 | 4 | 0 | 23 |
-| **All modules** | **20** | **110** | **109** | **6** | **245** |
+| **All modules** | **24** | **107** | **108** | **6** | **245** |
 
 Rows tagged `-note` are the spec's cautionary paragraphs and are included in the counts.
 
@@ -76,7 +76,7 @@ Rows tagged `-note` are the spec's cautionary paragraphs and are included in the
 
 **Environment variables (names only)**: `GROQ_API_KEY`, `GITHUB_TOKEN`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `SESSION_SECRET`, `COMMUNITY_ADMIN_KEY` (unused by any code), `X_BEARER_TOKEN` (read by a dormant function in `lib/news.ts`), `SIWE_DOMAIN` (optional, pins the sign-in domain; defaults to the request host).
 
-**Tests**: 101 Vitest tests in 13 files (`pnpm test`), CI workflow in `.github/workflows/ci.yml`. No end-to-end tests.
+**Tests**: 152 Vitest tests in 16 files (`pnpm test`), CI workflow in `.github/workflows/ci.yml`. No end-to-end tests.
 
 ## Step 1 changes (security and shared foundation)
 
@@ -90,7 +90,7 @@ Rows tagged `-note` are the spec's cautionary paragraphs and are included in the
 | E. Prompt injection | Chat history validated; one shared untrusted-content helper applied to wallet, debug and ecosystem prompts. | untrusted, promptInjection |
 | G. Credits | No 30-day expiry; legacy balances are made permanent when touched; idempotent migration script (dry-run by default). | credits |
 
-Totals: 101 tests in 13 files, all passing. Mock-based suites say so in their header comment; the real-service checks run during Step 1 are listed in the Step 1 report (live Upstash limiter check, full sign-in/chat/debug/wallet/credits flow against a local production build with a throwaway wallet).
+Totals: 152 tests in 16 files, all passing. Mock-based suites say so in their header comment; the real-service checks run during Step 1 are listed in the Step 1 report (live Upstash limiter check, full sign-in/chat/debug/wallet/credits flow against a local production build with a throwaway wallet).
 
 ## Module 1. AI Developer Copilot (/build)
 
@@ -236,7 +236,7 @@ PASS 5 | PARTIAL 12 | MISSING 17 | BLOCKED 1
 
 ## Module 4. USDC Payment Infrastructure
 
-PASS 2 | PARTIAL 26 | MISSING 25 | BLOCKED 0
+PASS 6 | PARTIAL 23 | MISSING 24 | BLOCKED 0
 
 | # | Requirement | Status | Evidence | Notes |
 |---|---|---|---|---|
@@ -249,15 +249,15 @@ PASS 2 | PARTIAL 26 | MISSING 25 | BLOCKED 0
 | 4.1-7 | handlePaymentFailure | **PARTIAL** | app/api/credits/purchase/route.ts (releaseTxHash on addCredit failure) | Only that one case. |
 | 4.1-note | Follow codebase naming; no duplicate payment implementation | **PARTIAL** | lib/pricing.ts, lib/usedTx.ts, lib/credits.ts, purchase and payment-history routes, lib/statsScan.ts | Payment logic is spread across six files with no single interface. |
 | 4.2-1 | Arc Mainnet chain ID and token contract verification | **PARTIAL** | app/api/credits/purchase/route.ts | Token contract is checked; the chain ID is never queried (fixed RPC). |
-| 4.2-2 | Recipient, amount, sender and token validation | **PARTIAL** | app/api/credits/purchase/route.ts | All four are checked. No tests and no live payment run. It inspects only the first USDC Transfer log, so batched or multi-transfer transactions are rejected. |
+| 4.2-2 | Recipient, amount, sender and token validation | **PASS** | app/api/credits/purchase/route.ts; tests/purchase.test.ts (mocked chain, real route code) | Recipient, sender, token, amount and mined status are all checked and tested (wrong sender/recipient/amount/token/failed tx each rejected, nothing credited). Still inspects only the first USDC Transfer log. |
 | 4.2-3 | Transaction receipt status verification | **PARTIAL** | app/api/credits/purchase/route.ts (status 0x1) | Code-read only. |
 | 4.2-4 | Confirmations / finality policy | **PARTIAL** | app/api/credits/purchase/route.ts | Accepts any included receipt. Arc finalises on inclusion (docs.arc.io evm-compatibility), but the policy is not written down in code. |
 | 4.2-5 | ERC-20 Transfer event validation | **PARTIAL** | app/api/credits/purchase/route.ts (TRANSFER_TOPIC, log.address check) | Code-read only. |
-| 4.2-6 | Duplicate transaction and replay prevention | **PARTIAL** | lib/usedTx.ts (SET NX, 1 h TTL) + 10-minute age cap | Sound design, not tested. Safety depends on the age cap being shorter than the claim TTL. |
+| 4.2-6 | Duplicate transaction and replay prevention | **PASS** | lib/usedTx.ts (SET NX, no expiry); tests/purchase.test.ts | Claims never expire, so a replay stays impossible for the whole 7-day window; two simultaneous submissions credit once; the claim is released if crediting fails. |
 | 4.2-7 | Idempotency key | **MISSING** | - | Purchases are naturally keyed by txHash. AI requests have no idempotency key. |
 | 4.2-8 | Server-side payment verification | **PARTIAL** | app/api/credits/purchase/route.ts | Yes for purchases. |
-| 4.2-9 | Do not trust the frontend's claimed payment status | **PARTIAL** | app/api/credits/purchase/route.ts (amount computed from lib/pricing.ts) | Code-read only. |
-| 4.2-10 | Pending, confirmed, failed and expired states | **MISSING** | - | Binary accept/reject; no state model. |
+| 4.2-9 | Do not trust the frontend's claimed payment status | **PASS** | app/api/credits/purchase/route.ts; tests/purchase.test.ts | The credit count comes from the bundle size or the amount actually paid; the client never supplies the amount. |
+| 4.2-10 | Pending, confirmed, failed and expired states | **PARTIAL** | lib/pendingPurchase.ts; app/api/credits/purchase/route.ts (reason, retryable) | The client now distinguishes pending (not visible yet / node down), credited, already credited and rejected. The server still has no stored payment record with these states. |
 | 4.3-1 | AI query pricing | **PARTIAL** | lib/pricing.ts (PRICE_PER_QUERY = 1000, i.e. 0.001 USDC) | One flat price. |
 | 4.3-2 | Developer Copilot pricing | **PARTIAL** | app/api/copilot/route.ts (1 credit) | Same as a chat query; Continue is free. |
 | 4.3-3 | Transaction analysis pricing | **MISSING** | app/api/debug-analyze/route.ts | Free and unauthenticated. |
@@ -268,7 +268,7 @@ PASS 2 | PARTIAL 26 | MISSING 25 | BLOCKED 0
 | 4.3-8 | Free and paid usage limits | **PASS** | app/api/{wallet,debug-analyze,ecosystem-search}/route.ts; tests/publicAiRoutes.test.ts; live run | Free AI lookups: 5-10/min and 40-60/day per caller plus a shared daily budget per route. Paid features spend credits. |
 | 4.3-9 | Payment receipt and billing history for users | **PARTIAL** | app/components/tabs/CreditsTab.tsx; app/components/PaymentReceipt.tsx | On-chain transfers only. Credit spending is not recorded. |
 | 4.4-1 | RPC errors and temporary network failures | **PARTIAL** | lib/arcRpc.ts; app/api/credits/purchase/route.ts; tests/arcRpc.test.ts (mocked fetch) | The payment RPC call now has a 6 s timeout and one retry. An RPC outage during verification still returns a 402 'Payment verification failed.' (purchase logic is Step 2). |
-| 4.4-2 | Retry and idempotency | **PARTIAL** | lib/usedTx.ts | See 4.2-7. |
+| 4.4-2 | Retry and idempotency | **PASS** | lib/pendingPurchase.ts; app/components/usePendingPurchases.ts; tests/pendingPurchase.test.ts | txHash saved before verification, retried with backoff, resumed after a reload, cleared only on success or definitive rejection. |
 | 4.4-3 | Payment reconciliation | **MISSING** | - | - |
 | 4.4-4 | On-chain vs internal record consistency | **MISSING** | lib/credits.ts | There is no internal purchase ledger, only a counter. |
 | 4.4-5 | Secure backend API validation | **PARTIAL** | app/api/credits/purchase/route.ts | Input validated; session required. |
@@ -368,7 +368,7 @@ PASS 7 | PARTIAL 12 | MISSING 4 | BLOCKED 0
 | 6-11 | Secrets management | **PARTIAL** | - | No tracked secrets (secret scan clean). No rotation or validation. |
 | 6-12 | Database schema validation / migrations | **PARTIAL** | - | No SQL database. Redis keys are defined ad hoc in code, with no validation. |
 | 6-13 | Observability and actionable error reporting | **MISSING** | - | No Sentry/OTel or log drain config. |
-| 6-14 | Unit, integration and end-to-end tests | **PARTIAL** | tests/ (101 tests in 13 files); vitest.config.mts; .github/workflows/ci.yml | Unit and mocked-integration tests (fake Redis, mocked fetch/Groq/cookies are labelled as mocks). No end-to-end tests and no payment-purchase tests yet (Step 2). |
+| 6-14 | Unit, integration and end-to-end tests | **PARTIAL** | tests/ (152 tests in 16 files); vitest.config.mts; .github/workflows/ci.yml | Unit and mocked-integration tests (fake Redis, mocked fetch/Groq/cookies are labelled as mocks). No end-to-end tests and no payment-purchase tests yet (Step 2). |
 | 6-15 | Accessibility and responsive UI | **PARTIAL** | app/components/tabs/* | aria labels on newer tabs. No audit or tooling. Responsive layout not re-verified in a browser. |
 | 6-16 | API documentation | **MISSING** | README.md | README is outdated. |
 | 6-17 | Production build verification | **PARTIAL** | .github/workflows/ci.yml; local `pnpm build` passes | CI (install, lint, typecheck, test, build) is defined but has not run on GitHub yet. |
@@ -388,8 +388,8 @@ Severity: **High** (loss of funds, money-for-nothing, or open cost abuse), **Med
 | S1 | High | **Open LLM cost abuse.** `/api/debug-analyze`, `/api/wallet` and `/api/ecosystem-search` are unauthenticated and call Groq. `/api/ecosystem-search` also lets the caller supply up to 500 x 80 characters of "project names", i.e. a free general-purpose prompt channel. | routes above | Require a session or credit for AI calls, or a durable per-IP limit; build the project list server-side. | **Fixed (Step 1 D).** Still public by design; bounded by per-minute, per-day and shared daily caps. Ecosystem search no longer accepts client text. |
 | S2 | High | **Rate limiting does not work on serverless.** `lib/rateLimit.ts` is an in-memory Map per instance (its own comment says it is not a security boundary). It is the only abuse control on every route. `/api/session/nonce` and `/api/credits/purchase` have none (20 of 20 nonce requests returned 200). | `lib/rateLimit.ts`; live probe | Redis-backed limiter (INCR + EXPIRE or `@upstash/ratelimit`). | **Fixed (Step 1 C).** Redis sliding window on every route; nonce endpoint limited. |
 | S3 | High | **Prepaid credits silently expire.** Each purchase resets a 30-day Redis TTL (`lib/credits.ts`). A paying user who is idle for 30 days loses their whole balance, and no UI copy discloses it. | `lib/credits.ts:6,33` | Remove the TTL or disclose it clearly and refresh it on use. | **Fixed in code (Step 1 G).** New and touched balances never expire. Existing balances: dry run found 3 of 7 credit keys still expiring (261 credits, soonest in about 21 days); `scripts/persist-credits.ts --apply` not yet run, pending your approval. |
-| S4 | High | **No purchase ledger, reconciliation or recovery.** Payments are only a Redis counter plus a one-hour tx-claim key. If a user pays and the request fails or is retried after 10 minutes (`MAX_TX_AGE_MS`), the payment is rejected as "too old" and there is no record, tool or flow to credit it. | `app/api/credits/purchase/route.ts`, `lib/usedTx.ts` | Persist a payment record (tx, wallet, amount, status) and add an admin or retry path. | Open (Step 2). |
-| S5 | Medium | **Payment verification is untested and narrow.** It takes the first matching USDC Transfer log and demands an exact amount. A batched or multicall transaction with several transfers is rejected. The chain ID is never checked and the RPC call has no timeout or retry. | `app/api/credits/purchase/route.ts` | Scan all logs, add `eth_chainId`, timeout/retry, and tests. | Partly fixed: payment RPC now has a timeout and retry. Multi-log transactions, chain ID check and tests: Step 2. |
+| S4 | High | **No purchase ledger, reconciliation or recovery.** Payments are only a Redis counter plus a one-hour tx-claim key. If a user pays and the request fails or is retried after 10 minutes (`MAX_TX_AGE_MS`), the payment is rejected as "too old" and there is no record, tool or flow to credit it. | `app/api/credits/purchase/route.ts`, `lib/usedTx.ts` | Persist a payment record (tx, wallet, amount, status) and add an admin or retry path. | **Fixed for new payments.** The txHash is saved in localStorage the moment the wallet returns it and verified in the background (backoff, resume after reload); the server accepts payments for 7 days; claims never expire; the Credits page has a Recover a payment form. Not recoverable automatically: payments mined before 2026-10-09T17:00Z, because their one-hour claims have lapsed and crediting them again could pay twice (support handles those). |
+| S5 | Medium | **Payment verification is untested and narrow.** It takes the first matching USDC Transfer log and demands an exact amount. A batched or multicall transaction with several transfers is rejected. The chain ID is never checked and the RPC call has no timeout or retry. | `app/api/credits/purchase/route.ts` | Scan all logs, add `eth_chainId`, timeout/retry, and tests. | Partly fixed: timeout and retry on the payment RPC, and tests for every rejection path. Still open: only the first USDC Transfer log is checked (batched transactions are rejected) and the chain ID is not queried. |
 | S6 | Medium | **Charge-before-work with no refund or idempotency.** Chat and Copilot spend a credit before the AI call; on failure the user gets an apology, and a client retry is charged again. | `app/api/chat/route.ts`, `app/api/copilot/route.ts` | Request id + refund on AI failure. | Open (Step 2). |
 | S7 | Medium | **Session sign-in is phishable.** The signed message has no domain, URI or chain ID (not EIP-4361), and `/api/session/nonce` is public. An attacker site can fetch a nonce for a victim's address and ask them to sign; the attacker then posts the signature and receives a session for that wallet. The nonce for an address can also be overwritten by anyone. | `lib/siwe.ts`, `app/api/session/*` | EIP-4361 with domain and chain binding; rate-limit nonce. | **Fixed (Step 1 B).** EIP-4361 with domain/URI/chain binding, single-use nonces keyed by nonce, rate limits. The standard SIWE caveat remains: wallets, not the server, must warn about a domain that differs from the site. |
 | S8 | Medium | **Prompt injection and role injection.** `/api/chat` accepts client `history` entries with arbitrary roles (including `system`) and arbitrary length. Token symbols and news text are placed in prompts unescaped. | `app/api/chat/route.ts:102,146`; wallet and debug prompts | Validate roles/length server-side, keep history server-side, quote untrusted data. | **Fixed (Step 1 E).** History validated, untrusted content fenced. |

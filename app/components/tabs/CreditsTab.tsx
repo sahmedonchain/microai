@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { TabLink as Link } from "@/app/components/tabs/TabNav";
 import { PaymentReceipt } from "@/app/components/PaymentReceipt";
+import { RecoverPayment } from "@/app/components/RecoverPayment";
 
 interface Receipt {
   txHash: string;
@@ -104,6 +105,8 @@ export function CreditsTab() {
                   <p className="font-mono text-2xl font-semibold text-text">{totalSpent.toFixed(3)}</p>
                 </div>
               </div>
+
+              <RecoverPayment onRecovered={(c) => setCredits(c)} />
 
               <div>
                 <h2 className="mb-3 text-xs text-muted">Payment history</h2>
