@@ -43,7 +43,7 @@ function mine(txHash: string, opts: { from?: string; to?: string; units?: number
       },
     ],
   });
-  chain.blocks.set(block, { timestamp: "0x" + Math.floor((NOW - (opts.ageMs ?? 60_000)) / 1000).toString(16) });
+  chain.blocks.set(block, { timestamp: "0x" + Math.floor((Date.now() - (opts.ageMs ?? 60_000)) / 1000).toString(16) });
 }
 
 const tx = (n: number) => "0x" + n.toString(16).padStart(64, "0");
@@ -116,14 +116,63 @@ describe("credit purchase verification (mocked chain)", () => {
     expect(await getCredit(WALLET)).toBe(1);
   });
 
+  it("a payment mined after the deploy but before the old 17:00Z cutoff is credited once (live bug)", async () => {
+    // The exact case that failed in production: mined 2026-10-09 16:42:01Z, verified the same evening.
+    vi.setSystemTime(Date.parse("2026-10-09T17:10:00Z"));
+    cookieJar.value = issueSessionToken(WALLET);
+    mine(tx(30), { units: 5000, ageMs: Date.parse("2026-10-09T17:10:00Z") - Date.parse("2026-10-09T16:42:01Z") });
+    const first = await post({ txHash: tx(30), queries: 5 });
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({ credits: 5, added: 5 });
+    const replay = await post({ txHash: tx(30), queries: 5 });
+    expect(replay.status).toBe(409);
+    expect(await getCredit(WALLET)).toBe(5);
+  });
+
+  it("recovery of that same payment (no queries) credits it once too", async () => {
+    vi.setSystemTime(Date.parse("2026-10-09T17:10:00Z"));
+    cookieJar.value = issueSessionToken(WALLET);
+    mine(tx(31), { units: 5000, ageMs: Date.parse("2026-10-09T17:10:00Z") - Date.parse("2026-10-09T16:42:01Z") });
+    expect((await post({ txHash: tx(31) })).status).toBe(200);
+    expect((await post({ txHash: tx(31) })).status).toBe(409);
+    expect(await getCredit(WALLET)).toBe(5);
+  });
+
+  it("the window opens at 16:00Z: 16:00 is eligible, 15:59 is held with the 'before recovery' message", async () => {
+    vi.setSystemTime(Date.parse("2026-10-09T17:10:00Z"));
+    cookieJar.value = issueSessionToken(WALLET);
+    const at = (iso: string) => Date.parse("2026-10-09T17:10:00Z") - Date.parse(iso);
+    mine(tx(32), { units: 1000, ageMs: at("2026-10-09T16:00:00Z") });
+    expect((await post({ txHash: tx(32), queries: 1 })).status).toBe(200);
+    mine(tx(33), { units: 1000, ageMs: at("2026-10-09T15:59:00Z") });
+    const held = await post({ txHash: tx(33), queries: 1 });
+    expect(held.status).toBe(402);
+    const body = await held.json();
+    expect(body).toMatchObject({ reason: "before_recovery", retryable: false, error: "This payment was made before our recovery system went live. Contact support." });
+    expect(body.error).not.toMatch(/7-day/);
+    expect(await redis.get(`microai:usedtx:${tx(33)}`)).toBeNull();
+  });
+
+  it("a payment already credited by the old code (legacy claim key) is not credited again", async () => {
+    vi.setSystemTime(Date.parse("2026-10-09T17:10:00Z"));
+    cookieJar.value = issueSessionToken(WALLET);
+    mine(tx(34), { units: 1000, ageMs: 40 * 60_000 });
+    await redis.set(`microai:usedtx:${tx(34)}`, "1", { ex: 3600 }); // the old format: value "1", one-hour TTL
+    const res = await post({ txHash: tx(34), queries: 1 });
+    expect(res.status).toBe(409);
+    expect(await getCredit(WALLET)).toBe(0);
+  });
+
   it("rejects payments older than 7 days and ones mined before the recovery window opened", async () => {
     mine(tx(6), { units: 1000, ageMs: 8 * DAY });
     const old = await post({ txHash: tx(6), queries: 1 });
     expect(old.status).toBe(402);
-    expect(await old.json()).toMatchObject({ reason: "too_old", retryable: false });
-    // Younger than 7 days, but mined before 2026-10-09T17:00Z: its old 1-hour claim has lapsed, so it could be a double credit.
+    expect(await old.json()).toMatchObject({ reason: "too_old", retryable: false, error: expect.stringMatching(/7-day/) });
+    // Younger than 7 days, but mined before 2026-10-09T16:00Z: its old 1-hour claim has lapsed, so it could be a double credit.
     mine(tx(7), { units: 1000, ageMs: NOW - Date.parse("2026-10-09T10:00:00Z") });
-    expect((await post({ txHash: tx(7), queries: 1 })).status).toBe(402);
+    const held = await post({ txHash: tx(7), queries: 1 });
+    expect(held.status).toBe(402);
+    expect(await held.json()).toMatchObject({ reason: "before_recovery", error: "This payment was made before our recovery system went live. Contact support." });
     expect(await getCredit(WALLET)).toBe(0);
   });
 
@@ -198,6 +247,11 @@ describe("credit purchase verification (mocked chain)", () => {
 
 describe("client classification of the real server answers", () => {
   const bridge = ((url: string, init: RequestInit) => POST(new Request("https://microai.example" + url, init))) as unknown as typeof fetch;
+
+  it("a payment from before the recovery window is held, not rejected", async () => {
+    mine(tx(23), { units: 1000, ageMs: NOW - Date.parse("2026-10-09T10:00:00Z") });
+    expect(await submitPurchase({ txHash: tx(23), queries: 1 }, bridge)).toMatchObject({ kind: "held", message: expect.stringMatching(/before our recovery system went live/) });
+  });
 
   it("credited, retry (not mined yet), already credited, rejected, auth", async () => {
     expect((await submitPurchase({ txHash: tx(20), queries: 1 }, bridge)).kind).toBe("retry");

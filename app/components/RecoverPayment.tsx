@@ -35,6 +35,9 @@ export function RecoverPayment({ onRecovered }: { onRecovered: (credits: number)
       case "auth":
         setResult({ ok: false, text: "Sign in with the wallet that sent the payment, then try again." });
         break;
+      case "held":
+        setResult({ ok: false, text: outcome.message });
+        break;
       case "retry":
         setResult({ ok: false, text: "We can't see this transaction on Arc Mainnet yet. If you just paid, wait a minute and try again." });
         break;

@@ -50,6 +50,9 @@ export function usePendingPurchases({ wallet, ensureSession, onCredited }: Optio
         } else if (result.status === "rejected") {
           setNotice("");
           setError(result.message);
+        } else if (result.status === "held") {
+          // Not an error and not lost: the payment stays saved.
+          setNotice(result.message);
         } else if (result.status === "needs-session") {
           setNotice("Payment pending. Sign in again to finish verifying it.");
         } else {

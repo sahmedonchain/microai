@@ -61,6 +61,7 @@ export type SubmitOutcome =
   | { kind: "credited"; credits: number; added: number }
   | { kind: "already"; message: string } // this tx was already credited (e.g. by another tab)
   | { kind: "retry"; message: string } // not visible yet / node unreachable: ask again later
+  | { kind: "held"; message: string } // not creditable automatically (made before recovery went live): keep it saved
   | { kind: "auth" } // no valid session
   | { kind: "rejected"; message: string }; // definitive: this payment will never be credited
 
@@ -85,6 +86,7 @@ export async function submitPurchase(p: { txHash: string; queries?: number }, fe
   }
   if (res.ok) return { kind: "credited", credits: body.credits ?? 0, added: body.added ?? p.queries ?? 0 };
   if (res.status === 401) return { kind: "auth" };
+  if (body.reason === "before_recovery") return { kind: "held", message: body.error ?? "This payment was made before our recovery system went live. Contact support." };
   if (body.reason === "already_used") return { kind: "already", message: body.error ?? "This payment has already been credited." };
   if (body.retryable || res.status === 429 || res.status >= 500) return { kind: "retry", message: body.error ?? "Verifying…" };
   return { kind: "rejected", message: body.error ?? "This payment could not be verified." };
@@ -94,6 +96,7 @@ export type ResolveResult =
   | { status: "credited"; credits: number }
   | { status: "already" }
   | { status: "rejected"; message: string }
+  | { status: "held"; message: string } // kept saved; support has to handle it (or a later fix can credit it)
   | { status: "needs-session" } // kept saved; verification resumes after sign-in
   | { status: "gave-up" }; // kept saved; verification resumes on the next visit
 
@@ -125,6 +128,8 @@ export async function resolvePurchase(p: PendingPurchase, deps: ResolveDeps): Pr
       case "already":
         removePending(p.txHash);
         return { status: "already" };
+      case "held":
+        return { status: "held", message: outcome.message }; // deliberately NOT removed from storage
       case "rejected":
         removePending(p.txHash);
         return { status: "rejected", message: outcome.message };

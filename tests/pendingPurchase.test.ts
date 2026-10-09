@@ -74,6 +74,7 @@ describe("submitPurchase classification (scripted fetch)", () => {
     [503, { error: "node down", reason: "rpc_unavailable", retryable: true }, { kind: "retry" }],
     [500, { error: "boom" }, { kind: "retry" }],
     [402, { error: "Transfer sender does not match your session wallet.", reason: "wrong_sender", retryable: false }, { kind: "rejected" }],
+    [402, { error: "This payment was made before our recovery system went live. Contact support.", reason: "before_recovery", retryable: false }, { kind: "held" }],
   ])("HTTP %i -> %j", async (status, body, expected) => {
     expect(await submitPurchase({ txHash: HASH, queries: 5 }, answer(status, body))).toMatchObject(expected);
   });
@@ -143,6 +144,20 @@ describe("resolving a pending payment", () => {
     savePending(entry());
     const result = await resolvePurchase(entry(), { submit: script([{ kind: "rejected", message: "Transfer sender does not match your session wallet." }]), ensureSession: async () => true, sleep: noSleep });
     expect(result).toEqual({ status: "rejected", message: "Transfer sender does not match your session wallet." });
+    expect(stored()).toEqual([]);
+  });
+
+  it("a payment from before the recovery window is NOT cleared: it stays saved so it can be recovered after a fix", async () => {
+    savePending(entry());
+    const submit = script([{ kind: "held", message: "This payment was made before our recovery system went live. Contact support." }]);
+    const result = await resolvePurchase(entry(), { submit, ensureSession: async () => true, sleep: noSleep });
+    expect(result).toEqual({ status: "held", message: "This payment was made before our recovery system went live. Contact support." });
+    expect(stored()).toHaveLength(1);
+    expect(submit).toHaveBeenCalledTimes(1); // no retry loop for something retrying cannot fix
+    // after a fix, the same saved entry is picked up again on the next visit and credited
+    const [resumed] = loadPending(WALLET);
+    const later = await resolvePurchase(resumed, { submit: script([{ kind: "credited", credits: 5, added: 5 }]), ensureSession: async () => true, sleep: noSleep });
+    expect(later.status).toBe("credited");
     expect(stored()).toEqual([]);
   });
 
