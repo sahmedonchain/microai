@@ -28,34 +28,63 @@ function cacheKey(repo: string) {
   return `microai:ghstatus:${repo.toLowerCase()}`;
 }
 
-async function fetchGithub(repo: string): Promise<GithubStatusPayload> {
-  const token = process.env.GITHUB_TOKEN;
-  const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
+class GithubError extends Error {
+  constructor(readonly kind: "not_found" | "rate_limited" | "api_error", message: string) {
+    super(message);
+  }
+}
+
+async function requestRepo(repo: string, token: string | undefined): Promise<Response> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "MicroAI",
+  };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(`https://api.github.com/repos/${repo}`, { headers, signal: controller.signal });
-    if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-    const data = await res.json();
-    return {
-      pushedAt: data.pushed_at,
-      updatedAt: data.updated_at,
-      stars: data.stargazers_count,
-      forks: data.forks_count,
-      name: data.full_name,
-    };
+    return await fetch(`https://api.github.com/repos/${repo}`, { headers, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
 }
 
+async function fetchGithub(repo: string): Promise<GithubStatusPayload> {
+  const token = process.env.GITHUB_TOKEN;
+  let res = await requestRepo(repo, token);
+
+  // A rejected token fails every request. Say so loudly in the logs, then
+  // fall back to unauthenticated access (lower rate limit, same data) so the
+  // page still works until the token is replaced.
+  if (res.status === 401 && token) {
+    console.error("GITHUB_TOKEN was rejected by GitHub (401 Bad credentials). Replace it; falling back to unauthenticated requests.");
+    res = await requestRepo(repo, undefined);
+  }
+
+  if (res.status === 404) throw new GithubError("not_found", `${repo} not found`);
+  if (res.status === 429 || (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0")) {
+    throw new GithubError("rate_limited", `GitHub rate limit hit while fetching ${repo}`);
+  }
+  if (!res.ok) throw new GithubError("api_error", `GitHub API ${res.status} for ${repo}`);
+
+  const data = await res.json();
+  return {
+    pushedAt: data.pushed_at,
+    updatedAt: data.updated_at,
+    stars: data.stargazers_count,
+    forks: data.forks_count,
+    name: data.full_name,
+  };
+}
+
 async function fetchGithubWithRetry(repo: string): Promise<GithubStatusPayload> {
   try {
     return await fetchGithub(repo);
-  } catch {
-    return await fetchGithub(repo); // one retry
+  } catch (err) {
+    // 404 and rate limits will not change on an immediate retry.
+    if (err instanceof GithubError && err.kind !== "api_error") throw err;
+    return await fetchGithub(repo); // one retry for timeouts and 5xx
   }
 }
 
@@ -93,6 +122,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ ...data, cached: false });
   } catch (err: unknown) {
     console.error(`GitHub status error for ${repo}:`, err);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    if (err instanceof GithubError && err.kind === "not_found") {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    if (err instanceof GithubError && err.kind === "rate_limited") {
+      return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    }
+    return NextResponse.json({ error: "api_error" }, { status: 502 });
   }
 }

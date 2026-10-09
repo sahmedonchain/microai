@@ -15,6 +15,7 @@ interface RepoStatus {
   pushedAt: string | null;
   stars: number | null;
   status: "ACTIVE" | "SLOW" | "INACTIVE" | "LOADING" | "ERROR";
+  errorKind?: "not_found" | "rate_limited" | "api_error";
   daysAgo: number | null;
   url: string;
   projectUrl: string;
@@ -101,26 +102,31 @@ export function BuildStatusTab() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchStatuses = async () => {
-    const updated = await Promise.all(
-      REPOS.map(async (r) => {
+    // Limited concurrency: 24 simultaneous requests would burst the GitHub
+    // rate limit on a cold cache. Each repo fails on its own.
+    const results: RepoStatus[] = new Array(REPOS.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < REPOS.length) {
+        const i = next++;
+        const r = REPOS[i];
         try {
           const res = await fetch(`/api/github-status?repo=${r.repo}`);
           const data = await res.json();
-          if (data.error) throw new Error(data.error);
+          if (data.error) {
+            const errorKind = data.error === "not_found" || data.error === "rate_limited" ? data.error : "api_error";
+            results[i] = { ...r, pushedAt: null, stars: null, status: "ERROR", daysAgo: null, errorKind };
+            continue;
+          }
           const days = data.pushedAt ? getDaysAgo(data.pushedAt) : null;
-          return {
-            ...r,
-            pushedAt: data.pushedAt,
-            stars: data.stars,
-            status: getStatus(days),
-            daysAgo: days,
-          } as RepoStatus;
+          results[i] = { ...r, pushedAt: data.pushedAt, stars: data.stars, status: getStatus(days), daysAgo: days };
         } catch {
-          return { ...r, pushedAt: null, stars: null, status: "ERROR" as const, daysAgo: null };
+          results[i] = { ...r, pushedAt: null, stars: null, status: "ERROR", daysAgo: null, errorKind: "api_error" };
         }
-      })
-    );
-    setRepos(updated);
+      }
+    };
+    await Promise.all(Array.from({ length: 6 }, worker));
+    setRepos(results);
     setLastUpdated(new Date());
   };
 
@@ -279,7 +285,7 @@ export function BuildStatusTab() {
 
                   <span className="w-20 shrink-0 text-right font-mono text-xs text-muted">
                     {repo.status === "LOADING" ? "N/A" :
-                     repo.status === "ERROR" ? "API error" :
+                     repo.status === "ERROR" ? (repo.errorKind === "not_found" ? "Repo not found" : repo.errorKind === "rate_limited" ? "Rate limited" : "API error") :
                      repo.daysAgo === 0 ? "today" :
                      repo.daysAgo === 1 ? "1 day ago" :
                      repo.daysAgo !== null ? `${repo.daysAgo}d ago` : "N/A"}
