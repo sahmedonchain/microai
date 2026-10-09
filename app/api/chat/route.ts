@@ -2,6 +2,7 @@ import Groq from "groq-sdk";
 import { searchKnowledge } from "@/lib/search";
 import { apiErrors, parseJson, withApi } from "@/lib/api";
 import { chatBodyBase } from "@/lib/schemas";
+import { parseChatHistory } from "@/lib/chatHistory";
 import { describeAddresses, networkSummary } from "@/lib/arcAddresses";
 import { spendCredit } from "@/lib/credits";
 
@@ -107,7 +108,7 @@ export const POST = withApi(
           : "NO DIRECT MATCH — use your built-in Arc & Circle knowledge to answer accurately.";
 
       // STEP 2: CALL AI
-      const pastMessages = (Array.isArray(history) ? history : []) as { role: string; content: string }[];
+      const pastMessages = parseChatHistory(history);
       const completion = await groq.chat.completions.create({
         model: "openai/gpt-oss-120b",
         messages: [
@@ -116,10 +117,7 @@ export const POST = withApi(
             role: "system",
             content: `[ARC & CIRCLE KNOWLEDGE BASE CONTEXT]\n\n${context}\n\nUse this context to give accurate, grounded answers. For addresses and chain IDs always use verified data only.`,
           },
-          ...pastMessages.slice(-8).map((h) => ({
-            role: h.role as "user" | "assistant",
-            content: h.content,
-          })),
+          ...pastMessages,
           { role: "user", content: message },
         ],
         temperature: 0.1,

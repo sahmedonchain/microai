@@ -2,6 +2,7 @@ import Groq from "groq-sdk";
 import { apiErrors, parseJson, withApi } from "@/lib/api";
 import { explorerFetch } from "@/lib/arcExplorer";
 import { debugAnalyzeBody } from "@/lib/schemas";
+import { UNTRUSTED_DATA_NOTICE, dataBlock, sanitizeUntrusted as clean } from "@/lib/untrusted";
 import { ARC_MAINNET, USDC_ADDRESS } from "@/lib/arcConfig";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -108,38 +109,22 @@ interface AnalysisResult {
   severity: "high" | "medium" | "low";
 }
 
+// Everything taken from the transaction and the Explorer (revert reasons, token
+// symbols, input data, ...) is untrusted: it goes into a delimited data block
+// in the user message, while the instructions live in the system message.
 function buildPrompt(
   txData: TxData,
   decodedFunction: string,
   tokenTransfers: TokenTransfer[],
   internalTxs: InternalTx[],
   correctedFlow: string[]
-): string {
-  return `Analyze this Arc MAINNET transaction and debug it:
-
-Transaction Hash: ${txData.hash}
-Status: ${txData.status}
-Result: ${txData.result || "unknown"}
-From: ${txData.from?.hash}
-To: ${txData.to?.hash || "contract creation"}
-Value: ${txData.value}
-Gas Used: ${txData.gas_used}
-Gas Limit: ${txData.gas_limit}
-Error: ${txData.error || "none"}
-Revert Reason: ${txData.revert_reason || "none"}
-Input Data: ${txData.raw_input ? txData.raw_input.slice(0, 100) : "none"}
-Fee: ${txData.fee?.value || "unknown"}
-Timestamp: ${txData.timestamp || "unknown"}
-Block: ${txData.block_number || "pending"}
-Decoded Function: ${decodedFunction}
-Token Transfers: ${tokenTransfers.length}${tokenTransfers.length ? " (" + tokenTransfers.slice(0, 5).map((t) => `${t.value} ${t.symbol}`).join(", ") + ")" : ""}
-Internal Transactions: ${internalTxs.length}
-Suggested Corrected Flow: ${correctedFlow.join(" -> ")}
+): { system: string; user: string } {
+  const system = `You analyze Arc MAINNET transactions and debug them.
 
 USDC Contract on Arc: ${USDC_CONTRACT}
 Arc Chain ID: ${ARC_CHAIN_ID}
 
-Please respond ONLY with valid JSON in this exact format, no other text:
+Respond ONLY with valid JSON in this exact format, no other text:
 {
   "summary": "one sentence describing what happened",
   "rootCause": "the specific technical reason this failed or succeeded",
@@ -148,11 +133,33 @@ Please respond ONLY with valid JSON in this exact format, no other text:
 }
 
 If the transaction succeeded, set severity to "low" and explain what it did.
-If it failed, identify the root cause from: insufficient USDC balance, wrong chain, gas limit too low, contract revert, invalid input, nonce issue, or other.`;
+If it failed, identify the root cause from: insufficient USDC balance, wrong chain, gas limit too low, contract revert, invalid input, nonce issue, or other.
+
+${UNTRUSTED_DATA_NOTICE}`;
+
+  const lines = [
+    `Transaction Hash: ${clean(txData.hash, 70)}`,
+    `Status: ${clean(txData.status, 20)}`,
+    `Result: ${clean(txData.result || "unknown", 20)}`,
+    `From: ${clean(txData.from?.hash, 50)}`,
+    `To: ${clean(txData.to?.hash || "contract creation", 50)}`,
+    `Value: ${clean(txData.value, 40)}`,
+    `Gas Used: ${clean(txData.gas_used, 20)}`,
+    `Gas Limit: ${clean(txData.gas_limit, 20)}`,
+    `Error: ${clean(txData.error || "none", 200)}`,
+    `Revert Reason: ${clean(txData.revert_reason || "none", 300)}`,
+    `Input Data: ${txData.raw_input ? clean(txData.raw_input.slice(0, 100), 100) : "none"}`,
+    `Fee: ${clean(txData.fee?.value || "unknown", 40)}`,
+    `Timestamp: ${clean(txData.timestamp || "unknown", 40)}`,
+    `Block: ${clean(txData.block_number || "pending", 20)}`,
+    `Decoded Function: ${clean(decodedFunction, 80)}`,
+    `Token Transfers: ${tokenTransfers.length}${tokenTransfers.length ? " (" + tokenTransfers.slice(0, 5).map((t) => `${clean(t.value, 40)} ${clean(t.symbol, 12)}`).join(", ") + ")" : ""}`,
+    `Internal Transactions: ${internalTxs.length}`,
+    `Suggested Corrected Flow: ${correctedFlow.map((c) => clean(c, 80)).join(" -> ")}`,
+  ];
+  return { system, user: `Analyze this transaction:\n${dataBlock("transaction", lines, { maxLineLen: 420 })}` };
 }
 
-// Public AI endpoint: strict per-minute and per-day limits for each caller
-// (wallet if signed in, otherwise IP) plus one shared daily budget for the route.
 export const POST = withApi(
   {
     name: "debug-analyze",
@@ -188,7 +195,13 @@ export const POST = withApi(
   try {
     const completion = await groq.chat.completions.create({
       model: "openai/gpt-oss-120b",
-      messages: [{ role: "user", content: buildPrompt(txData, decodedFunction, tokenTransfers, internalTxs, correctedFlow) }],
+      messages: (() => {
+        const prompt = buildPrompt(txData, decodedFunction, tokenTransfers, internalTxs, correctedFlow);
+        return [
+          { role: "system" as const, content: prompt.system },
+          { role: "user" as const, content: prompt.user },
+        ];
+      })(),
       temperature: 0.1,
       max_tokens: 700,
     });

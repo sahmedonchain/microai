@@ -2,6 +2,7 @@ import Groq from "groq-sdk";
 import { apiErrors, parseJson, withApi } from "@/lib/api";
 import { explorerFetch } from "@/lib/arcExplorer";
 import { walletBody } from "@/lib/schemas";
+import { UNTRUSTED_DATA_NOTICE, dataBlock, sanitizeUntrusted } from "@/lib/untrusted";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -85,24 +86,25 @@ export const POST = withApi(
 
   let aiSummary = "";
   try {
-    const tokens = tokenBalances
+    // Token symbols are chosen by whoever deployed the token: untrusted.
+    const tokenLines = tokenBalances
       .slice(0, 10)
-      .map((t) => `${t.token?.symbol ?? "?"}: ${t.value ?? "0"} (raw)`)
-      .join(", ");
+      .map((t) => `${sanitizeUntrusted(t.token?.symbol ?? "?", 12)}: ${sanitizeUntrusted(t.value ?? "0", 40)} (raw)`);
     const completion = await groq.chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: [
         {
           role: "system",
           content:
-            "You are MicroAI Wallet Analyst. Analyze Arc wallet activity and give a short 3-4 sentence summary. Focus on USDC movements, contract interactions, and activity patterns. Be factual, not alarmist.",
+            `You are MicroAI Wallet Analyst. Analyze Arc wallet activity and give a short 3-4 sentence summary. Focus on USDC movements, contract interactions, and activity patterns. Be factual, not alarmist. ${UNTRUSTED_DATA_NOTICE}`,
         },
         {
           role: "user",
           content: `Address: ${address}
 Transaction count: ${txCount}
 Recent transactions analyzed: ${transactions.length}
-Token balances: ${tokens || "none"}
+Token balances:
+${dataBlock("token_balances", tokenLines, { maxLineLen: 80 })}
 Risk signals detected: ${JSON.stringify(riskSignals)}`,
         },
       ],
