@@ -222,14 +222,13 @@ export default function BuildPage() {
   const shown = history.slice(-MAX_SHOWN);
 
   return (
-    <div className="flex min-h-screen flex-col bg-space font-sans text-text">
+    <div className="flex h-screen flex-col overflow-hidden bg-space font-sans text-text">
       {showWalletModal && (
         <WalletModal onConnect={handleWalletConnect} onClose={() => setShowWalletModal(false)} />
       )}
 
-
-      <div className="flex flex-1">
-        <aside className="hidden w-72 shrink-0 border-r border-border bg-surface p-6 lg:block">
+      <div className="flex min-h-0 flex-1">
+        <aside className="hidden w-72 shrink-0 overflow-y-auto border-r border-border bg-surface p-6 lg:flex lg:flex-col">
           <h2 className="text-sm font-semibold">Mode guide</h2>
           <p className="mt-1 text-xs text-muted">Pick a mode to focus the answer format.</p>
           <ul className="mt-4 space-y-4">
@@ -249,7 +248,7 @@ export default function BuildPage() {
           </ul>
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
             <div className="max-w-3xl">
               <h1 className="text-2xl font-semibold leading-tight">AI Developer Copilot</h1>
