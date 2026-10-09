@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { explorerFetch } from "@/lib/arcExplorer";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
-const EXPLORER_TIMEOUT_MS = 5000;
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
@@ -23,20 +21,6 @@ interface ExplorerTx {
   raw_input?: string;
   timestamp?: string;
   to?: { is_contract?: boolean } | null;
-}
-
-async function explorerGet(path: string): Promise<unknown | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), EXPLORER_TIMEOUT_MS);
-  try {
-    const res = await fetch(`${ARC_EXPLORER_API}${path}`, { cache: "no-store", signal: controller.signal });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null; // timeout, network error or malformed response
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 function toBigInt(value: unknown): bigint {
@@ -84,26 +68,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid address. Must be 0x followed by 40 hex characters." }, { status: 400 });
   }
 
-  const [profile, txData, tokenData, counters] = await Promise.all([
-    explorerGet(`/addresses/${address}`),
-    explorerGet(`/addresses/${address}/transactions?limit=20`),
-    explorerGet(`/addresses/${address}/token-balances`),
-    explorerGet(`/addresses/${address}/counters`),
+  const [profileRes, txRes, tokenRes, countersRes] = await Promise.all([
+    explorerFetch<object>(`/addresses/${address}`),
+    explorerFetch<{ items?: ExplorerTx[] }>(`/addresses/${address}/transactions`),
+    explorerFetch<{ token?: { symbol?: string }; value?: string }[]>(`/addresses/${address}/token-balances`),
+    explorerFetch<{ transactions_count?: string }>(`/addresses/${address}/counters`),
   ]);
 
-  if (!profile || !txData || !tokenData) {
+  if (!profileRes.ok && profileRes.kind === "not_found") {
+    return NextResponse.json({ error: "Address not found on Arc Mainnet." }, { status: 404 });
+  }
+  if (!profileRes.ok || !txRes.ok || !tokenRes.ok) {
     return NextResponse.json(
-      { error: "Could not load this wallet from Arc Explorer. The address may not exist on Arc Mainnet, or Explorer timed out. Try again in a moment." },
-      { status: 504 }
+      { error: "Arc Explorer is unreachable right now. Try again in a moment." },
+      { status: 502 }
     );
   }
 
-  const transactions: ExplorerTx[] = Array.isArray((txData as { items?: unknown })?.items)
-    ? ((txData as { items: ExplorerTx[] }).items).slice(0, 20)
-    : [];
-  const tokenBalances = Array.isArray(tokenData) ? tokenData : [];
+  const profile = profileRes.data;
+  const transactions: ExplorerTx[] = Array.isArray(txRes.data?.items) ? txRes.data.items.slice(0, 20) : [];
+  const tokenBalances = Array.isArray(tokenRes.data) ? tokenRes.data : [];
   const txCount =
-    (counters as { transactions_count?: string } | null)?.transactions_count ??
+    (countersRes.ok ? countersRes.data?.transactions_count : undefined) ??
     (profile as { tx_count?: string | number }).tx_count ??
     String(transactions.length);
 
@@ -113,7 +99,7 @@ export async function POST(req: Request) {
   try {
     const tokens = tokenBalances
       .slice(0, 10)
-      .map((t: { token?: { symbol?: string }; value?: string }) => `${t.token?.symbol ?? "?"}: ${t.value ?? "0"} (raw)`)
+      .map((t) => `${t.token?.symbol ?? "?"}: ${t.value ?? "0"} (raw)`)
       .join(", ");
     const completion = await groq.chat.completions.create({
       model: "openai/gpt-oss-120b",
@@ -141,7 +127,7 @@ Risk signals detected: ${JSON.stringify(riskSignals)}`,
   }
 
   return NextResponse.json({
-    profile: { ...(profile as object), tx_count: txCount },
+    profile: { ...profile, tx_count: txCount },
     transactions,
     tokenBalances,
     riskSignals,
