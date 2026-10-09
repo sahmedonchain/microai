@@ -10,6 +10,9 @@ const navLinks = [
   { label: "STATS", href: "/stats" },
   { label: "BUILD", href: "/build-status" },
   { label: "NEWS", href: "/news" },
+  { label: "COPILOT", href: "/build" },
+  { label: "WALLET", href: "/wallet" },
+  { label: "CREDITS", href: "/credits" },
 ];
 
 export function Navbar() {

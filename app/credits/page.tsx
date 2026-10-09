@@ -121,7 +121,7 @@ export default function CreditsPage() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {receipts.map((r) => (
-                    <PaymentReceipt key={r.txHash} {...r} />
+                    <PaymentReceipt key={r.txHash + r.from + r.to} {...r} />
                   ))}
                 </div>
               )}

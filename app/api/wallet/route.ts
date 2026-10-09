@@ -5,6 +5,8 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
+const EXPLORER_TIMEOUT_MS = 5000;
+
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
 const RATE_LIMIT = 10; // requests
@@ -24,12 +26,16 @@ interface ExplorerTx {
 }
 
 async function explorerGet(path: string): Promise<unknown | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXPLORER_TIMEOUT_MS);
   try {
-    const res = await fetch(`${ARC_EXPLORER_API}${path}`, { cache: "no-store" });
+    const res = await fetch(`${ARC_EXPLORER_API}${path}`, { cache: "no-store", signal: controller.signal });
     if (!res.ok) return null;
     return await res.json();
   } catch {
-    return null;
+    return null; // timeout, network error or malformed response
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -85,8 +91,11 @@ export async function POST(req: Request) {
     explorerGet(`/addresses/${address}/counters`),
   ]);
 
-  if (!profile) {
-    return NextResponse.json({ error: "Address not found on Arc Mainnet, or Arc Explorer is unavailable." }, { status: 502 });
+  if (!profile || !txData || !tokenData) {
+    return NextResponse.json(
+      { error: "Could not load this wallet from Arc Explorer. The address may not exist on Arc Mainnet, or Explorer timed out. Try again in a moment." },
+      { status: 504 }
+    );
   }
 
   const transactions: ExplorerTx[] = Array.isArray((txData as { items?: unknown })?.items)

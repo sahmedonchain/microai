@@ -8,6 +8,8 @@ const ARC_EXPLORER_API = "https://explorer.arc.io/api/v2";
 const USDC_CONTRACT = "0x3600000000000000000000000000000000000000";
 const ARC_CHAIN_ID = 5042;
 
+const EXPLORER_TIMEOUT_MS = 5000;
+
 const TX_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
 const RATE_LIMIT = 10; // requests
@@ -73,13 +75,17 @@ function buildCorrectedFlow(txData: TxData): string[] {
 // Explorer sub-resources are best-effort: a failure here must not fail the
 // whole analysis, so it degrades to an empty list.
 async function fetchItems(txHash: string, path: string): Promise<Record<string, any>[]> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXPLORER_TIMEOUT_MS);
   try {
-    const res = await fetch(`${ARC_EXPLORER_API}/transactions/${txHash}/${path}`, { cache: "no-store" });
+    const res = await fetch(`${ARC_EXPLORER_API}/transactions/${txHash}/${path}`, { cache: "no-store", signal: controller.signal });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data?.items) ? data.items : [];
   } catch {
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 }
 

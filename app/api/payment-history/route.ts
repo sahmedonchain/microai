@@ -21,13 +21,19 @@ interface ExplorerTransfer {
 }
 
 export async function POST() {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  const session = token ? verifySessionToken(token) : null;
-  if (!session) {
-    return NextResponse.json({ error: "session_required" }, { status: 401 });
+  let walletAddress: string;
+  try {
+    const store = await cookies();
+    const token = store.get(SESSION_COOKIE)?.value;
+    const session = token ? verifySessionToken(token) : null;
+    if (!session) {
+      return NextResponse.json({ error: "session_required" }, { status: 401 });
+    }
+    walletAddress = session.sub;
+  } catch (err) {
+    console.error("Payment history session error:", err);
+    return NextResponse.json({ error: "Session check failed. Please try again later." }, { status: 500 });
   }
-  const walletAddress = session.sub;
 
   if (!checkRateLimit(`payment-history:${walletAddress}`, RATE_LIMIT, RATE_WINDOW_MS)) {
     return NextResponse.json({ error: "Too many requests. Please slow down and try again shortly." }, { status: 429 });
