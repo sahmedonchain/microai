@@ -19,15 +19,15 @@ function formatTimestamp(ts: string): string {
 
 export function PaymentReceipt({ txHash, from, to, amount, timestamp, explorerUrl }: PaymentReceiptProps) {
   return (
-    <div style={{ padding: 16, borderRadius: 12, background: "rgba(3,17,10,0.25)", border: "1px solid rgba(16,185,129,0.08)" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 16, fontWeight: 600, color: "#34d399", fontFamily: "monospace" }}>{amount}</span>
+    <div className="rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-mono text-base font-semibold text-success">{amount}</span>
         <a
           href={explorerUrl}
           target="_blank"
           rel="noreferrer"
           aria-label={`View transaction ${short(txHash)} on Arc Explorer`}
-          style={{ color: "#34d399", display: "inline-flex" }}
+          className="inline-flex text-muted transition hover:text-text"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
@@ -36,11 +36,11 @@ export function PaymentReceipt({ txHash, from, to, amount, timestamp, explorerUr
           </svg>
         </a>
       </div>
-      <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontSize: 11, color: "#64748b" }}>
-        <span style={{ fontFamily: "monospace" }}>{short(from)} → {short(to)}</span>
+      <div className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-muted">
+        <span className="font-mono">{short(from)} → {short(to)}</span>
         <span>{formatTimestamp(timestamp)}</span>
       </div>
-      <div style={{ marginTop: 6, fontSize: 11, color: "#475569", fontFamily: "monospace" }}>{short(txHash)}</div>
+      <div className="mt-1.5 font-mono text-xs text-muted">{short(txHash)}</div>
     </div>
   );
 }
