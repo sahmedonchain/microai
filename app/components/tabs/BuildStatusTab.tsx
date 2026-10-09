@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 import { Search, SlidersHorizontal, MessageSquare, ExternalLink } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { timeAgo } from "@/lib/format";
-import type { AchSwapOnchainPayload } from "@/app/api/achswap-onchain/route";
-import { SCAN_WINDOW_LABEL } from "@/app/api/achswap-onchain/route";
+import type { AchSwapOnchainPayload } from "@/lib/achswapTypes";
+import { SCAN_WINDOW_LABEL } from "@/lib/achswapTypes";
 
 interface RepoStatus {
   name: string;

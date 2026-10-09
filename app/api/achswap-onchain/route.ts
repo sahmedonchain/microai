@@ -2,6 +2,7 @@ import { getRedis } from "@/lib/redis";
 import { rpcCall } from "@/lib/arcRpc";
 import { ARC_MAINNET } from "@/lib/arcConfig";
 import { withApi } from "@/lib/api";
+import { type ActivityResult, type AchSwapOnchainPayload } from "@/lib/achswapTypes";
 
 // AchSwap's GitHub org is private (no public repo for the core app), so
 // Build Status tracks it via on-chain proof instead: real contract code on
@@ -51,36 +52,8 @@ const CHUNK_SIZE = 9000;
 const MAX_CHUNKS = 8;
 const CHUNK_DELAY_MS = 250;
 
-// Human-readable version of MAX_CHUNKS * CHUNK_SIZE at Arc's ~0.5s block
-// time, for the UI to state the scan window honestly instead of implying
-// "no activity ever" when nothing turns up.
-export const SCAN_WINDOW_LABEL = "~10h";
-
 const CACHE_KEY = "microai:achswap:onchain";
 const CACHE_TTL_SECONDS = 12 * 60; // 12 min, within the requested 10-15 min window
-
-interface ContractStatus {
-  name: string;
-  address: string;
-  role: ContractRole;
-  hasCode: boolean;
-}
-
-interface ActivityResult {
-  lastActivityAt: string | null;
-  lastActivityTxHash: string | null;
-  lastActivityAddress: string | null;
-}
-
-export interface AchSwapOnchainPayload {
-  chainIdOk: boolean;
-  contracts: ContractStatus[];
-  verifiedCount: number;
-  totalCount: number;
-  swap: ActivityResult;
-  liquidity: ActivityResult;
-  unavailable: boolean;
-}
 
 interface RawLog {
   blockNumber: string;
