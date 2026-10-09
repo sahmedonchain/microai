@@ -65,9 +65,12 @@ interface Exchange {
   reply: string;
   mode: string;
   error?: boolean;
+  truncated?: boolean; // the model hit its length limit; the answer can be continued
+  continueId?: string;
 }
 
 const MAX_SHOWN = 6;
+const MAX_INPUT_HEIGHT = 200; // px; the box grows with the text up to ~8 lines, then scrolls
 
 function LoadingDots() {
   return (
@@ -96,7 +99,9 @@ export function CopilotTab() {
   const [authed, setAuthed] = useState(false);
   const [credit, setCredit] = useState<number | null>(null);
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [continuing, setContinuing] = useState<number | null>(null);
   const nextId = useRef(1);
 
   const placeholder =
@@ -172,8 +177,20 @@ export function CopilotTab() {
   );
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [history, loading]);
+    // Scroll the answer area itself: scrollIntoView would also scroll the
+    // overflow-hidden ancestors and push the pinned input out of view.
+    const el = scrollRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [history, loading, continuing]);
+
+  // Auto-grow: compact by default, grows with the text up to
+  // MAX_INPUT_HEIGHT, then scrolls inside. Clearing the input shrinks it back.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_HEIGHT)}px`;
+  }, [input]);
 
   const noCredits = authed && credit !== null && credit <= 0;
   const canSubmit = !!wallet && authed && !noCredits && !loading && input.trim().length > 0;
@@ -184,8 +201,6 @@ export function CopilotTab() {
     setInput("");
     setLoading(true);
 
-    // Prefix a chosen mode so the server's keyword detection follows the pill.
-    const outgoing = mode ? `[${mode}] ${message}` : message;
     const past = history.slice(-MAX_SHOWN).flatMap((h) => [
       { role: "user", content: h.message },
       { role: "assistant", content: h.reply },
@@ -196,7 +211,7 @@ export function CopilotTab() {
       const res = await fetch("/api/copilot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: outgoing, history: past }),
+        body: JSON.stringify({ message, mode: mode ?? undefined, history: past }),
       });
       const data = await res.json();
 
@@ -210,12 +225,49 @@ export function CopilotTab() {
         setHistory((h) => [...h, { id, message, mode: "ERROR", error: true, reply: data.error || data.reply || "Request failed. Try again in a moment." }]);
       } else {
         if (typeof data.credits === "number") setCredit(data.credits);
-        setHistory((h) => [...h, { id, message, mode: data.mode ?? "GENERAL", reply: data.reply }]);
+        setHistory((h) => [...h, { id, message, mode: data.mode ?? "GENERAL", reply: data.reply, truncated: data.truncated === true, continueId: data.continueId }]);
       }
     } catch {
       setHistory((h) => [...h, { id, message, mode: "ERROR", error: true, reply: "Network error. Check your connection and try again." }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Continue a cut-off answer. The server does not charge a credit for this.
+  const continueAnswer = async (exchange: Exchange) => {
+    if (!exchange.continueId || continuing !== null) return;
+    setContinuing(exchange.id);
+    try {
+      const res = await fetch("/api/copilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ continueId: exchange.continueId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (typeof data.credits === "number") setCredit(data.credits);
+        setHistory((h) =>
+          h.map((x) =>
+            x.id === exchange.id
+              ? { ...x, reply: x.reply + data.reply, truncated: data.truncated === true, continueId: data.continueId }
+              : x
+          )
+        );
+      } else {
+        // 502 keeps the same answer continuable (a fresh id); 410 means it expired.
+        setHistory((h) =>
+          h.map((x) =>
+            x.id === exchange.id
+              ? { ...x, continueId: data.continueId, truncated: Boolean(data.continueId), reply: x.reply + (data.continueId ? "" : `\n\n*${data.error || "Could not continue this answer."}*`) }
+              : x
+          )
+        );
+      }
+    } catch {
+      /* network error: keep the Continue button so the user can retry */
+    } finally {
+      setContinuing(null);
     }
   };
 
@@ -249,11 +301,11 @@ export function CopilotTab() {
 
       <div className="flex min-h-0 flex-1">
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-8 sm:px-8">
             <div className="max-w-3xl">
               <h1 className="text-2xl font-semibold leading-tight">AI Developer Copilot</h1>
               <p className="mt-2 max-w-xl text-sm text-muted">
-                Describe your idea. MicroAI builds, integrates, tests and deploys it on Arc.
+                Describe your idea. MicroAI writes the contracts, integration code, tests and deploy steps for Arc.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2" role="group" aria-label="Copilot mode">
@@ -297,6 +349,19 @@ export function CopilotTab() {
                       <div className="markdown text-sm leading-relaxed">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{h.reply}</ReactMarkdown>
                       </div>
+                      {h.truncated && h.continueId && (
+                        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
+                          <button
+                            type="button"
+                            onClick={() => continueAnswer(h)}
+                            disabled={continuing !== null}
+                            className="rounded-md border border-border px-3 py-1.5 text-sm text-text transition hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {continuing === h.id ? "Continuing..." : "Continue"}
+                          </button>
+                          <span className="text-xs text-muted">This answer hit the length limit. Continuing is free.</span>
+                        </div>
+                      )}
                     </div>
                   </section>
                 ))}
@@ -306,12 +371,11 @@ export function CopilotTab() {
                     <LoadingDots />
                   </div>
                 )}
-                <div ref={bottomRef} />
               </div>
             </div>
           </div>
 
-          <div className="border-t border-border bg-space px-4 py-4 sm:px-8">
+          <div className="shrink-0 border-t border-border bg-space px-4 py-3 sm:px-8">
             <div className="max-w-3xl">
               {!wallet || !authed ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
@@ -335,30 +399,40 @@ export function CopilotTab() {
                 </div>
               ) : (
                 <>
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                        e.preventDefault();
-                        submit();
-                      }
-                    }}
-                    maxLength={4000}
-                    rows={6}
-                    placeholder={placeholder}
-                    className="w-full resize-y rounded-sm border border-border bg-surface px-4 py-3 text-base text-text placeholder:text-muted focus:border-accent focus:outline-none"
-                  />
-                  <div className="mt-3 flex items-center gap-4">
+                  <div className="relative rounded-lg border border-border bg-surface focus-within:border-accent">
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                          e.preventDefault();
+                          submit();
+                        }
+                      }}
+                      maxLength={4000}
+                      rows={1}
+                      placeholder={placeholder}
+                      aria-label="Describe what to build"
+                      className="block min-h-[52px] w-full resize-none bg-transparent py-3.5 pl-4 pr-14 text-sm text-text placeholder:text-muted focus:outline-none"
+                    />
                     <button
+                      type="button"
                       onClick={submit}
                       disabled={!canSubmit}
-                      className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label={loading ? "Sending" : "Send"}
+                      className="absolute bottom-2 right-2 flex size-9 items-center justify-center rounded-lg bg-accent text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      Build with Copilot
+                      {loading ? (
+                        <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none" aria-hidden="true" />
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                        </svg>
+                      )}
                     </button>
-                    <span className="font-mono text-xs text-muted">1 credit per request, Ctrl+Enter to send</span>
                   </div>
+                  <p className="mt-1.5 font-mono text-xs text-muted">1 credit per request, Ctrl+Enter to send</p>
                 </>
               )}
             </div>
