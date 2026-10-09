@@ -12,12 +12,19 @@ import { WalletTab } from "@/app/components/tabs/WalletTab";
 import { DebuggerTab } from "@/app/components/tabs/DebuggerTab";
 import { CreditsTab } from "@/app/components/tabs/CreditsTab";
 import { AnimatePresence, motion } from "framer-motion";
+import { SidebarNav } from "@/app/components/SidebarNav";
+import {
+  NAV_GROUPS_COOKIE,
+  groupOfPanel,
+  initialOpenGroups,
+  isPanelId,
+  serializeOpenGroups,
+} from "@/lib/navConfig";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   BarChart3,
   Bell,
-  BookOpen,
   Bug,
   Check,
   ChevronDown,
@@ -28,17 +35,16 @@ import {
   Copy,
   ExternalLink,
   FileText,
-  Gift,
-  Hammer,
   Link2,
+  Menu,
   MessageSquare,
-  Newspaper,
   Paperclip,
   PanelLeftClose,
   PanelLeftOpen,
   Receipt,
   Wallet,
   Wrench,
+  X,
 } from "lucide-react";
 import { WalletModal } from "@/app/components/WalletModal";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
@@ -75,30 +81,11 @@ interface StatsPayload {
   recentTransactions: RecentTransaction[];
 }
 
-const NAV_ITEMS: { label: string; id: TabId; icon: typeof MessageSquare }[] = [
-  { label: "Chat", id: "home", icon: MessageSquare },
-  { label: "Ecosystem", id: "ecosystem", icon: Compass },
-  { label: "Grants", id: "grants", icon: Gift },
-  { label: "Build status", id: "build-status", icon: Hammer },
-  { label: "Stats", id: "stats", icon: BarChart3 },
-  { label: "News", id: "news", icon: Newspaper },
-  { label: "Copilot", id: "copilot", icon: Code2 },
-  { label: "Wallet", id: "wallet", icon: Wallet },
-  { label: "Debug", id: "debugger", icon: Bug },
-  { label: "Credits", id: "credits", icon: Coins },
-];
-
 const NEW_FEATURES = [
   { title: "AI Developer Copilot", href: "/build", icon: Code2, desc: "Describe your idea. MicroAI builds, integrates, tests and deploys it on Arc." },
   { title: "Wallet Intelligence", href: "/wallet", icon: Wallet, desc: "AI-powered wallet analysis, risk signals, and portfolio overview." },
   { title: "Transaction Debugger", href: "/debug", icon: Bug, desc: "Paste any TX hash. Get full AI breakdown, function decode, and fix suggestions." },
   { title: "Credits & Payments", href: "/credits", icon: Coins, desc: "View your USDC payment history and credit balance." },
-];
-
-const DEV_RESOURCES = [
-  { label: "Arc Developer Docs", href: "https://arc.io/docs" },
-  { label: "Circle Documentation", href: "https://circle.com/docs" },
-  { label: "USDC Resources", href: "https://www.circle.com/usdc" },
 ];
 
 const CATEGORY_PILLS = [
@@ -154,18 +141,34 @@ function saveUiCookie(name: string, value: string) {
 }
 
 function parsePanel(value: string | undefined): TabId {
-  return NAV_ITEMS.find((i) => i.id === value)?.id ?? "home";
+  return isPanelId(value) ? value : "home";
 }
 
 export function HomeTab({
   initialPanel,
   initialSidebarCollapsed = false,
+  initialNavGroups,
 }: {
   initialPanel?: string;
   initialSidebarCollapsed?: boolean;
+  initialNavGroups?: string;
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(initialSidebarCollapsed);
   const [activePanel, setActivePanel] = useState<TabId>(() => parsePanel(initialPanel));
+  // Open menu groups come from a cookie the server also read, so the first
+  // paint already has the right groups open (no jump after hydration).
+  const [openGroups, setOpenGroups] = useState<string[]>(() => initialOpenGroups(initialNavGroups, parsePanel(initialPanel)));
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  const saveOpenGroups = (next: string[]) => saveUiCookie(NAV_GROUPS_COOKIE, serializeOpenGroups(next));
+  const toggleGroup = (id: string) => {
+    setOpenGroups((prev) => {
+      const next = prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id];
+      saveOpenGroups(next);
+      return next;
+    });
+  };
 
   const toggleSidebar = () => {
     setSidebarCollapsed((prev) => {
@@ -456,7 +459,42 @@ export function HomeTab({
   const goToPanel = (tab: TabId) => {
     setActivePanel(tab);
     saveUiCookie(ACTIVE_PANEL_COOKIE, tab);
+    // Opening a page from anywhere (menu, in-page link) reveals its group.
+    const group = groupOfPanel(tab);
+    if (group) {
+      setOpenGroups((prev) => {
+        if (prev.includes(group)) return prev;
+        const next = [...prev, group];
+        saveOpenGroups(next);
+        return next;
+      });
+    }
   };
+
+  const selectFromMenu = (tab: TabId) => {
+    goToPanel(tab);
+    if (tab === "home") inputRef.current?.focus();
+  };
+
+  // Mobile drawer: Escape closes it, growing past the breakpoint closes it,
+  // and focus returns to the menu button.
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileNavOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => { if (mq.matches) setMobileNavOpen(false); };
+    document.addEventListener("keydown", onKey);
+    mq.addEventListener("change", onChange);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      mq.removeEventListener("change", onChange);
+    };
+  }, [mobileNavOpen]);
 
   return (
     <TabNavContext.Provider value={goToPanel}>
@@ -466,7 +504,7 @@ export function HomeTab({
         initial={false}
         animate={{ width: sidebarCollapsed ? 52 : 256 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="flex shrink-0 overflow-hidden border-r border-border bg-surface"
+        className="hidden shrink-0 overflow-hidden border-r border-border bg-surface md:flex"
       >
         <div className="flex w-full min-w-0 shrink-0 flex-col">
         <div className={`flex items-center border-b border-border ${sidebarCollapsed ? "justify-center px-2 py-5" : "justify-between gap-2 px-5 py-5"}`}>
@@ -489,62 +527,16 @@ export function HomeTab({
           </button>
         </div>
 
-        <nav className={`flex flex-col gap-1 py-4 ${sidebarCollapsed ? "px-1.5" : "px-3"}`} aria-label="Sections">
-          {NAV_ITEMS.map(({ label, id, icon: Icon }) => {
-            const active = activePanel === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                title={sidebarCollapsed ? label : undefined}
-                aria-label={label}
-                aria-current={active ? "page" : undefined}
-                onClick={() => {
-                  goToPanel(id);
-                  if (id === "home") inputRef.current?.focus();
-                }}
-                className={`flex items-center rounded-lg border-l-2 py-2 text-sm transition ${
-                  sidebarCollapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
-                } ${
-                  active
-                    ? "border-accent bg-accent-dim text-accent-text"
-                    : "border-transparent text-muted hover:bg-surface-raised hover:text-text"
-                }`}
-              >
-                <Icon className="size-4 shrink-0" aria-hidden="true" />
-                {!sidebarCollapsed && label}
-              </button>
-            );
-          })}
-        </nav>
-
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <SidebarNav
+            activePanel={activePanel}
+            openGroups={openGroups}
+            onToggleGroup={toggleGroup}
+            onSelectPanel={selectFromMenu}
+            collapsed={sidebarCollapsed}
+          />
         {!sidebarCollapsed && (
-        <div className="border-t border-border px-5 pt-4">
-          <p className="text-xs font-medium tracking-wide text-muted">Developer resources</p>
-          <div className="mt-3 flex flex-col gap-0.5">
-            {DEV_RESOURCES.map((r) => (
-              <a
-                key={r.label}
-                href={r.href}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between gap-2 rounded-md px-1 py-2 text-sm text-muted transition hover:text-text"
-              >
-                <span className="flex items-center gap-2">
-                  <BookOpen className="size-3.5 text-muted" aria-hidden="true" />
-                  {r.label}
-                </span>
-                <ExternalLink className="size-3 text-muted" aria-hidden="true" />
-              </a>
-            ))}
-          </div>
-        </div>
-        )}
-
-        <div className="flex-1" />
-
-        {!sidebarCollapsed && (
-        <div className="m-4 rounded-lg border border-accent/20 bg-accent-dim p-4">
+        <div className="m-4 mt-auto rounded-lg border border-accent/20 bg-accent-dim p-4">
           <LogoMark className="size-6" />
           <p className="mt-2 text-sm font-semibold text-text">Explore. Build. Earn.</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
@@ -556,13 +548,24 @@ export function HomeTab({
         </div>
         )}
         </div>
+        </div>
       </motion.aside>
 
       {/* CENTER + RIGHT */}
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* TOP BAR */}
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-6 py-4">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-4 md:px-6">
           <div className="flex items-center gap-3">
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={mobileNavOpen}
+              className="-ml-1 shrink-0 rounded-md p-1.5 text-muted transition hover:bg-surface-raised hover:text-text md:hidden"
+            >
+              <Menu className="size-5" aria-hidden="true" />
+            </button>
             <LogoMark className="size-7 shrink-0" />
             <span className="flex flex-col leading-tight">
               <span className="text-sm font-semibold text-text">MicroAI</span>
@@ -999,6 +1002,62 @@ export function HomeTab({
         </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.div
+              key="nav-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setMobileNavOpen(false)}
+              className="fixed inset-0 z-40 bg-black/60 md:hidden"
+              aria-hidden="true"
+            />
+            <motion.aside
+              key="nav-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col border-r border-border bg-surface md:hidden"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-border px-5 py-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <LogoMark className="size-8 shrink-0" />
+                  <span className="flex flex-col leading-tight">
+                    <span className="text-sm font-semibold text-text">MicroAI</span>
+                    <span className="text-xs text-muted">Build on Arc</span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => { setMobileNavOpen(false); menuButtonRef.current?.focus(); }}
+                  aria-label="Close menu"
+                  className="shrink-0 rounded-md p-1.5 text-muted transition hover:bg-surface-raised hover:text-text"
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <SidebarNav
+                  activePanel={activePanel}
+                  openGroups={openGroups}
+                  onToggleGroup={toggleGroup}
+                  onSelectPanel={selectFromMenu}
+                  onNavigate={() => setMobileNavOpen(false)}
+                />
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {walletModalOpen && <WalletModal onConnect={handleConnect} onClose={() => setWalletModalOpen(false)} />}
