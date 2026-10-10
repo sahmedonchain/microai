@@ -44,3 +44,4 @@ next-env.d.ts
 
 # separate project with its own repo
 /buildorbit-portfolio/
+!.env.example
