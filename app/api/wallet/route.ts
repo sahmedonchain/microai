@@ -1,6 +1,7 @@
 import Groq from "groq-sdk";
 import { apiErrors, parseJson, withApi } from "@/lib/api";
 import { explorerFetch } from "@/lib/arcExplorer";
+import { USDC_ADDRESS } from "@/lib/arcConfig";
 import { walletBody } from "@/lib/schemas";
 import { UNTRUSTED_DATA_NOTICE, dataBlock, sanitizeUntrusted } from "@/lib/untrusted";
 
@@ -9,11 +10,14 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MAX_UINT_SUFFIX = "f".repeat(64);
 // Arc's native USDC uses 18 decimals, and TX `value` is denominated in them.
 const HIGH_VALUE_THRESHOLD = BigInt(100) * BigInt(10) ** BigInt(18);
+// The same 100 USDC threshold for USDC sent through the ERC-20 interface (6 decimals).
+const HIGH_VALUE_USDC_UNITS = BigInt(100) * BigInt(10) ** BigInt(6);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface ExplorerTx {
   hash?: string;
   value?: string;
+  token_transfers?: { token?: { address_hash?: string; address?: string }; total?: { value?: string } }[] | null;
   raw_input?: string;
   timestamp?: string;
   to?: { is_contract?: boolean } | null;
@@ -38,6 +42,10 @@ function computeRiskSignals(txs: ExplorerTx[]) {
     const input = (tx.raw_input || "").toLowerCase();
     if (input.startsWith("0x095ea7b3") && input.endsWith(MAX_UINT_SUFFIX)) hasUnlimitedApproval = true;
     if (toBigInt(tx.value) > HIGH_VALUE_THRESHOLD) highValueTx = true;
+    for (const t of tx.token_transfers ?? []) {
+      const token = (t.token?.address_hash ?? t.token?.address ?? "").toLowerCase();
+      if (token === USDC_ADDRESS && toBigInt(t.total?.value) > HIGH_VALUE_USDC_UNITS) highValueTx = true;
+    }
 
     const age = tx.timestamp ? now - new Date(tx.timestamp).getTime() : Infinity;
     if (tx.to?.is_contract === true && age < 7 * DAY_MS) newContract = true;
