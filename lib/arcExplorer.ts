@@ -1,11 +1,5 @@
-// Shared client for the Arc Mainnet Blockscout API.
-//
-// explorer.arc.io sits behind a Cloudflare managed challenge that answers
-// requests carrying no Referer header with `403 cf-mitigated: challenge`
-// (an HTML "Just a moment..." page), so every bare server-side fetch fails.
-// Sending a Referer is what the explorer's own frontend does and is enough
-// to be served the JSON. If Cloudflare tightens the rule, requests surface
-// here as kind "unavailable" with the real status logged server-side.
+// Shared client for the Arc Mainnet Blockscout API. Requests carry a Referer
+// header, as the explorer's own frontend does, plus a timeout and one retry.
 import { ARC_MAINNET } from "@/lib/arcConfig";
 import { createLogger } from "@/lib/logger";
 

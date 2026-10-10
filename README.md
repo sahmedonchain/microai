@@ -79,19 +79,19 @@ USDC is the gas token on Arc. The native balance uses 18 decimals and the USDC E
 Implemented controls:
 
 - **Sign-in:** Sign-In with Ethereum (EIP-4361) bound to the app domain and Arc Mainnet chain ID. Nonces are stored in Redis, expire after 5 minutes and work once.
-- **Payments:** verified on the server from the Arc receipt (successful, USDC, correct recipient, amount and sender). Each transaction hash can be credited once, enforced atomically in Redis. Payments are verifiable for 7 days.
+- **Payments:** verified on the server from the Arc receipt: the RPC is checked to be Arc Mainnet, the transaction succeeded, and every USDC transfer in it is read. Transfers from the signed-in wallet to the MicroAI wallet are summed and must match the amount. Each transaction hash can be credited once, enforced atomically in Redis. Payments are verifiable for 7 days.
 - **Credits:** never expire.
+- **Headers:** HSTS, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy and a permissions policy on every response. A Content-Security-Policy is sent in report-only mode.
 - **Abuse limits:** Redis sliding-window rate limits on every API route, keyed by wallet or IP, plus daily caps on the public AI endpoints.
 - **Input handling:** request bodies and queries are validated with zod. Chat history from the browser is validated, and third-party text (token symbols, explorer fields) is fenced as data before it reaches the model.
 - **Keys:** the app never asks for a private key or seed phrase.
-- **Tests:** 159 tests in 16 files cover sign-in, payment verification, replay and recovery, rate limiting, prompt handling and the navigation config. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
+- **Tests:** 176 tests in 17 files cover sign-in, payment verification, replay and recovery, rate limiting, prompt handling and the navigation config. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
 
 Known limitations:
 
 - Experimental and not independently audited. Do not rely on it for large amounts.
 - AI answers can be wrong. Check addresses and parameters against [docs.arc.io](https://docs.arc.io) before sending funds.
 - Copilot output is not compiled or tested. Review and test generated code yourself.
-- Each payment transaction must contain a single USDC transfer to the payment wallet.
 - The ecosystem and grants lists are curated by hand and are not independently verified.
 - Wallet, Debug and ecosystem search are public and rate limited, so they can return `429`.
 - Chain data comes from the Arc RPC and the Arc Explorer API and is unavailable when they are.
