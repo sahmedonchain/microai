@@ -1,21 +1,19 @@
 import { PRICE_PER_QUERY, computeBundleAmount, isValidQueryCount } from "@/lib/pricing";
 import { rpcCall } from "@/lib/arcRpc";
-import { ERC20_TRANSFER_TOPIC, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
+import { ARC_MAINNET, ERC20_TRANSFER_TOPIC, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
+import { createLogger } from "@/lib/logger";
 
-const USDC_CONTRACT = USDC_ADDRESS;
-const RECEIVER = PAYMENT_RECEIVER;
+const log = createLogger({ lib: "purchaseVerification" });
+
+const USDC_CONTRACT = USDC_ADDRESS.toLowerCase();
+const RECEIVER = PAYMENT_RECEIVER.toLowerCase();
 const TRANSFER_TOPIC = ERC20_TRANSFER_TOPIC;
+
 // A payment can be verified up to 7 days after it was mined, so a purchase whose
 // confirmation was lost (slow receipt, closed tab) can still be credited.
 const MAX_TX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Before the 7-day window shipped (deployed 2026-10-09T16:22Z) credited payments
-// left a claim that expired after one hour, so for older transactions there is no
-// record of which were already credited, and crediting them again would pay twice.
-// Only transactions mined at or after this moment are eligible. It sits 22 minutes
-// before the deploy: a scan of the claim keys at 16:47Z found none, and every claim
-// written in the previous hour would still have been there, so no transaction mined
-// since 16:00Z was credited by the old code. Payments mined earlier go to support.
+// Payments are recoverable from this moment on; earlier ones are handled by support.
 export const RECOVERY_WINDOW_START_MS = Date.parse("2026-10-09T16:00:00Z");
 
 export type Reason =
@@ -25,6 +23,7 @@ export type Reason =
   | "wrong_recipient"
   | "wrong_amount"
   | "wrong_sender"
+  | "wrong_chain"
   | "too_old"
   | "before_recovery"
   | "already_used";
@@ -37,17 +36,62 @@ export class PaymentVerificationError extends Error {
   }
 }
 
-function topicToAddress(topic: string): string {
-  return "0x" + topic.slice(-40);
+// --- chain check -------------------------------------------------------------
+// Every verification confirms that the RPC really is Arc Mainnet. The answer is
+// cached for a minute so a burst of purchases costs one extra call, not one each.
+const CHAIN_CHECK_TTL_MS = 60_000;
+let chainConfirmedAt = 0;
+
+export function resetChainCheckCache() {
+  chainConfirmedAt = 0;
 }
 
-// Verifies txHash is a real, mined, exact USDC transfer from walletAddress (the
-// session-verified address, never a client-supplied one) to RECEIVER, mined
-// inside the recovery window. Read-only: it does not claim or credit anything. When
-// `requestedQueries` is omitted (payment recovery) the credit count is derived
-// from the amount paid. Returns the number of queries to credit.
-export async function checkPurchaseTx(txHash: string, walletAddress: string, requestedQueries: number | undefined): Promise<number> {
-  const receipt = await rpcCall<{ status?: string; logs?: unknown[]; blockNumber: string } | null>("eth_getTransactionReceipt", [txHash]);
+async function assertArcMainnet(): Promise<void> {
+  if (Date.now() - chainConfirmedAt < CHAIN_CHECK_TTL_MS) return;
+  const chainId = await rpcCall<string>("eth_chainId", []);
+  if (typeof chainId !== "string" || chainId.toLowerCase() !== ARC_MAINNET.chainIdHex) {
+    log.error("RPC returned an unexpected chain id", { expected: ARC_MAINNET.chainIdHex, got: String(chainId) });
+    // Nothing is claimed or credited. The user's payment is untouched and can be retried.
+    throw new PaymentVerificationError("Could not confirm the Arc Mainnet network right now. Try again shortly.", "wrong_chain", true);
+  }
+  chainConfirmedAt = Date.now();
+}
+
+// --- receipt -----------------------------------------------------------------
+interface ReceiptLog {
+  address?: string;
+  topics?: string[];
+  data?: string;
+  logIndex?: string;
+}
+
+interface Receipt {
+  status?: string;
+  logs?: ReceiptLog[];
+  blockNumber: string;
+}
+
+function topicToAddress(topic: string): string {
+  return ("0x" + topic.slice(-40)).toLowerCase();
+}
+
+export interface VerifiedPurchase {
+  queries: number;
+  units: bigint; // total USDC (6-decimal units) credited
+  logIndexes: number[]; // which Transfer logs were counted
+}
+
+// Verifies that txHash is a successful transaction on Arc Mainnet that paid
+// USDC from walletAddress (the session-verified address, never a client-supplied
+// one) to the MicroAI wallet, mined inside the recovery window. Every USDC
+// Transfer log in the receipt is examined; those from this wallet to our
+// wallet are summed, so a batched transaction with other transfers works.
+// Read-only: it does not claim or credit anything. When `requestedQueries` is
+// omitted (payment recovery) the credit count is derived from the amount paid.
+export async function checkPurchaseTx(txHash: string, walletAddress: string, requestedQueries: number | undefined): Promise<VerifiedPurchase> {
+  await assertArcMainnet();
+
+  const receipt = await rpcCall<Receipt | null>("eth_getTransactionReceipt", [txHash]);
   if (!receipt) {
     throw new PaymentVerificationError("Transaction not found on Arc Mainnet yet.", "not_found", true);
   }
@@ -55,38 +99,41 @@ export async function checkPurchaseTx(txHash: string, walletAddress: string, req
     throw new PaymentVerificationError("Transaction did not succeed.", "failed");
   }
 
-  const logs = (receipt.logs || []) as { address?: string; topics?: string[]; data?: string }[];
-  const transferLog = logs.find(
-    (log) =>
-      log.address?.toLowerCase() === USDC_CONTRACT.toLowerCase() &&
-      log.topics?.[0]?.toLowerCase() === TRANSFER_TOPIC &&
-      log.topics?.length === 3
-  );
-  if (!transferLog || !transferLog.topics || !transferLog.data) {
+  const wallet = walletAddress.toLowerCase();
+  const transfers = (receipt.logs ?? [])
+    .map((l, i) => ({ l, index: l.logIndex !== undefined ? parseInt(l.logIndex, 16) : i }))
+    .filter(
+      ({ l }) =>
+        l.address?.toLowerCase() === USDC_CONTRACT &&
+        l.topics?.length === 3 &&
+        l.topics[0].toLowerCase() === TRANSFER_TOPIC &&
+        typeof l.data === "string" &&
+        l.data.length > 2
+    )
+    .map(({ l, index }) => ({ index, from: topicToAddress(l.topics![1]), to: topicToAddress(l.topics![2]), value: BigInt(l.data!) }));
+
+  if (transfers.length === 0) {
     throw new PaymentVerificationError("No USDC transfer found in transaction.", "no_transfer");
   }
-
-  const from = topicToAddress(transferLog.topics[1]);
-  const to = topicToAddress(transferLog.topics[2]);
-  const value = BigInt(transferLog.data);
-
-  if (to.toLowerCase() !== RECEIVER.toLowerCase()) {
+  const toUs = transfers.filter((t) => t.to === RECEIVER);
+  if (toUs.length === 0) {
     throw new PaymentVerificationError("Transfer recipient does not match.", "wrong_recipient");
   }
-  if (from.toLowerCase() !== walletAddress.toLowerCase()) {
+  const matching = toUs.filter((t) => t.from === wallet);
+  if (matching.length === 0) {
     throw new PaymentVerificationError("Transfer sender does not match your session wallet.", "wrong_sender");
   }
 
+  const units = matching.reduce((sum, t) => sum + t.value, BigInt(0));
   let queries: number;
   if (requestedQueries === undefined) {
-    const units = Number(value);
-    queries = units / PRICE_PER_QUERY;
+    queries = Number(units) / PRICE_PER_QUERY;
     if (!Number.isInteger(queries) || !isValidQueryCount(queries)) {
       throw new PaymentVerificationError("Transfer amount is not a valid credit bundle.", "wrong_amount");
     }
   } else {
     queries = requestedQueries;
-    if (value !== BigInt(computeBundleAmount(queries))) {
+    if (units !== BigInt(computeBundleAmount(queries))) {
       throw new PaymentVerificationError("Transfer amount does not match the requested query count.", "wrong_amount");
     }
   }
@@ -101,6 +148,5 @@ export async function checkPurchaseTx(txHash: string, walletAddress: string, req
     throw new PaymentVerificationError("This payment was made before our recovery system went live. Contact support.", "before_recovery");
   }
 
-  return queries;
+  return { queries, units, logIndexes: matching.map((t) => t.index) };
 }
-

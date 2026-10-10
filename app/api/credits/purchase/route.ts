@@ -8,8 +8,8 @@ import { purchaseBody } from "@/lib/schemas";
 // Verifies the payment, then atomically marks it credited (SET NX) so it can be
 // credited only once. Returns the number of queries to credit.
 async function verifyAndClaim(txHash: string, walletAddress: string, requestedQueries: number | undefined): Promise<number> {
-  const queries = await checkPurchaseTx(txHash, walletAddress, requestedQueries);
-  const claimed = await claimTxHash(txHash, { wallet: walletAddress.toLowerCase(), credits: queries, at: new Date().toISOString() });
+  const { queries, logIndexes } = await checkPurchaseTx(txHash, walletAddress, requestedQueries);
+  const claimed = await claimTxHash(txHash, { wallet: walletAddress.toLowerCase(), credits: queries, logIndexes, at: new Date().toISOString() });
   if (!claimed) {
     throw new PaymentVerificationError("This payment has already been credited.", "already_used");
   }
@@ -31,6 +31,10 @@ export const POST = withApi(
     } catch (err) {
       if (err instanceof PaymentVerificationError) {
         log.warn("credit purchase rejected", { reason: err.reason });
+        // A network mismatch is a service problem, not a problem with the payment.
+        if (err.reason === "wrong_chain") {
+          throw new ApiError(503, "upstream_unavailable", err.message, { extra: { reason: err.reason, retryable: true } });
+        }
         const status = err.reason === "already_used" ? 409 : 402;
         throw new ApiError(status, "payment_invalid", err.message, { extra: { reason: err.reason, retryable: err.retryable } });
       }

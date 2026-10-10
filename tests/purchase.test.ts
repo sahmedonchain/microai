@@ -14,6 +14,7 @@ import { POST } from "@/app/api/credits/purchase/route";
 import { issueSessionToken } from "@/lib/session";
 import { getCredit, creditKey } from "@/lib/credits";
 import { submitPurchase } from "@/lib/pendingPurchase";
+import { resetChainCheckCache } from "@/lib/purchaseVerification";
 import { ERC20_TRANSFER_TOPIC, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
 
 const WALLET = "0x" + "a1".repeat(20);
@@ -27,6 +28,8 @@ interface Chain {
   receipts: Map<string, unknown>;
   blocks: Map<string, { timestamp: string }>;
   down: boolean;
+  chainId: string;
+  chainIdCalls: number;
 }
 let chain: Chain;
 
@@ -46,11 +49,29 @@ function mine(txHash: string, opts: { from?: string; to?: string; units?: number
   chain.blocks.set(block, { timestamp: "0x" + Math.floor((Date.now() - (opts.ageMs ?? 60_000)) / 1000).toString(16) });
 }
 
+// A receipt with several USDC logs (or logs from other tokens), for batched transactions.
+interface Xfer { from?: string; to?: string; units: number; token?: string }
+function mineBatch(txHash: string, transfers: Xfer[], opts: { ageMs?: number } = {}) {
+  const block = "0x" + (200 + chain.receipts.size).toString(16);
+  chain.receipts.set(txHash, {
+    status: "0x1",
+    blockNumber: block,
+    logs: transfers.map((t, i) => ({
+      address: t.token ?? USDC_ADDRESS,
+      logIndex: "0x" + (i + 5).toString(16),
+      topics: [ERC20_TRANSFER_TOPIC, pad(t.from ?? WALLET), pad(t.to ?? PAYMENT_RECEIVER)],
+      data: "0x" + BigInt(t.units).toString(16).padStart(64, "0"),
+    })),
+  });
+  chain.blocks.set(block, { timestamp: "0x" + Math.floor((Date.now() - (opts.ageMs ?? 60_000)) / 1000).toString(16) });
+}
+
 const tx = (n: number) => "0x" + n.toString(16).padStart(64, "0");
 
 beforeEach(() => {
   redis = makeFakeRedis();
-  chain = { receipts: new Map(), blocks: new Map(), down: false };
+  chain = { receipts: new Map(), blocks: new Map(), down: false, chainId: "0x13b2", chainIdCalls: 0 };
+  resetChainCheckCache();
   process.env.SESSION_SECRET = "test-secret";
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
@@ -60,7 +81,8 @@ beforeEach(() => {
     vi.fn(async (_url: string, init: RequestInit) => {
       if (chain.down) return new Response("bad gateway", { status: 502 });
       const { method, params } = JSON.parse(init.body as string);
-      const result = method === "eth_getTransactionReceipt" ? (chain.receipts.get(params[0]) ?? null) : method === "eth_getBlockByNumber" ? chain.blocks.get(params[0]) : null;
+      if (method === "eth_chainId") chain.chainIdCalls++;
+      const result = method === "eth_chainId" ? chain.chainId : method === "eth_getTransactionReceipt" ? (chain.receipts.get(params[0]) ?? null) : method === "eth_getBlockByNumber" ? chain.blocks.get(params[0]) : null;
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), { status: 200 });
     })
   );
@@ -116,8 +138,8 @@ describe("credit purchase verification (mocked chain)", () => {
     expect(await getCredit(WALLET)).toBe(1);
   });
 
-  it("a payment mined after the deploy but before the old 17:00Z cutoff is credited once (live bug)", async () => {
-    // The exact case that failed in production: mined 2026-10-09 16:42:01Z, verified the same evening.
+  it("a payment mined shortly after the recovery window opened is credited once", async () => {
+    // Mined 2026-10-09 16:42:01Z, verified the same evening.
     vi.setSystemTime(Date.parse("2026-10-09T17:10:00Z"));
     cookieJar.value = issueSessionToken(WALLET);
     mine(tx(30), { units: 5000, ageMs: Date.parse("2026-10-09T17:10:00Z") - Date.parse("2026-10-09T16:42:01Z") });
@@ -153,7 +175,7 @@ describe("credit purchase verification (mocked chain)", () => {
     expect(await redis.get(`microai:usedtx:${tx(33)}`)).toBeNull();
   });
 
-  it("a payment already credited by the old code (legacy claim key) is not credited again", async () => {
+  it("a payment that already has a claim key in the old format is not credited again", async () => {
     vi.setSystemTime(Date.parse("2026-10-09T17:10:00Z"));
     cookieJar.value = issueSessionToken(WALLET);
     mine(tx(34), { units: 1000, ageMs: 40 * 60_000 });
@@ -168,7 +190,7 @@ describe("credit purchase verification (mocked chain)", () => {
     const old = await post({ txHash: tx(6), queries: 1 });
     expect(old.status).toBe(402);
     expect(await old.json()).toMatchObject({ reason: "too_old", retryable: false, error: expect.stringMatching(/7-day/) });
-    // Younger than 7 days, but mined before 2026-10-09T16:00Z: its old 1-hour claim has lapsed, so it could be a double credit.
+    // Younger than 7 days, but mined before the recovery window opened (2026-10-09T16:00Z): held for support.
     mine(tx(7), { units: 1000, ageMs: NOW - Date.parse("2026-10-09T10:00:00Z") });
     const held = await post({ txHash: tx(7), queries: 1 });
     expect(held.status).toBe(402);
@@ -242,6 +264,111 @@ describe("credit purchase verification (mocked chain)", () => {
     cookieJar.value = undefined;
     mine(tx(15));
     expect((await post({ txHash: tx(15), queries: 5 })).status).toBe(401);
+  });
+});
+
+describe("batched transactions and the chain check (mocked chain)", () => {
+  const THIRD = "0x" + "d4".repeat(20);
+
+  it("credits a batched tx: the valid transfer is found among unrelated ones, wherever it sits", async () => {
+    mineBatch(tx(40), [
+      { to: THIRD, from: OTHER, units: 777 }, // someone else paying someone else
+      { from: WALLET, to: THIRD, units: 9999 }, // our wallet paying a third party
+      { units: 5000 }, // the payment to us
+      { token: "0x" + "c3".repeat(20), units: 12345 }, // another token entirely
+    ]);
+    const res = await post({ txHash: tx(40), queries: 5 });
+    expect(res.status).toBe(200);
+    expect(await getCredit(WALLET)).toBe(5);
+    expect(await redis.get(`microai:usedtx:${tx(40)}`)).toMatchObject({ wallet: WALLET, credits: 5, logIndexes: [7] });
+  });
+
+  it("sums two matching transfers in one transaction", async () => {
+    mineBatch(tx(41), [{ units: 3000 }, { units: 2000 }]);
+    expect((await post({ txHash: tx(41), queries: 5 })).status).toBe(200);
+    expect(await redis.get(`microai:usedtx:${tx(41)}`)).toMatchObject({ credits: 5, logIndexes: [5, 6] });
+  });
+
+  it("sums matching transfers in recovery mode too", async () => {
+    mineBatch(tx(42), [{ units: 7000 }, { units: 3000 }]);
+    expect(await (await post({ txHash: tx(42) })).json()).toMatchObject({ added: 10, credits: 10 });
+  });
+
+  it("ignores a Transfer log from another token even if it is addressed to us, from us, for the right amount", async () => {
+    mineBatch(tx(43), [{ token: "0x" + "c3".repeat(20), units: 5000 }, { units: 1000 }]);
+    // only the 1000-unit USDC log counts, so a 5-credit claim must fail
+    const res = await post({ txHash: tx(43), queries: 5 });
+    expect(res.status).toBe(402);
+    expect((await res.json()).reason).toBe("wrong_amount");
+    expect(await getCredit(WALLET)).toBe(0);
+  });
+
+  it("only credits what matches: transfers to us from other senders are not counted for this wallet", async () => {
+    mineBatch(tx(44), [{ from: OTHER, units: 4000 }, { units: 1000 }]);
+    expect((await post({ txHash: tx(44), queries: 5 })).status).toBe(402);
+    expect((await post({ txHash: tx(44), queries: 1 })).status).toBe(200);
+  });
+
+  it("rejects when no log matches (and says whether the sender or the recipient was wrong)", async () => {
+    mineBatch(tx(45), [{ from: OTHER, units: 5000 }]);
+    expect((await (await post({ txHash: tx(45), queries: 5 })).json()).reason).toBe("wrong_sender");
+    mineBatch(tx(46), [{ to: THIRD, units: 5000 }]);
+    expect((await (await post({ txHash: tx(46), queries: 5 })).json()).reason).toBe("wrong_recipient");
+    mineBatch(tx(47), [{ token: "0x" + "c3".repeat(20), units: 5000 }]);
+    expect((await (await post({ txHash: tx(47), queries: 5 })).json()).reason).toBe("no_transfer");
+  });
+
+  it("a replayed batched tx is rejected, and the same tx cannot be credited again through a different log", async () => {
+    mineBatch(tx(48), [{ units: 2000 }, { units: 3000 }]);
+    expect((await post({ txHash: tx(48), queries: 5 })).status).toBe(200);
+    expect((await post({ txHash: tx(48), queries: 5 })).status).toBe(409);
+    expect((await post({ txHash: tx(48), queries: 2 })).status).not.toBe(200); // asking for only part of the tx is no way in either
+    expect((await post({ txHash: tx(48) })).status).toBe(409);
+    expect(await getCredit(WALLET)).toBe(5);
+  });
+
+  it("concurrent submits of a batched tx credit once", async () => {
+    mineBatch(tx(49), [{ units: 1000 }, { units: 1000 }]);
+    const results = await Promise.all([1, 2, 3, 4].map(() => post({ txHash: tx(49), queries: 2 })));
+    expect(results.map((r) => r.status).sort()).toEqual([200, 409, 409, 409]);
+    expect(await getCredit(WALLET)).toBe(2);
+  });
+
+  it("rejects when the RPC is not Arc Mainnet, credits nothing, claims nothing, and says to retry", async () => {
+    mine(tx(50), { units: 5000 });
+    chain.chainId = "0x1"; // Ethereum mainnet
+    const res = await post({ txHash: tx(50), queries: 5 });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ reason: "wrong_chain", retryable: true });
+    expect(await getCredit(WALLET)).toBe(0);
+    expect(await redis.get(`microai:usedtx:${tx(50)}`)).toBeNull();
+    // the mismatch is not cached as success: once the node is right again the payment goes through
+    chain.chainId = "0x13b2";
+    expect((await post({ txHash: tx(50), queries: 5 })).status).toBe(200);
+  });
+
+  it("rejects a non-string or empty chain id", async () => {
+    mine(tx(51), { units: 1000 });
+    chain.chainId = "0x" as string;
+    expect((await post({ txHash: tx(51), queries: 1 })).status).toBe(503);
+  });
+
+  it("checks the chain on every verification but caches a good answer for a minute", async () => {
+    mine(tx(52), { units: 1000 });
+    mine(tx(53), { units: 1000 });
+    await post({ txHash: tx(52), queries: 1 });
+    await post({ txHash: tx(53), queries: 1 });
+    expect(chain.chainIdCalls).toBe(1);
+    vi.setSystemTime(Date.now() + 61_000);
+    cookieJar.value = issueSessionToken(WALLET);
+    mine(tx(54), { units: 1000 });
+    await post({ txHash: tx(54), queries: 1 });
+    expect(chain.chainIdCalls).toBe(2);
+  });
+
+  it("still requires a successful receipt every time", async () => {
+    mine(tx(55), { units: 1000, status: "0x0" });
+    expect((await (await post({ txHash: tx(55), queries: 1 })).json()).reason).toBe("failed");
   });
 });
 

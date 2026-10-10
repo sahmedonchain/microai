@@ -13,9 +13,12 @@ function txKey(txHash: string): string {
   return `microai:usedtx:${txHash.toLowerCase()}`;
 }
 
+// One claim per transaction hash, however many Transfer logs it contains: the
+// claim covers the whole transaction, and records which logs were counted.
 export interface TxClaim {
   wallet: string;
   credits: number;
+  logIndexes: number[];
   at: string;
 }
 
