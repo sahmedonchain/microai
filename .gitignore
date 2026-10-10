@@ -45,3 +45,10 @@ next-env.d.ts
 # separate project with its own repo
 /buildorbit-portfolio/
 !.env.example
+
+# internal security docs live outside the repo (~/microai-private-docs/); never commit them
+/security-spec.md
+/docs/phase1-audit.md
+/docs/security-*.md
+/docs/*audit*.md
+/docs/*findings*.md

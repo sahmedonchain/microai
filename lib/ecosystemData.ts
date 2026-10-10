@@ -1,7 +1,7 @@
 // Ecosystem directory data. Lives in lib/ so the server (AI search) and the
 // UI read the same list; the client never has to send project data to the API.
 // Structured fields (usdcSupport, github, contract, ...) are filled in only
-// when verified, see docs/phase1-audit.md section 5.
+// when verified.
 
 export type Project = {
   name: string;

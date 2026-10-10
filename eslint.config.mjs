@@ -8,7 +8,7 @@ const eslintConfig = defineConfig([
   {
     // Existing code predates these React Compiler lint rules (12 findings in
     // app/chat, app/stats, Stats, WalletModal, BuildStatus). Kept as warnings
-    // so CI can gate on new errors; tracked in docs/phase1-audit.md.
+    // so CI can gate on new errors.
     rules: {
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/immutability": "warn",
