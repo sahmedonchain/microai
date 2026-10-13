@@ -38,7 +38,7 @@ export const categories = [
 export const projects: Project[] = [
   {
     name: "MicroAI",
-    desc: "Pay-per-use AI chatbot dApp on Arc MAINNET. Ask any Arc or Circle question for $0.001 USDC. The Arc & Circle Intelligence Hub.",
+    desc: "MicroAI — Payment tools for builders on Arc",
     category: "COMMUNITY BUILDS",
     tags: ["AI", "Pay-per-use", "USDC", "Arc MAINNET"],
     url: "https://microai-tan.vercel.app",
