@@ -1,6 +1,6 @@
 # MicroAI
 
-> Pay-per-use AI assistant for builders on Arc, paid in USDC.
+> MicroAI — Payment tools for builders on Arc.
 
 [![CI](https://github.com/sahmedonchain/microai/actions/workflows/ci.yml/badge.svg)](https://github.com/sahmedonchain/microai/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/sahmedonchain/microai/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/sahmedonchain/microai/actions/workflows/github-code-scanning/codeql)

@@ -568,7 +568,7 @@ export function HomeTab({
             <LogoMark className="size-7 shrink-0" />
             <span className="flex flex-col leading-tight">
               <span className="text-sm font-semibold text-text">MicroAI</span>
-              <span className="hidden text-xs text-muted sm:block">AI assistant for the Arc ecosystem</span>
+              <span className="hidden text-xs text-muted sm:block">Payment & integration tools for Arc</span>
             </span>
           </div>
 

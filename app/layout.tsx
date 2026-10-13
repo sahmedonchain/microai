@@ -13,8 +13,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MicroAI: AI Chatbot for the Arc & Circle Intelligence Hub",
-  description: "Pay-per-use AI chatbot on Arc MAINNET. Ask any Arc or Circle question for $0.001 USDC, settled onchain.",
+  title: "MicroAI — Payment tools for builders on Arc",
+  description: "MicroAI — Payment tools for builders on Arc",
 };
 
 export default function RootLayout({
