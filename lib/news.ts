@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { hostMatches, safeFetch, type SafeResponse } from "./safeFetch";
 import { Redis } from "@upstash/redis";
 
 const FETCH_TIMEOUT_MS = 5000;
@@ -103,13 +104,23 @@ function isImportant(official: boolean, tags: NewsTag[]): boolean {
   return official || tags.some((t) => IMPORTANT_TAGS.includes(t));
 }
 
-async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+// All outbound news requests go through safeFetch (https/443 only, public IPs
+// only, 3 redirects max, 5 s deadline, 1 MB cap). `allowedHosts` additionally
+// pins sitemap-derived URLs, which come from remote data, to Arc/Circle.
+async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS, allowedHosts?: readonly string[]): Promise<SafeResponse> {
+  return safeFetch(url, { timeoutMs, allowedHosts, headers: { "User-Agent": BROWSER_USER_AGENT } });
+}
+
+// Sitemap sources are Arc and Circle sites; so is every page they may list.
+// Anything else in a sitemap (other host, subdomain of something else) is ignored.
+const SITEMAP_HOSTS = ["arc.io", "*.arc.io", "circle.com", "*.circle.com"] as const;
+
+export function isAllowedSitemapUrl(loc: string): boolean {
   try {
-    return await fetch(url, { signal: controller.signal, headers: { "User-Agent": BROWSER_USER_AGENT } });
-  } finally {
-    clearTimeout(timer);
+    const u = new URL(loc);
+    return u.protocol === "https:" && !u.username && !u.password && (u.port === "" || u.port === "443") && hostMatches(u.hostname, SITEMAP_HOSTS);
+  } catch {
+    return false;
   }
 }
 
@@ -160,7 +171,7 @@ function extractMetaContent(html: string, patterns: RegExp[]): string | null {
 }
 
 async function fetchPageMeta(url: string): Promise<{ title: string | null; description: string | null; publishedAt: string | null }> {
-  const res = await fetchWithTimeout(url);
+  const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, SITEMAP_HOSTS);
   if (!res.ok) throw new Error(`${res.status}`);
   const html = await res.text();
 
@@ -186,7 +197,7 @@ interface SitemapUrlEntry {
 }
 
 async function fetchSitemapUrls(sitemapUrl: string): Promise<SitemapUrlEntry[]> {
-  const res = await fetchWithTimeout(sitemapUrl);
+  const res = await fetchWithTimeout(sitemapUrl, FETCH_TIMEOUT_MS, SITEMAP_HOSTS);
   if (!res.ok) throw new Error(`${res.status}`);
   const xml = await res.text();
   const parser = new XMLParser();
@@ -201,6 +212,7 @@ async function fetchSitemapUrls(sitemapUrl: string): Promise<SitemapUrlEntry[]> 
 async function fetchSitemapMetaSource(source: Extract<SourceConfig, { type: "sitemap-meta" }>): Promise<NewsItem[]> {
   const entries = await fetchSitemapUrls(source.sitemapUrl);
   const matched = entries
+    .filter((e) => isAllowedSitemapUrl(e.loc))
     .filter((e) => {
       try {
         return source.pathMatch.test(new URL(e.loc).pathname);
@@ -341,17 +353,23 @@ async function fetchSource(source: SourceConfig): Promise<NewsItem[]> {
 export async function fetchXPosts(handle: string): Promise<NewsItem[]> {
   const token = process.env.X_BEARER_TOKEN;
   if (!token) return [];
+  // Defense in depth: this is not wired to any request input, but a handle is
+  // spliced into a URL path, so refuse anything that is not an X username.
+  if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) return [];
   try {
-    const userRes = await fetchWithTimeout(`https://api.twitter.com/2/users/by/username/${handle}`);
+    const userRes = await safeFetch(`https://api.twitter.com/2/users/by/username/${handle}`, {
+      allowedHosts: ["api.twitter.com"],
+      headers: { "User-Agent": BROWSER_USER_AGENT, Authorization: `Bearer ${token}` },
+    });
     if (!userRes.ok) return [];
     const userData = await userRes.json();
     const userId = userData?.data?.id;
     if (!userId) return [];
 
-    const tweetsRes = await fetch(
-      `https://api.twitter.com/2/users/${userId}/tweets?max_results=10&tweet.fields=created_at`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const tweetsRes = await safeFetch(`https://api.twitter.com/2/users/${encodeURIComponent(String(userId))}/tweets?max_results=10&tweet.fields=created_at`, {
+      allowedHosts: ["api.twitter.com"],
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!tweetsRes.ok) return [];
     const tweetsData = await tweetsRes.json();
     const tweets: { id: string; text: string; created_at?: string }[] = tweetsData?.data ?? [];

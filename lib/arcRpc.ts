@@ -1,5 +1,6 @@
 import { ARC_MAINNET } from "@/lib/arcConfig";
 import { createLogger } from "@/lib/logger";
+import { ARC_RPC_HOSTS, assertAllowedHost, readTextCapped, SafeFetchError } from "@/lib/safeFetch";
 
 // Shared JSON-RPC client for Arc. Every method used by the app is a read, so
 // timeouts, network errors and 429/5xx responses are retried once.
@@ -24,7 +25,10 @@ async function attempt(url: string, method: string, params: unknown[], timeoutMs
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    // Only Arc's own RPC hosts, https/443, and never a redirect.
+    assertAllowedHost(url, ARC_RPC_HOSTS);
     const res = await fetch(url, {
+      redirect: "error",
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
@@ -32,12 +36,14 @@ async function attempt(url: string, method: string, params: unknown[], timeoutMs
       signal: controller.signal,
     });
     if (res.status === 429 || res.status >= 500) throw new RpcError(`RPC HTTP ${res.status}`, true);
-    const data = await res.json();
+    const data = JSON.parse(await readTextCapped(res));
     // A JSON-RPC error is a definitive answer from the node, so it is not retried.
     if (data.error) throw new RpcError(data.error.message || JSON.stringify(data.error), false);
     return data.result;
   } catch (err) {
     if (err instanceof RpcError) throw err;
+    // A refused host or oversized body will not improve on retry.
+    if (err instanceof SafeFetchError) throw new RpcError("RPC request refused", false);
     throw new RpcError(err instanceof Error ? `${err.name}: ${err.message}` : "RPC request failed", true);
   } finally {
     clearTimeout(timer);

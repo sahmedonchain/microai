@@ -2,6 +2,7 @@
 // header, as the explorer's own frontend does, plus a timeout and one retry.
 import { ARC_MAINNET } from "@/lib/arcConfig";
 import { createLogger } from "@/lib/logger";
+import { ARC_EXPLORER_HOSTS, assertAllowedHost, readTextCapped, SafeFetchError } from "@/lib/safeFetch";
 
 export const ARC_EXPLORER_API = ARC_MAINNET.explorerApiUrl;
 const log = createLogger({ lib: "arcExplorer" });
@@ -28,7 +29,11 @@ async function attempt<T>(path: string, timeoutMs: number): Promise<ExplorerResu
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(`${ARC_EXPLORER_API}${path}`, {
+    const target = `${ARC_EXPLORER_API}${path}`;
+    // Only Arc's own explorer hosts, https/443, and never a redirect.
+    assertAllowedHost(target, ARC_EXPLORER_HOSTS);
+    const res = await fetch(target, {
+      redirect: "error",
       headers: REQUEST_HEADERS,
       cache: "no-store",
       signal: controller.signal,
@@ -44,8 +49,12 @@ async function attempt<T>(path: string, timeoutMs: number): Promise<ExplorerResu
     }
 
     try {
-      return { ok: true, data: (await res.json()) as T };
-    } catch {
+      return { ok: true, data: JSON.parse(await readTextCapped(res)) as T };
+    } catch (err) {
+      if (err instanceof SafeFetchError) {
+        log.error("explorer response too large", { path });
+        return { ok: false, kind: "unavailable", status: res.status };
+      }
       log.error("explorer response was not JSON", { path, status: res.status });
       return { ok: false, kind: "unavailable", status: res.status };
     }

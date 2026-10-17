@@ -2,6 +2,7 @@ import { getRedis } from "@/lib/redis";
 import { ApiError, apiErrors, parseQuery, withApi } from "@/lib/api";
 import { githubStatusQuery } from "@/lib/schemas";
 import { createLogger } from "@/lib/logger";
+import { safeFetch, type SafeResponse } from "@/lib/safeFetch";
 
 const CACHE_TTL_SECONDS = 12 * 60; // 12 min, within the requested 10-15 min window
 const FETCH_TIMEOUT_MS = 5000;
@@ -24,20 +25,17 @@ class GithubError extends Error {
   }
 }
 
-async function requestRepo(repo: string, token: string | undefined): Promise<Response> {
+async function requestRepo(repo: string, token: string | undefined): Promise<SafeResponse> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "User-Agent": "MicroAI",
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(`https://api.github.com/repos/${repo}`, { headers, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+  // GITHUB_TOKEN is only ever sent to api.github.com: the host allowlist
+  // refuses any redirect elsewhere, and safeFetch also strips Authorization
+  // whenever a redirect changes host.
+  return safeFetch(`https://api.github.com/repos/${repo}`, { headers, timeoutMs: FETCH_TIMEOUT_MS, allowedHosts: ["api.github.com"] });
 }
 
 async function fetchGithub(repo: string): Promise<GithubStatusPayload> {
