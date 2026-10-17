@@ -59,7 +59,7 @@ function computeRiskSignals(txs: ExplorerTx[]) {
 // (wallet if signed in, otherwise IP) plus one shared daily budget for the route.
 export const POST = withApi(
   {
-    name: "wallet",
+    name: "wallet", onLimiterError: "closed",
     auth: "optional",
     limits: [
       { limit: 5, windowSec: 60 },

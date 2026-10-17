@@ -11,6 +11,7 @@ vi.mock("@/lib/rateLimit", async (orig) => ({ ...(await orig<typeof import("@/li
 
 import { withApi, parseJson, apiErrors } from "@/lib/api";
 import { issueSessionToken } from "@/lib/session";
+import { RateLimiterUnavailableError } from "@/lib/rateLimit";
 
 const post = (body: unknown) => new Request("http://localhost/api/x", { method: "POST", body: JSON.stringify(body) });
 
@@ -50,14 +51,55 @@ describe("withApi", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it("keys limits by wallet when a session exists, otherwise by IP", async () => {
+  const keysUsed = () => consume.mock.calls.map((c) => c[0] as string);
+
+  it("charges both the IP key and the wallet key when a session exists", async () => {
     cookieJar.value = issueSessionToken("0x0000000000000000000000000000000000000002");
-    await withApi({ name: "t", auth: "optional", limits: [{ limit: 5, windowSec: 60 }] }, async () => ({}))(post({}));
-    expect(consume.mock.calls[0][0]).toContain("w:0x0000000000000000000000000000000000000002");
+    const req = new Request("http://localhost/api/x", { method: "POST", headers: { "x-forwarded-for": "203.0.113.9" }, body: "{}" });
+    await withApi({ name: "t", auth: "optional", limits: [{ limit: 5, windowSec: 60 }] }, async () => ({}))(req);
+    expect(keysUsed()).toEqual(["t:ip:203.0.113.9:0", "t:w:0x0000000000000000000000000000000000000002:0"]);
+  });
+
+  it("charges only the IP key when there is no session", async () => {
     cookieJar.value = undefined;
     const req = new Request("http://localhost/api/x", { method: "POST", headers: { "x-forwarded-for": "203.0.113.9" }, body: "{}" });
     await withApi({ name: "t", auth: "optional", limits: [{ limit: 5, windowSec: 60 }] }, async () => ({}))(req);
-    expect(consume.mock.calls[1][0]).toContain("ip:203.0.113.9");
+    expect(keysUsed()).toEqual(["t:ip:203.0.113.9:0"]);
+  });
+
+  it("blocks when the wallet key is exhausted even if the IP key passes", async () => {
+    cookieJar.value = issueSessionToken("0x0000000000000000000000000000000000000002");
+    consume.mockImplementation(async (key: string) => (key.includes(":w:") ? { ok: false, retryAfterSec: 9 } : { ok: true, retryAfterSec: 0 }));
+    const handler = vi.fn();
+    const res = await withApi({ name: "t", auth: "optional", limits: [{ limit: 5, windowSec: 60 }] }, handler)(post({}));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("9");
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("blocks when the IP key is exhausted even if the wallet key would pass", async () => {
+    cookieJar.value = issueSessionToken("0x0000000000000000000000000000000000000002");
+    consume.mockImplementation(async (key: string) => (key.includes(":ip:") ? { ok: false, retryAfterSec: 4 } : { ok: true, retryAfterSec: 0 }));
+    const res = await withApi({ name: "t", auth: "optional", limits: [{ limit: 5, windowSec: 60 }] }, vi.fn())(post({}));
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("4");
+  });
+
+  it("fail-closed route answers 503 + Retry-After when the limiter is down, and never runs the handler", async () => {
+    consume.mockRejectedValue(new RateLimiterUnavailableError());
+    const handler = vi.fn();
+    const res = await withApi({ name: "t", onLimiterError: "closed", limits: [{ limit: 5, windowSec: 60 }] }, handler)(post({}));
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("30");
+    expect((await res.json()).code).toBe("rate_limiter_unavailable");
+    expect(handler).not.toHaveBeenCalled();
+    expect(consume.mock.calls[0][3]).toEqual({ failClosed: true });
+  });
+
+  it("fail-open route asks the limiter for the in-memory fallback", async () => {
+    consume.mockResolvedValue({ ok: true, retryAfterSec: 0, remaining: 1 });
+    await withApi({ name: "t", limits: [{ limit: 5, windowSec: 60 }] }, async () => ({}))(post({}));
+    expect(consume.mock.calls[0][3]).toEqual({ failClosed: false });
   });
 
   it("uses one shared key for global limits", async () => {

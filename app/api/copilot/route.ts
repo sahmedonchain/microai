@@ -66,7 +66,7 @@ async function saveContinuation(state: ContinuationState): Promise<string | unde
 }
 
 export const POST = withApi(
-  { name: "copilot", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
+  { name: "copilot", onLimiterError: "closed", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
   async ({ req, session, log }) => {
     const walletAddress = session!.sub;
     const body = await parseJson(req, copilotBody);

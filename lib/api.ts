@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { verifySessionToken, SESSION_COOKIE, type SessionPayload } from "@/lib/session";
-import { consume, getClientIp, type LimitSpec } from "@/lib/rateLimit";
+import { consume, getClientIp, RateLimiterUnavailableError, type LimitSpec } from "@/lib/rateLimit";
 import { createLogger, type Logger } from "@/lib/logger";
 
 // Shared API plumbing: typed errors, request parsing, session lookup and rate
@@ -22,6 +22,7 @@ export type ApiErrorCode =
   | "gone"
   | "rate_limited"
   | "upstream_unavailable"
+  | "rate_limiter_unavailable"
   | "internal";
 
 export interface ApiErrorBody {
@@ -53,6 +54,8 @@ export const apiErrors = {
   gone: (message: string) => new ApiError(410, "gone", message),
   tooMany: (retryAfterSec: number, message = "Too many requests. Please slow down and try again shortly.") =>
     new ApiError(429, "rate_limited", message, { retryAfterSec }),
+  limiterDown: () =>
+    new ApiError(503, "rate_limiter_unavailable", "Service is busy. Try again shortly.", { retryAfterSec: 30, extra: { retryable: true } }),
   upstream: (message: string) => new ApiError(502, "upstream_unavailable", message),
   internal: (message = "Server error occurred.") => new ApiError(500, "internal", message),
 };
@@ -106,9 +109,14 @@ export interface RouteOptions {
   name: string;
   // "required": 401 without a valid session. "optional": session if present.
   auth?: "required" | "optional" | "none";
-  // Applied in order. scope "actor" (default) keys by wallet when a session
-  // exists, otherwise by IP; scope "global" is one shared budget for the route.
+  // Applied in order. scope "actor" (default) charges TWO keys, per IP and, when
+  // a session exists, per wallet; both must pass. scope "global" is one shared
+  // budget for the route.
   limits?: LimitSpec[];
+  // Redis down: "closed" answers 503 (never the in-memory fallback), "open"
+  // (default) degrades to the per-instance window. Use "closed" for any route
+  // that spends AI/RPC budget or touches wallets or credits.
+  onLimiterError?: "open" | "closed";
 }
 
 async function readSession(): Promise<SessionPayload | null> {
@@ -136,13 +144,24 @@ export function withApi(opts: RouteOptions, handler: (ctx: ApiContext) => Promis
       }
 
       const ip = getClientIp(req);
-      const actor = session ? `w:${session.sub}` : `ip:${ip}`;
+      const failClosed = opts.onLimiterError === "closed";
       for (const [i, spec] of (opts.limits ?? []).entries()) {
-        const key = spec.scope === "global" ? `${opts.name}:global:${i}` : `${opts.name}:${actor}:${i}`;
-        const result = await consume(key, spec.limit, spec.windowSec * 1000);
-        if (!result.ok) {
-          log.warn("rate limited", { scope: spec.scope ?? "actor", windowSec: spec.windowSec });
-          throw apiErrors.tooMany(result.retryAfterSec);
+        const keys =
+          spec.scope === "global"
+            ? [`${opts.name}:global:${i}`]
+            : [`${opts.name}:ip:${ip}:${i}`, ...(session ? [`${opts.name}:w:${session.sub}:${i}`] : [])];
+        for (const key of keys) {
+          let result;
+          try {
+            result = await consume(key, spec.limit, spec.windowSec * 1000, { failClosed });
+          } catch (err) {
+            if (err instanceof RateLimiterUnavailableError) throw apiErrors.limiterDown();
+            throw err;
+          }
+          if (!result.ok) {
+            log.warn("rate limited", { scope: spec.scope ?? "actor", windowSec: spec.windowSec });
+            throw apiErrors.tooMany(result.retryAfterSec);
+          }
         }
       }
 

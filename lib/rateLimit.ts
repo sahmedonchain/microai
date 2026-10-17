@@ -8,9 +8,13 @@ import { createLogger } from "./logger";
 // `limit` remain. Rejected requests are removed again so they do not extend
 // the penalty.
 //
-// If Redis is unreachable the limiter degrades to a per-instance in-memory
-// window (logged as a warning) instead of failing the request: availability
-// of the API wins over strictness for a short outage.
+// If Redis is unreachable, behavior depends on the route:
+//   - fail OPEN (default, cheap read routes): degrade to a per-instance
+//     in-memory window, logged as a warning. Availability wins.
+//   - fail CLOSED (`failClosed`, routes that spend money or touch wallets/AI):
+//     throw RateLimiterUnavailableError, which withApi answers with 503 +
+//     Retry-After. The in-memory fallback is never used, because a per-instance
+//     counter lets an attacker multiply the limit by the instance count.
 const log = createLogger({ lib: "rateLimit" });
 
 export interface LimitSpec {
@@ -19,6 +23,12 @@ export interface LimitSpec {
   // "actor" (default): per wallet when signed in, otherwise per IP.
   // "global": one shared budget for the whole route (daily AI spend caps).
   scope?: "actor" | "global";
+}
+
+export class RateLimiterUnavailableError extends Error {
+  constructor() {
+    super("rate limiter unavailable");
+  }
 }
 
 export interface LimitResult {
@@ -40,7 +50,7 @@ function consumeInMemory(key: string, limit: number, windowMs: number, now: numb
   return { ok: true, retryAfterSec: 0, remaining: limit - hits.length };
 }
 
-export async function consume(key: string, limit: number, windowMs: number): Promise<LimitResult> {
+export async function consume(key: string, limit: number, windowMs: number, opts: { failClosed?: boolean } = {}): Promise<LimitResult> {
   const now = Date.now();
   const redisKey = `microai:rl:${key}`;
   try {
@@ -63,6 +73,10 @@ export async function consume(key: string, limit: number, windowMs: number): Pro
     }
     return { ok: true, retryAfterSec: 0, remaining: limit - count };
   } catch (err) {
+    if (opts.failClosed) {
+      log.error("redis limiter unavailable, failing closed", { err });
+      throw new RateLimiterUnavailableError();
+    }
     log.warn("redis limiter unavailable, using per-instance fallback", { err });
     return consumeInMemory(key, limit, windowMs, now);
   }
@@ -73,8 +87,23 @@ export function resetMemoryLimiter() {
   memory.clear();
 }
 
+// Client IP for rate limiting.
+//
+// On Vercel the platform sets `x-vercel-forwarded-for` (and overwrites
+// `x-forwarded-for` / `x-real-ip`) at the edge, so a client cannot choose them.
+// That header is therefore preferred.
+//
+// SPOOFING RISK outside Vercel: on any other host (self-hosted, another PaaS,
+// a proxy that appends instead of overwriting) every one of these headers is
+// client-controlled unless your own trusted proxy strips them. An attacker
+// could then rotate fake IPs to dodge the per-IP key (the per-wallet key still
+// applies to signed-in users). Only deploy off Vercel behind a proxy that
+// overwrites these headers, and adjust this function to match it.
 export function getClientIp(req: Request): string {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0].trim();
-  return req.headers.get("x-real-ip") || "unknown";
+  const vercel = req.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim();
+  if (vercel) return vercel;
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+  const forwardedFor = req.headers.get("x-forwarded-for")?.split(",")[0].trim();
+  return forwardedFor || "unknown";
 }

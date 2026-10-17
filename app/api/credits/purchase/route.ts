@@ -8,7 +8,7 @@ import { purchaseBody } from "@/lib/schemas";
 const alreadyUsed = () => new PaymentVerificationError("This payment has already been credited.", "already_used");
 
 export const POST = withApi(
-  { name: "credits-purchase", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
+  { name: "credits-purchase", onLimiterError: "closed", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
   async ({ req, session, log }) => {
     const walletAddress = session!.sub;
     const { txHash, queries: requestedQueries } = await parseJson(req, purchaseBody);

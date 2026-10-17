@@ -80,7 +80,7 @@ function safeSearch(query: string, data: KnowledgeItem[]) {
 }
 
 export const POST = withApi(
-  { name: "chat", auth: "required", limits: [{ limit: 20, windowSec: 60 }] },
+  { name: "chat", onLimiterError: "closed", auth: "required", limits: [{ limit: 20, windowSec: 60 }] },
   async ({ req, session, log }) => {
     const walletAddress = session!.sub;
     const { message, history } = await parseJson(req, chatBodyBase);
