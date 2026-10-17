@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { decodeEntities, htmlToText } from "./htmlText";
 import { hostMatches, safeFetch, type SafeResponse } from "./safeFetch";
 import { Redis } from "@upstash/redis";
 
@@ -134,38 +135,18 @@ function makeId(url: string): string {
   return Math.abs(hash).toString(36);
 }
 
-function decodeHtmlEntities(str: string): string {
-  return str
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#8217;/g, "’")
-    .replace(/&#8216;/g, "‘")
-    .replace(/&#8220;/g, "“")
-    .replace(/&#8221;/g, "”");
-}
-
-// Strips HTML tags from RSS/Atom description fields (e.g. bsc.news embeds an
-// <img> in every <description>) and collapses whitespace, so the UI never
-// renders raw markup or oversized blurbs.
+// Strips HTML from RSS/Atom description fields (e.g. bsc.news embeds an <img>
+// in every <description>) and collapses whitespace, so the UI never renders raw
+// markup or oversized blurbs. See lib/htmlText.ts.
 function sanitizeText(html: string, maxLength = 280): string {
-  const stripped = html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const text = decodeHtmlEntities(stripped);
+  const text = htmlToText(html);
   return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}...` : text;
 }
 
 function extractMetaContent(html: string, patterns: RegExp[]): string | null {
   for (const re of patterns) {
     const match = html.match(re);
-    if (match?.[1]) return decodeHtmlEntities(match[1].trim());
+    if (match?.[1]) return decodeEntities(match[1].trim());
   }
   return null;
 }
@@ -283,7 +264,7 @@ async function fetchGoogleNewsSource(source: Extract<SourceConfig, { type: "goog
     if (!rawTitle || !link) continue;
 
     const splitAt = rawTitle.lastIndexOf(" - ");
-    const title = decodeHtmlEntities(splitAt > 0 ? rawTitle.slice(0, splitAt) : rawTitle);
+    const title = decodeEntities(splitAt > 0 ? rawTitle.slice(0, splitAt) : rawTitle);
     const outlet = typeof raw.source === "string" ? raw.source : raw.source?.["#text"];
 
     if (!isArcRelevant(title)) continue;
@@ -318,7 +299,7 @@ async function fetchRssSource(source: Extract<SourceConfig, { type: "rss" }>): P
     const link = raw.link ?? "";
     if (!rawTitle || !link) continue;
 
-    const title = decodeHtmlEntities(rawTitle);
+    const title = decodeEntities(rawTitle);
     const description = raw.description ? sanitizeText(raw.description) : "";
 
     if (!source.official && !isArcRelevant(`${title} ${description}`)) continue;
