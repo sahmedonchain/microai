@@ -95,7 +95,7 @@ describe("proxy", () => {
 
   it("matcher skips API routes, static assets and prefetches", () => {
     const m = config.matcher[0];
-    const re = new RegExp(`^${m.source.replace(/\(\?!/, "(?!")}$`);
+    const re = new RegExp(`^${m.source}$`);
     expect(re.test("/news")).toBe(true);
     expect(re.test("/")).toBe(true);
     expect(re.test("/api/chat")).toBe(false);
