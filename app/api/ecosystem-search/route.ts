@@ -19,7 +19,7 @@ const PROJECT_LIST = dataBlock(
 // (wallet if signed in, otherwise IP) plus one shared daily budget for the route.
 export const POST = withApi(
   {
-    name: "ecosystem-search",
+    name: "ecosystem-search", onLimiterError: "closed",
     auth: "optional",
     limits: [
       { limit: 10, windowSec: 60 },

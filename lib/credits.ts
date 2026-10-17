@@ -32,6 +32,10 @@ export async function getCredit(address: string): Promise<number> {
 }
 
 // Adds `queries` credit. Returns the new total.
+/**
+ * @deprecated Not idempotent. Purchases must go through `claimAndCredit` in
+ * lib/usedTx.ts, which records the tx claim and adds the credit atomically.
+ */
 export async function addCredit(address: string, queries: number): Promise<number> {
   const key = creditKey(address);
   const newTotal = await getClient().incrby(key, queries);

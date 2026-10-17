@@ -78,12 +78,13 @@ export async function submitPurchase(p: { txHash: string; queries?: number }, fe
   } catch {
     return { kind: "retry", message: "Network problem. Retrying…" };
   }
-  let body: { error?: string; credits?: number; added?: number; reason?: string; retryable?: boolean } = {};
+  let body: { error?: string; credits?: number; added?: number; reason?: string; retryable?: boolean; alreadyCredited?: boolean } = {};
   try {
     body = await res.json();
   } catch {
     /* non-JSON body */
   }
+  if (res.ok && body.alreadyCredited) return { kind: "already", message: "This payment has already been credited." };
   if (res.ok) return { kind: "credited", credits: body.credits ?? 0, added: body.added ?? p.queries ?? 0 };
   if (res.status === 401) return { kind: "auth" };
   if (body.reason === "before_recovery") return { kind: "held", message: body.error ?? "This payment was made before our recovery system went live. Contact support." };

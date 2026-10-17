@@ -162,7 +162,7 @@ ${UNTRUSTED_DATA_NOTICE}`;
 
 export const POST = withApi(
   {
-    name: "debug-analyze",
+    name: "debug-analyze", onLimiterError: "closed",
     auth: "optional",
     limits: [
       { limit: 5, windowSec: 60 },

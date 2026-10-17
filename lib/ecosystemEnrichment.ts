@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { safeFetch } from "@/lib/safeFetch";
 
 const DEFILLAMA_TIMEOUT_MS = 5000;
 const CACHE_TTL_SECONDS = 6 * 60 * 60; // 6 hours
@@ -39,12 +40,13 @@ interface CachedTvl {
 // (all-chain) number DeFiLlama reports at the top level, which would be
 // misleading for a chain-specific ecosystem page.
 async function fetchArcTvl(slug: string): Promise<number | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), DEFILLAMA_TIMEOUT_MS);
   try {
-    const res = await fetch(`https://api.llama.fi/protocol/${slug}`, { signal: controller.signal });
+    const res = await safeFetch(`https://api.llama.fi/protocol/${encodeURIComponent(slug)}`, {
+      timeoutMs: DEFILLAMA_TIMEOUT_MS,
+      allowedHosts: ["api.llama.fi"],
+    });
     if (!res.ok) return null;
-    const data = await res.json();
+    const data = res.json<{ chainTvls?: { Arc?: { tvl?: { totalLiquidityUSD?: number }[] } } }>();
     const points = data?.chainTvls?.Arc?.tvl;
     if (!Array.isArray(points) || points.length === 0) return null;
     const latest = points[points.length - 1]?.totalLiquidityUSD;
@@ -52,8 +54,6 @@ async function fetchArcTvl(slug: string): Promise<number | null> {
     return latest;
   } catch {
     return null; // timeout, network error, or malformed response — fail silently, no fake data
-  } finally {
-    clearTimeout(timer);
   }
 }
 

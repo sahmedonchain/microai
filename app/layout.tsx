@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { connection } from "next/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -17,11 +18,14 @@ export const metadata: Metadata = {
   description: "MicroAI — Payment tools for builders on Arc",
 };
 
-export default function RootLayout({
+// Pages render per request so Next.js can stamp the CSP nonce (proxy.ts) on its
+// scripts. A statically prerendered page has no request, hence no nonce.
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await connection();
   return (
     <html
       lang="en"

@@ -5,7 +5,8 @@ import { makeFakeRedis } from "./helpers/fakeRedis";
 let redis = makeFakeRedis();
 vi.mock("@/lib/redis", () => ({ getRedis: () => redis }));
 
-import { consume, getClientIp, resetMemoryLimiter } from "@/lib/rateLimit";
+import { readFileSync } from "fs";
+import { consume, getClientIp, resetMemoryLimiter, RateLimiterUnavailableError } from "@/lib/rateLimit";
 
 beforeEach(() => {
   redis = makeFakeRedis();
@@ -70,10 +71,38 @@ describe("Redis sliding-window limiter (fake Redis)", () => {
   });
 });
 
+describe("fail closed", () => {
+  it("throws instead of using the in-memory fallback when Redis is down", async () => {
+    redis.multi = () => { throw new Error("redis down"); };
+    await expect(consume("k", 1, 60_000, { failClosed: true })).rejects.toBeInstanceOf(RateLimiterUnavailableError);
+    // Repeated calls never fall back to a per-instance counter.
+    await expect(consume("k", 1, 60_000, { failClosed: true })).rejects.toBeInstanceOf(RateLimiterUnavailableError);
+  });
+
+  it("still limits normally while Redis is healthy", async () => {
+    expect((await consume("k", 1, 60_000, { failClosed: true })).ok).toBe(true);
+    expect((await consume("k", 1, 60_000, { failClosed: true })).ok).toBe(false);
+  });
+});
+
+describe("per-route fail mode (source of truth: route files)", () => {
+  const closed = ["chat", "copilot", "credits/purchase", "payment-history", "wallet", "debug-analyze", "ecosystem-search"];
+  const open = ["news", "stats", "github-status", "ecosystem-tvl", "achswap-onchain"];
+  const src = (r: string) => readFileSync(`app/api/${r}/route.ts`, "utf8");
+
+  it.each(closed)("%s fails closed", (r) => expect(src(r)).toMatch(/onLimiterError:\s*"closed"/));
+  it.each(open)("%s keeps the in-memory fallback (fails open)", (r) => expect(src(r)).not.toMatch(/onLimiterError/));
+});
+
 describe("getClientIp", () => {
-  it("uses the first x-forwarded-for entry, then x-real-ip", () => {
+  it("prefers the Vercel-set header over client-controllable ones", () => {
+    const h = { "x-vercel-forwarded-for": "9.9.9.9", "x-real-ip": "3.3.3.3", "x-forwarded-for": "1.1.1.1, 2.2.2.2" };
+    expect(getClientIp(new Request("http://x", { headers: h }))).toBe("9.9.9.9");
+  });
+
+  it("then x-real-ip, then the first x-forwarded-for entry, then unknown", () => {
+    expect(getClientIp(new Request("http://x", { headers: { "x-real-ip": "3.3.3.3", "x-forwarded-for": "1.1.1.1" } }))).toBe("3.3.3.3");
     expect(getClientIp(new Request("http://x", { headers: { "x-forwarded-for": "1.1.1.1, 2.2.2.2" } }))).toBe("1.1.1.1");
-    expect(getClientIp(new Request("http://x", { headers: { "x-real-ip": "3.3.3.3" } }))).toBe("3.3.3.3");
     expect(getClientIp(new Request("http://x"))).toBe("unknown");
   });
 });

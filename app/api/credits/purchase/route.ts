@@ -1,38 +1,45 @@
-import { ApiError, apiErrors, parseJson, withApi } from "@/lib/api";
-import { claimTxHash, releaseTxHash } from "@/lib/usedTx";
-import { addCredit } from "@/lib/credits";
+import { ApiError, parseJson, withApi } from "@/lib/api";
+import { claimAndCredit, getClaim } from "@/lib/usedTx";
+import { getCredit } from "@/lib/credits";
 import { RpcError } from "@/lib/arcRpc";
 import { PaymentVerificationError, checkPurchaseTx } from "@/lib/purchaseVerification";
 import { purchaseBody } from "@/lib/schemas";
 
-// Verifies the payment, then atomically marks it credited (SET NX) so it can be
-// credited only once. Returns the number of queries to credit.
-async function verifyAndClaim(txHash: string, walletAddress: string, requestedQueries: number | undefined): Promise<number> {
-  const { queries, logIndexes } = await checkPurchaseTx(txHash, walletAddress, requestedQueries);
-  const claimed = await claimTxHash(txHash, { wallet: walletAddress.toLowerCase(), credits: queries, logIndexes, at: new Date().toISOString() });
-  if (!claimed) {
-    throw new PaymentVerificationError("This payment has already been credited.", "already_used");
-  }
-  return queries;
-}
+const alreadyUsed = () => new PaymentVerificationError("This payment has already been credited.", "already_used");
 
 export const POST = withApi(
-  { name: "credits-purchase", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
+  { name: "credits-purchase", onLimiterError: "closed", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
   async ({ req, session, log }) => {
     const walletAddress = session!.sub;
     const { txHash, queries: requestedQueries } = await parseJson(req, purchaseBody);
 
-    // The expected charge is derived on the server: from the requested bundle
-    // size, or (recovery, no `queries`) from the amount actually paid. The client
-    // never supplies the amount itself.
-    let queries: number;
     try {
-      queries = await verifyAndClaim(txHash, walletAddress, requestedQueries);
+      // A retry of a payment this wallet already had credited is a success, not an error.
+      // Checked first so it also works after the 7-day verification window has passed.
+      const existing = await getClaim(txHash);
+      if (existing.exists) {
+        if (existing.claim?.wallet !== walletAddress.toLowerCase()) throw alreadyUsed();
+        return { ok: true, alreadyCredited: true, credits: await getCredit(walletAddress), added: 0, txHash };
+      }
+
+      // The expected charge is derived on the server: from the requested bundle
+      // size, or (recovery, no `queries`) from the amount actually paid.
+      const { queries, logIndexes } = await checkPurchaseTx(txHash, walletAddress, requestedQueries);
+
+      // One atomic Redis operation claims the txHash and adds the credit. The claim is
+      // never released: if this call fails ambiguously, the retry finds the claim and
+      // reports "already credited", so a payment can never be credited twice.
+      const result = await claimAndCredit(txHash, walletAddress, queries, logIndexes);
+      if (result.outcome === "already") {
+        if (result.claim?.wallet !== walletAddress.toLowerCase()) throw alreadyUsed();
+        return { ok: true, alreadyCredited: true, credits: await getCredit(walletAddress), added: 0, txHash };
+      }
+      return { ok: true, credits: result.balance, added: queries, txHash };
     } catch (err) {
       if (err instanceof PaymentVerificationError) {
         log.warn("credit purchase rejected", { reason: err.reason });
-        // A network mismatch is a service problem, not a problem with the payment.
-        if (err.reason === "wrong_chain") {
+        // A network mismatch or odd receipt is a service problem, not a problem with the payment.
+        if (err.reason === "wrong_chain" || err.reason === "bad_receipt") {
           throw new ApiError(503, "upstream_unavailable", err.message, { extra: { reason: err.reason, retryable: true } });
         }
         const status = err.reason === "already_used" ? 409 : 402;
@@ -45,27 +52,13 @@ export const POST = withApi(
           extra: { reason: "rpc_unavailable", retryable: true },
         });
       }
-      log.error("credit purchase verification error", { err });
-      throw apiErrors.internal("Payment verification failed.");
-    }
-
-    // verifyPurchase() already claimed txHash (atomic NX) to block concurrent
-    // double-spends of the same transaction. If crediting then fails, release
-    // that claim rather than leaving the payer with a burned, uncreditable
-    // txHash and no way to retry the same on-chain payment.
-    let newTotal: number;
-    try {
-      newTotal = await addCredit(walletAddress, queries);
-    } catch (err) {
-      log.error("addCredit failed after claiming txHash, releasing claim", { err });
-      await releaseTxHash(txHash).catch((releaseErr) => {
-        log.error("failed to release txHash after addCredit failure", { err: releaseErr });
-      });
-      throw new ApiError(500, "internal", "Payment verified but crediting failed. Please retry with the same transaction.", {
+      if (err instanceof ApiError) throw err;
+      // Redis failed around the claim. The outcome may be ambiguous; the claim is kept, and a
+      // retry either credits the payment or reports it as already credited. Never twice.
+      log.error("credit purchase failed", { err });
+      throw new ApiError(503, "upstream_unavailable", "Could not record your payment right now. Try again shortly; you will not be charged twice.", {
         extra: { reason: "credit_failed", retryable: true },
       });
     }
-
-    return { ok: true, credits: newTotal, added: queries, txHash };
   }
 );

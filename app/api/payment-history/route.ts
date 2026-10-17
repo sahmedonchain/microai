@@ -14,7 +14,7 @@ interface ExplorerTransfer {
 }
 
 export const POST = withApi(
-  { name: "payment-history", auth: "required", limits: [{ limit: 20, windowSec: 60 }] },
+  { name: "payment-history", onLimiterError: "closed", auth: "required", limits: [{ limit: 20, windowSec: 60 }] },
   async ({ session }) => {
     const walletAddress = session!.sub;
 
