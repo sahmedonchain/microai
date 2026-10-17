@@ -1,3 +1,5 @@
+import { CLAIM_AND_CREDIT_SCRIPT } from "@/lib/usedTx";
+
 // MOCK: in-memory stand-in for @upstash/redis, covering only the commands the
 // app uses. Tests that use this are mock-based unit/integration tests; they
 // say nothing about real Upstash behaviour (latency, REST serialisation).
@@ -61,6 +63,28 @@ export class FakeRedis {
   }
   incr(key: string) { return this.incrby(key, 1); }
   decr(key: string) { return this.incrby(key, -1); }
+
+  // Emulates CLAIM_AND_CREDIT_SCRIPT in JS (no Lua interpreter here). Runs without
+  // awaiting, so it is atomic like the real script. Tests can set `evalFailure`
+  // to simulate a timeout: "before" = script never ran, "after" = it ran but the reply was lost.
+  evalFailure: "before" | "after" | null = null;
+  async eval(script: string, keys: string[], args: string[]) {
+    if (script !== CLAIM_AND_CREDIT_SCRIPT) throw new Error("FakeRedis.eval: unknown script");
+    if (this.evalFailure === "before") throw new Error("redis timeout");
+    const existing = this.live(keys[0]);
+    let result: [number, unknown];
+    if (existing) {
+      result = [0, typeof existing.value === "string" ? existing.value : JSON.stringify(existing.value)];
+    } else {
+      this.store.set(keys[0], { value: JSON.parse(args[0]), expiresAt: null });
+      const cur = this.live(keys[1]);
+      const next = (typeof cur?.value === "number" ? cur.value : 0) + Number(args[1]);
+      this.store.set(keys[1], { value: next, expiresAt: null });
+      result = [1, next];
+    }
+    if (this.evalFailure === "after") throw new Error("redis timeout");
+    return result;
+  }
 
   async expire(key: string, seconds: number) {
     const e = this.live(key);

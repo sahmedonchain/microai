@@ -33,16 +33,19 @@ interface Chain {
 }
 let chain: Chain;
 
-function mine(txHash: string, opts: { from?: string; to?: string; units?: number; token?: string; status?: string; ageMs?: number; block?: string } = {}) {
+function mine(txHash: string, opts: { txFrom?: string; receiptHash?: string; removed?: boolean; data?: string; from?: string; to?: string; units?: number; token?: string; status?: string; ageMs?: number; block?: string } = {}) {
   const block = opts.block ?? "0x" + (16 + chain.receipts.size).toString(16);
   chain.receipts.set(txHash, {
+    transactionHash: opts.receiptHash ?? txHash,
+    from: opts.txFrom ?? WALLET,
     status: opts.status ?? "0x1",
     blockNumber: block,
     logs: [
       {
+        removed: opts.removed,
         address: opts.token ?? USDC_ADDRESS,
         topics: [ERC20_TRANSFER_TOPIC, pad(opts.from ?? WALLET), pad(opts.to ?? PAYMENT_RECEIVER)],
-        data: "0x" + BigInt(opts.units ?? 5000).toString(16).padStart(64, "0"),
+        data: opts.data ?? "0x" + BigInt(opts.units ?? 5000).toString(16).padStart(64, "0"),
       },
     ],
   });
@@ -54,6 +57,7 @@ interface Xfer { from?: string; to?: string; units: number; token?: string }
 function mineBatch(txHash: string, transfers: Xfer[], opts: { ageMs?: number } = {}) {
   const block = "0x" + (200 + chain.receipts.size).toString(16);
   chain.receipts.set(txHash, {
+    transactionHash: txHash,
     status: "0x1",
     blockNumber: block,
     logs: transfers.map((t, i) => ({
@@ -109,15 +113,28 @@ describe("credit purchase verification (mocked chain)", () => {
     mine(tx(2), { units: 3000 });
     expect((await post({ txHash: tx(2), queries: 3 })).status).toBe(200);
     const replay = await post({ txHash: tx(2), queries: 3 });
-    expect(replay.status).toBe(409);
-    expect(await replay.json()).toMatchObject({ code: "payment_invalid", reason: "already_used", retryable: false });
+    expect(replay.status).toBe(200);
+    expect(await replay.json()).toMatchObject({ ok: true, alreadyCredited: true, added: 0, credits: 3 });
+    expect(await getCredit(WALLET)).toBe(3);
+  });
+
+  it("a different wallet cannot use a payment that was credited to someone else", async () => {
+    mine(tx(2), { units: 3000 });
+    expect((await post({ txHash: tx(2), queries: 3 })).status).toBe(200);
+    cookieJar.value = issueSessionToken(OTHER);
+    const res = await post({ txHash: tx(2), queries: 3 });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: "payment_invalid", reason: "already_used", retryable: false });
+    expect(await getCredit(OTHER)).toBe(0);
     expect(await getCredit(WALLET)).toBe(3);
   });
 
   it("credits a payment exactly once when submitted twice at the same time", async () => {
     mine(tx(3), { units: 4000 });
     const [a, b] = await Promise.all([post({ txHash: tx(3), queries: 4 }), post({ txHash: tx(3), queries: 4 })]);
-    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    expect([a.status, b.status]).toEqual([200, 200]);
+    const bodies = [await a.json(), await b.json()];
+    expect(bodies.filter((x) => x.alreadyCredited).length).toBe(1);
     expect(await getCredit(WALLET)).toBe(4);
   });
 
@@ -134,7 +151,7 @@ describe("credit purchase verification (mocked chain)", () => {
   it("an old but valid payment (3 days) is credited, once", async () => {
     mine(tx(5), { units: 1000, ageMs: 3 * DAY });
     expect((await post({ txHash: tx(5), queries: 1 })).status).toBe(200);
-    expect((await post({ txHash: tx(5), queries: 1 })).status).toBe(409);
+    expect(await (await post({ txHash: tx(5), queries: 1 })).json()).toMatchObject({ alreadyCredited: true });
     expect(await getCredit(WALLET)).toBe(1);
   });
 
@@ -147,7 +164,7 @@ describe("credit purchase verification (mocked chain)", () => {
     expect(first.status).toBe(200);
     expect(await first.json()).toMatchObject({ credits: 5, added: 5 });
     const replay = await post({ txHash: tx(30), queries: 5 });
-    expect(replay.status).toBe(409);
+    expect(await replay.json()).toMatchObject({ alreadyCredited: true });
     expect(await getCredit(WALLET)).toBe(5);
   });
 
@@ -156,7 +173,7 @@ describe("credit purchase verification (mocked chain)", () => {
     cookieJar.value = issueSessionToken(WALLET);
     mine(tx(31), { units: 5000, ageMs: Date.parse("2026-10-09T17:10:00Z") - Date.parse("2026-10-09T16:42:01Z") });
     expect((await post({ txHash: tx(31) })).status).toBe(200);
-    expect((await post({ txHash: tx(31) })).status).toBe(409);
+    expect(await (await post({ txHash: tx(31) })).json()).toMatchObject({ alreadyCredited: true });
     expect(await getCredit(WALLET)).toBe(5);
   });
 
@@ -247,17 +264,30 @@ describe("credit purchase verification (mocked chain)", () => {
     expect((await post({ txHash: tx(13), queries: 2 })).status).toBe(200);
   });
 
-  it("releases the claim when crediting fails, so the same payment can be retried", async () => {
+  it("claim and credit are one operation: a failure before it ran leaves nothing behind, and the retry credits once", async () => {
     mine(tx(14), { units: 2000 });
-    const realIncr = redis.incrby.bind(redis);
-    redis.incrby = async () => { throw new Error("redis write failed"); };
+    redis.evalFailure = "before";
     const failed = await post({ txHash: tx(14), queries: 2 });
-    expect(failed.status).toBe(500);
+    expect(failed.status).toBe(503);
     expect(await failed.json()).toMatchObject({ reason: "credit_failed", retryable: true });
     expect(await redis.get(`microai:usedtx:${tx(14)}`)).toBeNull();
-    redis.incrby = realIncr;
+    expect(await getCredit(WALLET)).toBe(0);
+    redis.evalFailure = null;
     expect((await post({ txHash: tx(14), queries: 2 })).status).toBe(200);
     expect(await redis.get(creditKey(WALLET))).toBe(2);
+  });
+
+  it("an ambiguous failure (script ran, reply lost) keeps the claim; the retry is 'already credited', never a second credit", async () => {
+    mine(tx(16), { units: 2000 });
+    redis.evalFailure = "after";
+    expect((await post({ txHash: tx(16), queries: 2 })).status).toBe(503);
+    redis.evalFailure = null;
+    const retry = await post({ txHash: tx(16), queries: 2 });
+    expect(retry.status).toBe(200);
+    expect(await retry.json()).toMatchObject({ alreadyCredited: true, added: 0, credits: 2 });
+    expect(await getCredit(WALLET)).toBe(2);
+    expect(await redis.get(`microai:usedtx:${tx(16)}`)).toMatchObject({ wallet: WALLET, credits: 2, status: "credited" });
+    expect(await redis.ttl(`microai:usedtx:${tx(16)}`)).toBe(-1);
   });
 
   it("requires a session", async () => {
@@ -321,16 +351,17 @@ describe("batched transactions and the chain check (mocked chain)", () => {
   it("a replayed batched tx is rejected, and the same tx cannot be credited again through a different log", async () => {
     mineBatch(tx(48), [{ units: 2000 }, { units: 3000 }]);
     expect((await post({ txHash: tx(48), queries: 5 })).status).toBe(200);
-    expect((await post({ txHash: tx(48), queries: 5 })).status).toBe(409);
-    expect((await post({ txHash: tx(48), queries: 2 })).status).not.toBe(200); // asking for only part of the tx is no way in either
-    expect((await post({ txHash: tx(48) })).status).toBe(409);
+    expect(await (await post({ txHash: tx(48), queries: 5 })).json()).toMatchObject({ alreadyCredited: true, added: 0 });
+    expect(await (await post({ txHash: tx(48), queries: 2 })).json()).toMatchObject({ alreadyCredited: true, added: 0 }); // asking for part of the tx adds nothing
+    expect(await (await post({ txHash: tx(48) })).json()).toMatchObject({ alreadyCredited: true, added: 0 });
     expect(await getCredit(WALLET)).toBe(5);
   });
 
   it("concurrent submits of a batched tx credit once", async () => {
     mineBatch(tx(49), [{ units: 1000 }, { units: 1000 }]);
     const results = await Promise.all([1, 2, 3, 4].map(() => post({ txHash: tx(49), queries: 2 })));
-    expect(results.map((r) => r.status).sort()).toEqual([200, 409, 409, 409]);
+    expect(results.map((r) => r.status)).toEqual([200, 200, 200, 200]);
+    expect((await Promise.all(results.map((r) => r.json()))).filter((b) => !b.alreadyCredited).length).toBe(1);
     expect(await getCredit(WALLET)).toBe(2);
   });
 
@@ -391,5 +422,68 @@ describe("client classification of the real server answers", () => {
     expect((await submitPurchase({ txHash: tx(22), queries: 1 }, bridge)).kind).toBe("retry");
     cookieJar.value = undefined;
     expect((await submitPurchase({ txHash: tx(22), queries: 1 }, bridge)).kind).toBe("auth");
+  });
+});
+
+describe("payment hardening (mocked chain)", () => {
+  it("rejects testnet: an RPC that reports the Arc Testnet chain id credits nothing", async () => {
+    mine(tx(60), { units: 5000 });
+    chain.chainId = "0x4cef52";
+    const res = await post({ txHash: tx(60), queries: 5 });
+    expect(res.status).toBe(503);
+    expect((await res.json()).reason).toBe("wrong_chain");
+    expect(await getCredit(WALLET)).toBe(0);
+  });
+
+  it("rejects a native-value transfer: only USDC ERC-20 Transfer logs count", async () => {
+    chain.receipts.set(tx(61), { transactionHash: tx(61), status: "0x1", blockNumber: "0x99", logs: [] });
+    chain.blocks.set("0x99", { timestamp: "0x" + Math.floor((Date.now() - 60_000) / 1000).toString(16) });
+    const res = await post({ txHash: tx(61), queries: 5 });
+    expect(res.status).toBe(402);
+    expect((await res.json()).reason).toBe("no_transfer");
+  });
+
+  it("rejects an amount in 18-decimal scale: 5 credits paid as 0.005 * 1e18 is not 5000 six-decimal units", async () => {
+    mine(tx(62), { units: 0, data: "0x" + (BigInt(5000) * BigInt(10) ** BigInt(12)).toString(16).padStart(64, "0") });
+    expect((await (await post({ txHash: tx(62), queries: 5 })).json()).reason).toBe("wrong_amount");
+    expect((await (await post({ txHash: tx(62) })).json()).reason).toBe("wrong_amount"); // recovery path too
+    expect(await getCredit(WALLET)).toBe(0);
+  });
+
+  it("rejects a receipt for a different transaction hash, and one without a hash", async () => {
+    mine(tx(63), { units: 5000, receiptHash: tx(999) });
+    const res = await post({ txHash: tx(63), queries: 5 });
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ reason: "bad_receipt", retryable: true });
+    mine(tx(64), { units: 5000, receiptHash: undefined });
+    const rec = chain.receipts.get(tx(64)) as { transactionHash?: string };
+    delete rec.transactionHash;
+    expect((await post({ txHash: tx(64), queries: 5 })).status).toBe(503);
+    expect(await getCredit(WALLET)).toBe(0);
+  });
+
+  it("ignores logs flagged removed=true", async () => {
+    mine(tx(65), { units: 5000, removed: true });
+    expect((await (await post({ txHash: tx(65), queries: 5 })).json()).reason).toBe("no_transfer");
+  });
+
+  it("ignores a log with malformed data instead of crashing, and still counts the good one", async () => {
+    mineBatch(tx(66), [{ units: 5000 }]);
+    const rec = chain.receipts.get(tx(66)) as { logs: { data: string }[] };
+    rec.logs.unshift({ ...rec.logs[0], data: "0xzz-not-hex" });
+    expect((await post({ txHash: tx(66), queries: 5 })).status).toBe(200);
+    expect(await getCredit(WALLET)).toBe(5);
+  });
+
+  it("sender rule is the Transfer log's `from`, not the transaction sender", async () => {
+    // A relayer (OTHER) sends the tx, but the USDC moves out of the session wallet: credited.
+    mine(tx(67), { units: 5000, txFrom: OTHER });
+    expect((await post({ txHash: tx(67), queries: 5 })).status).toBe(200);
+    // The session wallet sends the tx, but the USDC moves out of someone else: rejected.
+    mine(tx(68), { units: 5000, from: OTHER, txFrom: WALLET });
+    const res = await post({ txHash: tx(68), queries: 5 });
+    expect(res.status).toBe(402);
+    expect((await res.json()).reason).toBe("wrong_sender");
+    expect(await getCredit(WALLET)).toBe(5);
   });
 });

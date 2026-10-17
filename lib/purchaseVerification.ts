@@ -1,4 +1,4 @@
-import { PRICE_PER_QUERY, computeBundleAmount, isValidQueryCount } from "@/lib/pricing";
+import { MAX_QUERIES, PRICE_PER_QUERY, computeBundleAmount, isValidQueryCount } from "@/lib/pricing";
 import { rpcCall } from "@/lib/arcRpc";
 import { ARC_MAINNET, ERC20_TRANSFER_TOPIC, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
 import { createLogger } from "@/lib/logger";
@@ -24,6 +24,7 @@ export type Reason =
   | "wrong_amount"
   | "wrong_sender"
   | "wrong_chain"
+  | "bad_receipt"
   | "too_old"
   | "before_recovery"
   | "already_used";
@@ -63,9 +64,11 @@ interface ReceiptLog {
   topics?: string[];
   data?: string;
   logIndex?: string;
+  removed?: boolean;
 }
 
 interface Receipt {
+  transactionHash?: string;
   status?: string;
   logs?: ReceiptLog[];
   blockNumber: string;
@@ -99,18 +102,43 @@ export async function checkPurchaseTx(txHash: string, walletAddress: string, req
     throw new PaymentVerificationError("Transaction did not succeed.", "failed");
   }
 
+  // The receipt must be the one we asked for.
+  if (typeof receipt.transactionHash !== "string" || receipt.transactionHash.toLowerCase() !== txHash.toLowerCase()) {
+    log.error("receipt hash does not match the requested hash", { requested: txHash, got: String(receipt.transactionHash) });
+    throw new PaymentVerificationError("Could not verify this transaction. Try again shortly.", "bad_receipt", true);
+  }
+  // Arc has deterministic finality (docs.arc.io/arc/concepts/deterministic-finality: "Every transaction
+  // in a committed block is immediately and irreversibly settled ... no confirmation windows, no
+  // reorganization risk"), so a receipt for a committed block is final and no confirmation count is needed.
+  if (typeof receipt.blockNumber !== "string") {
+    throw new PaymentVerificationError("Transaction not found on Arc Mainnet yet.", "not_found", true);
+  }
+
+  // Sender rule: the USDC Transfer log's `from` must equal the session wallet. The
+  // transaction's own sender is deliberately not used, so a relayer or a batch that moves
+  // this wallet's USDC counts, while someone else's tokens never credit this wallet.
   const wallet = walletAddress.toLowerCase();
-  const transfers = (receipt.logs ?? [])
-    .map((l, i) => ({ l, index: l.logIndex !== undefined ? parseInt(l.logIndex, 16) : i }))
-    .filter(
-      ({ l }) =>
-        l.address?.toLowerCase() === USDC_CONTRACT &&
-        l.topics?.length === 3 &&
-        l.topics[0].toLowerCase() === TRANSFER_TOPIC &&
-        typeof l.data === "string" &&
-        l.data.length > 2
-    )
-    .map(({ l, index }) => ({ index, from: topicToAddress(l.topics![1]), to: topicToAddress(l.topics![2]), value: BigInt(l.data!) }));
+  const transfers: { index: number; from: string; to: string; value: bigint }[] = [];
+  (receipt.logs ?? []).forEach((l, i) => {
+    if (
+      l.removed === true ||
+      l.address?.toLowerCase() !== USDC_CONTRACT ||
+      l.topics?.length !== 3 ||
+      l.topics[0].toLowerCase() !== TRANSFER_TOPIC ||
+      typeof l.data !== "string" ||
+      l.data.length <= 2
+    ) {
+      return;
+    }
+    // USDC ERC-20 amounts are in 6-decimal units (never the 18-decimal native scale).
+    let value: bigint;
+    try {
+      value = BigInt(l.data);
+    } catch {
+      return; // malformed data: not a Transfer we can count
+    }
+    transfers.push({ index: l.logIndex !== undefined ? parseInt(l.logIndex, 16) : i, from: topicToAddress(l.topics[1]), to: topicToAddress(l.topics[2]), value });
+  });
 
   if (transfers.length === 0) {
     throw new PaymentVerificationError("No USDC transfer found in transaction.", "no_transfer");
@@ -127,10 +155,11 @@ export async function checkPurchaseTx(txHash: string, walletAddress: string, req
   const units = matching.reduce((sum, t) => sum + t.value, BigInt(0));
   let queries: number;
   if (requestedQueries === undefined) {
-    queries = Number(units) / PRICE_PER_QUERY;
-    if (!Number.isInteger(queries) || !isValidQueryCount(queries)) {
+    const price = BigInt(PRICE_PER_QUERY);
+    if (units % price !== BigInt(0) || units / price > BigInt(MAX_QUERIES) || !isValidQueryCount(Number(units / price))) {
       throw new PaymentVerificationError("Transfer amount is not a valid credit bundle.", "wrong_amount");
     }
+    queries = Number(units / price);
   } else {
     queries = requestedQueries;
     if (units !== BigInt(computeBundleAmount(queries))) {
