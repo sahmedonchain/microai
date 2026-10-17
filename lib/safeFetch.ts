@@ -419,8 +419,8 @@ export const ARC_RPC_HOSTS = ["rpc.mainnet.arc.io", "rpc.testnet.arc.io"] as con
 export const ARC_EXPLORER_HOSTS = ["explorer.arc.io", "explorer.testnet.arc.io"] as const;
 export const JSON_BODY_CAP_BYTES = 1024 * 1024;
 
-/** Reads a fetch Response body as text, aborting once it exceeds `maxBytes`. */
-export async function readTextCapped(res: Response, maxBytes: number = JSON_BODY_CAP_BYTES): Promise<string> {
+/** Reads a fetch Response or Request body as text, aborting once it exceeds `maxBytes`. */
+export async function readTextCapped(res: { headers: Headers; body: ReadableStream<Uint8Array> | null }, maxBytes: number = JSON_BODY_CAP_BYTES): Promise<string> {
   const declared = Number(res.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
     await res.body?.cancel().catch(() => {});
