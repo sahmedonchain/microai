@@ -113,7 +113,7 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Local development
 
-Requires Node 22 (the version CI uses), pnpm, a [Groq](https://console.groq.com) API key and an [Upstash Redis](https://upstash.com) database.
+Requires Node 22.23.4 or later 22.x (pinned in `.nvmrc`, which CI also reads), pnpm, a [Groq](https://console.groq.com) API key and an [Upstash Redis](https://upstash.com) database.
 
 ```bash
 git clone https://github.com/sahmedonchain/microai.git
