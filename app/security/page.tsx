@@ -13,8 +13,8 @@ const CONTROLS = [
   ["Private keys", "MicroAI never asks for a private key or seed phrase. Wallet signing happens in your own wallet."],
   ["Abuse limits", "Per-IP and per-wallet rate limits on every AI route. Paid routes stop (503) if the limiter is unavailable."],
   ["Outbound requests", "Requests to other sites go through a guard that allows only https, blocks private and internal addresses, and enforces timeouts and size limits."],
-  ["Browser protections", "HSTS, X-Frame-Options DENY, nosniff, a strict referrer policy, a permissions policy, same-site checks on every write request, and a Content-Security-Policy."],
-  ["Emergency stop", "AI answers and new credit purchases can each be paused immediately by the operator."],
+  ["Browser protections", "HSTS, X-Frame-Options DENY, nosniff, a strict referrer policy, a permissions policy, same-site checks on every write request, and a Content-Security-Policy (currently in report-only mode)."],
+  ["Emergency stop", "AI answers and new credit purchases can each be paused by the operator within minutes."],
 ] as const;
 
 const LIMITS = [
