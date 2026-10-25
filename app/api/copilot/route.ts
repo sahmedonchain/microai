@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import Groq from "groq-sdk";
 import { ApiError, apiErrors, parseJson, withApi } from "@/lib/api";
 import { getRedis } from "@/lib/redis";
-import { getCredit, spendCredit } from "@/lib/credits";
+import { getCredit, refundCredit, spendCredit } from "@/lib/credits";
 import { buildSystemPrompt, detectMode, type Mode } from "@/lib/copilotPrompt";
 import { copilotBody } from "@/lib/schemas";
 import { createLogger } from "@/lib/logger";
@@ -66,7 +66,7 @@ async function saveContinuation(state: ContinuationState): Promise<string | unde
 }
 
 export const POST = withApi(
-  { name: "copilot", onLimiterError: "closed", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
+  { name: "copilot", pause: "ai", onLimiterError: "closed", auth: "required", limits: [{ limit: 10, windowSec: 60 }] },
   async ({ req, session, log }) => {
     const walletAddress = session!.sub;
     const body = await parseJson(req, copilotBody);
@@ -114,26 +114,36 @@ export const POST = withApi(
     // An explicit mode from the UI wins; keyword detection is the fallback.
     const mode: Mode = body.mode ?? detectMode(message);
 
-    // Credit is already spent — always return remaining credit and mode so
-    // the UI stays in sync even if the AI call fails.
+    // Credit is already spent. If the AI call fails or returns nothing it is
+    // refunded below, and the UI always gets the current balance and mode.
     try {
       const { text, truncated } = await generate([
         { role: "system", content: buildSystemPrompt(mode) },
         { role: "user", content: message },
       ]);
+      if (!text) throw new Error("empty AI response");
       const continueId = truncated ? await saveContinuation({ wallet: walletAddress, mode, message, reply: text, n: 0 }) : undefined;
       return {
-        reply: text || "Could not generate response.",
+        reply: text,
         credits: remaining,
         mode,
         truncated,
         continueId,
       };
     } catch (err) {
-      log.error("AI generation error (credit already spent)", { err });
+      log.error("AI generation error, refunding the credit", { err });
+      const restored = await refundCredit(walletAddress);
+      if (restored === null) {
+        log.error("credit refund failed", { wallet: walletAddress });
+        return {
+          reply: "The response could not be generated and the credit could not be restored automatically. Please contact support.",
+          credits: remaining,
+          mode,
+        };
+      }
       return {
-        reply: "Your credit was used, but the response could not be generated. Please contact support.",
-        credits: remaining,
+        reply: "The response could not be generated this time. Your credit was refunded. Please try again.",
+        credits: restored,
         mode,
       };
     }

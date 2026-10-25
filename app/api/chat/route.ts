@@ -4,7 +4,7 @@ import { apiErrors, parseJson, withApi } from "@/lib/api";
 import { chatBodyBase } from "@/lib/schemas";
 import { parseChatHistory } from "@/lib/chatHistory";
 import { describeAddresses, networkSummary } from "@/lib/arcAddresses";
-import { spendCredit } from "@/lib/credits";
+import { refundCredit, spendCredit } from "@/lib/credits";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -80,7 +80,7 @@ function safeSearch(query: string, data: KnowledgeItem[]) {
 }
 
 export const POST = withApi(
-  { name: "chat", onLimiterError: "closed", auth: "required", limits: [{ limit: 20, windowSec: 60 }] },
+  { name: "chat", pause: "ai", onLimiterError: "closed", auth: "required", limits: [{ limit: 20, windowSec: 60 }] },
   async ({ req, session, log }) => {
     const walletAddress = session!.sub;
     const { message, history } = await parseJson(req, chatBodyBase);
@@ -91,9 +91,8 @@ export const POST = withApi(
     const remaining = await spendCredit(walletAddress);
     if (remaining === null) throw apiErrors.noCredits();
 
-    // Credit is already spent at this point — from here on we always
-    // return the remaining credit so the UI stays in sync even if the AI
-    // call fails.
+    // Credit is already spent at this point. If the AI call fails it is
+    // refunded below, and the UI always gets the current balance.
     try {
       // STEP 1: SEARCH KNOWLEDGE BASE
       const matched = searchKnowledge(message);
@@ -124,14 +123,23 @@ export const POST = withApi(
         max_tokens: 1500,
       });
 
-      const reply = completion.choices[0]?.message?.content || "Could not generate response.";
+      const reply = completion.choices[0]?.message?.content;
+      if (!reply) throw new Error("empty AI response");
 
       return { reply, credits: remaining };
     } catch (err) {
-      log.error("AI generation error (credit already spent)", { err });
+      log.error("AI generation error, refunding the credit", { err });
+      const restored = await refundCredit(walletAddress);
+      if (restored === null) {
+        log.error("credit refund failed", { wallet: walletAddress });
+        return {
+          reply: "The response could not be generated and the credit could not be restored automatically. Please contact support.",
+          credits: remaining,
+        };
+      }
       return {
-        reply: "Your credit was used, but the response could not be generated. Please contact support.",
-        credits: remaining,
+        reply: "The response could not be generated this time. Your credit was refunded. Please try again.",
+        credits: restored,
       };
     }
   }

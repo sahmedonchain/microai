@@ -80,12 +80,12 @@ Implemented controls:
 
 - **Sign-in:** Sign-In with Ethereum (EIP-4361) bound to the app domain and Arc Mainnet chain ID. Nonces are stored in Redis, expire after 5 minutes and work once.
 - **Payments:** verified on the server from the Arc receipt: the RPC is checked to be Arc Mainnet, the transaction succeeded, and every USDC transfer in it is read. Transfers from the signed-in wallet to the MicroAI wallet are summed and must match the amount. Each transaction hash can be credited once, enforced atomically in Redis. Payments are verifiable for 7 days.
-- **Credits:** never expire.
+- **Credits:** never expire. If the AI fails or returns nothing, the credit is refunded automatically.
 - **Headers:** HSTS, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy and a permissions policy on every response. A Content-Security-Policy is sent in report-only mode.
 - **Abuse limits:** Redis sliding-window rate limits on every API route, keyed by wallet or IP, plus daily caps on the public AI endpoints.
 - **Input handling:** request bodies and queries are validated with zod. Chat history from the browser is validated, and third-party text (token symbols, explorer fields) is fenced as data before it reaches the model.
 - **Keys:** the app never asks for a private key or seed phrase.
-- **Tests:** 176 tests in 17 files cover sign-in, payment verification, replay and recovery, rate limiting, prompt handling and the navigation config. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
+- **Tests:** 387 tests in 24 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling and the navigation config. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
 
 Known limitations:
 
@@ -149,7 +149,6 @@ pnpm build                         # production build
 
 - Payment hardening
 - Monitoring
-- A public `/security` page
 - Transaction Intelligence 2.0
 - Wallet Intelligence
 - Ecosystem Directory 2.0
