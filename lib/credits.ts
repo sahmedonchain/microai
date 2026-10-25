@@ -43,6 +43,20 @@ export async function addCredit(address: string, queries: number): Promise<numbe
   return newTotal;
 }
 
+// Gives back 1 credit after a paid request failed on our side (AI error or
+// empty answer). Never throws: a failed refund is logged by the caller via the
+// returned null, and the user is told to contact support.
+export async function refundCredit(address: string): Promise<number | null> {
+  try {
+    const key = creditKey(address);
+    const total = await getClient().incr(key);
+    await keepForever(key);
+    return total;
+  } catch {
+    return null;
+  }
+}
+
 // Atomically spends 1 credit. DECR is atomic in Redis, so concurrent
 // requests can't both spend the last credit: if the decrement goes negative
 // (no credit was available), it's compensated back and the caller is told

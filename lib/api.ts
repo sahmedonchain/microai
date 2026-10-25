@@ -4,6 +4,8 @@ import { z } from "zod";
 import { verifySessionToken, SESSION_COOKIE, type SessionPayload } from "@/lib/session";
 import { consume, getClientIp, RateLimiterUnavailableError, type LimitSpec } from "@/lib/rateLimit";
 import { createLogger, type Logger } from "@/lib/logger";
+import { isCrossSiteRequest } from "@/lib/csrf";
+import { isPaused, type PauseScope } from "@/lib/killSwitch";
 
 // Shared API plumbing: typed errors, request parsing, session lookup and rate
 // limiting for every route handler.
@@ -21,6 +23,8 @@ export type ApiErrorCode =
   | "not_found"
   | "gone"
   | "rate_limited"
+  | "forbidden"
+  | "paused"
   | "upstream_unavailable"
   | "rate_limiter_unavailable"
   | "internal";
@@ -52,6 +56,9 @@ export const apiErrors = {
   paymentInvalid: (message: string) => new ApiError(402, "payment_invalid", message),
   notFound: (message: string) => new ApiError(404, "not_found", message),
   gone: (message: string) => new ApiError(410, "gone", message),
+  forbidden: (message = "Request blocked.") => new ApiError(403, "forbidden", message),
+  paused: () =>
+    new ApiError(503, "paused", "MicroAI is paused for maintenance. Please try again later.", { retryAfterSec: 300, extra: { retryable: true } }),
   tooMany: (retryAfterSec: number, message = "Too many requests. Please slow down and try again shortly.") =>
     new ApiError(429, "rate_limited", message, { retryAfterSec }),
   limiterDown: () =>
@@ -117,6 +124,9 @@ export interface RouteOptions {
   // (default) degrades to the per-instance window. Use "closed" for any route
   // that spends AI/RPC budget or touches wallets or credits.
   onLimiterError?: "open" | "closed";
+  // Emergency kill switch. "ai" routes answer 503 while PAUSE_AI is set,
+  // "purchases" routes while PAUSE_PURCHASES is set (see lib/killSwitch.ts).
+  pause?: PauseScope;
 }
 
 async function readSession(): Promise<SessionPayload | null> {
@@ -131,6 +141,15 @@ export function withApi(opts: RouteOptions, handler: (ctx: ApiContext) => Promis
     const requestId = crypto.randomUUID();
     const log = createLogger({ route: opts.name, requestId });
     try {
+      if (opts.pause && isPaused(opts.pause)) {
+        log.warn("route paused by kill switch", { scope: opts.pause });
+        throw apiErrors.paused();
+      }
+      // Browsers attach Origin / Sec-Fetch-Site to cross-site writes; reject those.
+      if (isCrossSiteRequest(req)) {
+        log.warn("cross-site write blocked");
+        throw apiErrors.forbidden();
+      }
       let session: SessionPayload | null = null;
       if (auth !== "none") {
         try {
