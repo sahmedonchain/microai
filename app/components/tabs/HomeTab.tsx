@@ -599,8 +599,39 @@ export function HomeTab({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ duration: 0.12 }}
-                      className="absolute right-0 top-full mt-2 w-44 rounded-lg border border-border bg-surface-raised p-1 shadow-lg"
+                      className="absolute right-0 top-full z-30 mt-2 w-56 rounded-lg border border-border bg-surface-raised p-1 shadow-lg"
                     >
+                      {/* The right-hand wallet panel is hidden on small screens, so its actions live here. */}
+                      <div className="px-2.5 py-2 text-xs text-muted lg:hidden">
+                        Credits: <span className="font-mono text-text">{credit === null ? "N/A" : credit}</span> queries
+                      </div>
+                      <button
+                        onClick={() => {
+                          setWalletMenuOpen(false);
+                          setBuyModalOpen(true);
+                        }}
+                        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-text transition hover:bg-surface lg:hidden"
+                      >
+                        <Receipt className="size-3.5 text-accent-text" aria-hidden="true" />
+                        Buy credits
+                      </button>
+                      <a
+                        href={`https://explorer.arc.io/address/${wallet}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-text transition hover:bg-surface lg:hidden"
+                      >
+                        <ExternalLink className="size-3.5 text-accent-text" aria-hidden="true" />
+                        View on Explorer
+                      </a>
+                      <Link
+                        href="/stats"
+                        className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-text transition hover:bg-surface lg:hidden"
+                      >
+                        <BarChart3 className="size-3.5 text-accent-text" aria-hidden="true" />
+                        View stats
+                      </Link>
+                      <div className="my-1 h-px bg-border lg:hidden" />
                       <button
                         onClick={copyAddress}
                         className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-text transition hover:bg-surface"
@@ -860,7 +891,7 @@ export function HomeTab({
 
           {/* RIGHT SIDEBAR — only when connected */}
           {wallet && (
-            <aside className="flex w-72 shrink-0 flex-col overflow-y-auto border-l border-border bg-surface p-4">
+            <aside className="hidden w-72 shrink-0 flex-col overflow-y-auto border-l border-border bg-surface p-4 lg:flex">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-text">Wallet</p>
                 <span className="rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[11px] text-success">Connected</span>
