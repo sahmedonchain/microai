@@ -13,6 +13,7 @@ import { DebuggerTab } from "@/app/components/tabs/DebuggerTab";
 import { CreditsTab } from "@/app/components/tabs/CreditsTab";
 import { AnimatePresence, motion } from "framer-motion";
 import { SidebarNav } from "@/app/components/SidebarNav";
+import { LegalLinks } from "@/app/components/LegalLinks";
 import { usePendingPurchases } from "@/app/components/usePendingPurchases";
 import { createPending, savePending } from "@/lib/pendingPurchase";
 import {
@@ -546,6 +547,7 @@ export function HomeTab({
           </Link>
         </div>
         )}
+        {!sidebarCollapsed && <LegalLinks className="-mt-2 px-5 pb-4" />}
         </div>
         </div>
       </motion.aside>
@@ -988,8 +990,8 @@ export function HomeTab({
               <div className="mt-auto flex items-center gap-2 border-t border-border pt-4">
                 <LogoMark className="size-5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-text">Powered by Arc</p>
-                  <p className="truncate text-[11px] text-muted">Fast · Secure · On-chain</p>
+                  <p className="text-xs font-medium text-text">Built on Arc</p>
+                  <p className="truncate text-[11px] text-muted">Fast · On-chain</p>
                 </div>
               </div>
             </aside>
@@ -1048,6 +1050,9 @@ export function HomeTab({
                   onSelectPanel={selectFromMenu}
                   onNavigate={() => setMobileNavOpen(false)}
                 />
+              </div>
+              <div className="shrink-0 border-t border-border px-5 py-3">
+                <LegalLinks />
               </div>
             </motion.aside>
           </>
