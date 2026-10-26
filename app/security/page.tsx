@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LegalLinks } from "@/app/components/LegalLinks";
 
 export const metadata: Metadata = {
   title: "Security — MicroAI",
@@ -66,6 +67,7 @@ export default function SecurityPage() {
         </a>
         . Do not open a public issue, and do not test against other users&apos; wallets or funds.
       </p>
+      <LegalLinks className="mt-12 border-t border-[var(--color-border)] pt-6" />
     </main>
   );
 }
