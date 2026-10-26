@@ -1,15 +1,12 @@
 "use client";
-import { ARC_MAINNET, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
+import { PAYMENT_RECEIVER } from "@/lib/arcConfig";
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { TabLink as Link } from "@/app/components/tabs/TabNav";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { timeAgo } from "@/lib/format";
 
-const ARC_RPC = ARC_MAINNET.rpcUrl;
-const USDC_CONTRACT = USDC_ADDRESS;
-const EURC_CONTRACT = "0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1";
-const RECEIVER_WALLET = PAYMENT_RECEIVER;
 const FETCH_TIMEOUT_MS = 5000;
+const CHAIN_TIMEOUT_MS = 9000;
 const RETRY_DELAY_MS = 3000;
 
 interface NetworkStats {
@@ -51,16 +48,12 @@ async function fetchWithTimeout(url: string, options: RequestInit, ms = FETCH_TI
   }
 }
 
-async function rpcCall(method: string, params: unknown[] = []) {
-  const res = await fetchWithTimeout(ARC_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", method, params, id: 1 }),
-  });
-  if (!res.ok) throw new Error(`RPC returned ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || "RPC error");
-  return data.result;
+// All chain reads go through our own /api/chain route (not the browser straight
+// to Arc RPC), so they keep working when an extension or network blocks that host.
+async function chainRead<T>(params: Record<string, string>): Promise<T> {
+  const res = await fetchWithTimeout(`/api/chain?${new URLSearchParams(params)}`, {}, CHAIN_TIMEOUT_MS);
+  if (!res.ok) throw new Error(`chain API returned ${res.status}`);
+  return (await res.json()) as T;
 }
 
 function formatUnits(hex: string, decimals: number): string {
@@ -266,11 +259,7 @@ export function StatsTab() {
 
   const fetchNetworkStats = useCallback(async (isRetry = false) => {
     try {
-      const [blockHex, gasPriceHex, chainIdHex] = await Promise.all([
-        rpcCall("eth_blockNumber"),
-        rpcCall("eth_gasPrice"),
-        rpcCall("eth_chainId"),
-      ]);
+      const { blockHex, gasPriceHex, chainIdHex } = await chainRead<{ blockHex: string; gasPriceHex: string; chainIdHex: string }>({ kind: "network" });
       const gasPrice = formatGasPrice(gasPriceHex);
       setStats({
         blockNumber: parseInt(blockHex, 16),
@@ -293,8 +282,7 @@ export function StatsTab() {
 
   const fetchRevenue = useCallback(async (isRetry = false) => {
     try {
-      const data = "0x70a08231" + RECEIVER_WALLET.slice(2).padStart(64, "0");
-      const result = await rpcCall("eth_call", [{ to: USDC_CONTRACT, data }, "latest"]);
+      const { usdcHex: result } = await chainRead<{ usdcHex: string }>({ kind: "revenue" });
       setRevenue(formatUnits(result, 6));
       setRevenueFailed(false);
       revenueRetried.current = false;
@@ -365,12 +353,7 @@ export function StatsTab() {
     setWalletError("");
     setWalletData(null);
     try {
-      const usdcData = "0x70a08231" + addr.slice(2).padStart(64, "0");
-      const [usdcHex, eurcHex, nativeHex] = await Promise.all([
-        rpcCall("eth_call", [{ to: USDC_CONTRACT, data: usdcData }, "latest"]),
-        rpcCall("eth_call", [{ to: EURC_CONTRACT, data: usdcData }, "latest"]),
-        rpcCall("eth_getBalance", [addr, "latest"]),
-      ]);
+      const { usdcHex, eurcHex, nativeHex } = await chainRead<{ usdcHex: string; eurcHex: string; nativeHex: string }>({ kind: "balance", address: addr });
       setWalletData({
         address: addr,
         usdc: formatUnits(usdcHex, 6),
@@ -474,7 +457,7 @@ export function StatsTab() {
           </p>
         )}
         <a
-          href={`https://explorer.arc.io/address/${RECEIVER_WALLET}`}
+          href={`https://explorer.arc.io/address/${PAYMENT_RECEIVER}`}
           target="_blank"
           rel="noreferrer"
           className="mt-3 inline-block text-xs font-medium text-accent-text hover:underline"

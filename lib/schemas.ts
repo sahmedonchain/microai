@@ -40,6 +40,13 @@ export const copilotBody = z.union([
 ]);
 export const chatBodyBase = z.object({ message: chatMessage, history: z.unknown().optional() });
 export const nonceQuery = z.object({ address: EVM_ADDRESS });
+// Public chain reads for the Stats page. The browser never talks to Arc RPC
+// itself: it asks this route, which only ever runs these fixed reads.
+export const chainQuery = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("network") }),
+  z.object({ kind: z.literal("revenue") }),
+  z.object({ kind: z.literal("balance"), address: EVM_ADDRESS }),
+]);
 export const sessionPostBody = z.object({
   address: EVM_ADDRESS,
   signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/, "Invalid signature format."),
