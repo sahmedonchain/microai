@@ -155,7 +155,7 @@ Implemented controls:
 - **Outbound requests:** server-side fetches go through a guarded client that allows only https, blocks private and internal addresses, limits redirects and response size, and applies a timeout.
 - **Keys:** the app never asks for a private key or seed phrase.
 - **Repository:** the `main` branch is protected: changes go through pull requests, CI must pass, and force pushes are blocked. CodeQL and Dependabot run on the repository.
-- **Tests:** 393 tests in 25 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling and the navigation config. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
+- **Tests:** 435 tests in 26 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the x402 response checks (engine only, not yet exposed in the app). Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
 
 Known limitations:
 
