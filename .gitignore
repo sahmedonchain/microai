@@ -53,3 +53,7 @@ next-env.d.ts
 /docs/*audit*.md
 /docs/*findings*.md
 /docs/verify-spec.md
+
+# AI tool instruction files
+CLAUDE.md
+AGENTS.md
