@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="MicroAI: Payment tools for builders on Arc">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0b14"/>
+      <stop offset="1" stop-color="#2b1b63"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset="1" stop-color="#4f7cff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <circle cx="1130" cy="40" r="190" fill="#7c5cff" opacity="0.10"/>
+  <circle cx="1220" cy="300" r="130" fill="#4f7cff" opacity="0.10"/>
+  <rect x="80" y="86" width="112" height="112" rx="28" fill="url(#mark)"/>
+  <text x="136" y="166" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="78" font-weight="700" fill="#ffffff">&#956;</text>
+  <text x="232" y="148" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="72" font-weight="800" fill="#ffffff">MicroAI</text>
+  <text x="234" y="196" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="500" fill="#cdbfff">Payment tools for builders on Arc</text>
+  <text x="80" y="268" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" fill="#9d97c0">Pay-per-use AI today  ·  USDC and x402 payment checks next</text>
+  <rect x="1010" y="40" width="230" height="40" rx="20" fill="#14301f" stroke="#2fbf71" stroke-width="1.5"/>
+  <circle cx="1036" cy="60" r="6" fill="#2fbf71"/>
+  <text x="1054" y="67" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#7ee2a8">Live on Arc Mainnet</text>
+</svg>
