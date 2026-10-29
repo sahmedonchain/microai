@@ -7,7 +7,7 @@ import { parseResponse } from "./x402";
 // Static checks of an x402 endpoint's 402 answer against what is known about
 // Arc. Nothing here sends a payment or calls the network.
 
-const NETWORK_BY_CHAIN = new Map<number, ArcNetworkId>(
+export const NETWORK_BY_CHAIN = new Map<number, ArcNetworkId>(
   (Object.values(ARC_NETWORKS) as { id: ArcNetworkId; chainId: number }[]).map((n) => [n.chainId, n.id])
 );
 
@@ -42,7 +42,7 @@ export const NOT_CHECKED = [
   "Payment options on networks other than Arc",
 ];
 
-function isObject(v: unknown): v is Record<string, unknown> {
+export function isObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
@@ -54,9 +54,9 @@ export function formatUnits(value: bigint, decimals: number): string {
   return frac ? `${wholeText}.${frac}` : wholeText;
 }
 
-type AddressRead = { ok: false } | { ok: true; lower: string; badChecksum: boolean };
+export type AddressRead = { ok: false } | { ok: true; lower: string; badChecksum: boolean };
 
-function readAddress(v: unknown): AddressRead {
+export function readAddress(v: unknown): AddressRead {
   if (typeof v !== "string" || !/^0x[0-9a-fA-F]{40}$/.test(v)) return { ok: false };
   let badChecksum = false;
   try {
@@ -285,7 +285,21 @@ function checkEntry(raw: unknown, i: number, out: Finding[]): EntryResult {
   return { arcNetwork };
 }
 
+export function countFindings(findings: Finding[]): Record<Severity, number> {
+  const counts: Record<Severity, number> = { ok: 0, info: 0, warning: 0, error: 0 };
+  for (const f of findings) counts[f.severity]++;
+  return counts;
+}
+
 const RANK: Record<Severity, number> = { error: 0, warning: 1, info: 2, ok: 3 };
+
+/** Errors first, then warnings, notes and passes; otherwise in the order found. */
+export function sortFindings(findings: Finding[]): Finding[] {
+  return findings
+    .map((f, i) => ({ f, i }))
+    .sort((a, b) => RANK[a.f.severity] - RANK[b.f.severity] || a.i - b.i)
+    .map((x) => x.f);
+}
 
 export function verifyEndpointResponse(res: EndpointResponse, opts: { expectedNetwork?: ExpectedNetwork } = {}): VerifyReport {
   const { parsed, findings } = parseResponse(res);
@@ -317,13 +331,9 @@ export function verifyEndpointResponse(res: EndpointResponse, opts: { expectedNe
     }
   }
 
-  const sorted = findings
-    .map((f, i) => ({ f, i }))
-    .sort((a, b) => RANK[a.f.severity] - RANK[b.f.severity] || a.i - b.i)
-    .map((x) => x.f);
+  const sorted = sortFindings(findings);
 
-  const counts: Record<Severity, number> = { ok: 0, info: 0, warning: 0, error: 0 };
-  for (const f of sorted) counts[f.severity]++;
+  const counts = countFindings(sorted);
 
   return { expectedNetwork: opts.expectedNetwork, findings: sorted, counts, checked: CHECKED, notChecked: NOT_CHECKED };
 }
