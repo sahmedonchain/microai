@@ -47,12 +47,26 @@ export const chainQuery = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("revenue") }),
   z.object({ kind: z.literal("balance"), address: EVM_ADDRESS }),
 ]);
-// MicroAI Verify: the endpoint to check. The URL is only ever fetched through
-// safeFetch (https only, no private addresses, size and time limits).
-export const verifyBody = z.object({
-  url: z.string().trim().min(8, "Enter the full https:// URL of the endpoint.").max(2048, "URL is too long."),
-  network: z.enum(["mainnet", "testnet"]).optional(),
+// MicroAI Verify. A request names an endpoint to check, a transaction to match
+// against it, or both. The URL is only ever fetched through safeFetch (https
+// only, no private addresses, size and time limits).
+const verifyExpect = z.object({
+  payTo: EVM_ADDRESS,
+  amount: z.string().regex(/^\d{1,30}$/, "amount must be a whole number in the token's smallest unit."),
+  asset: EVM_ADDRESS.optional(),
 });
+export const verifyBody = z
+  .object({
+    url: z.string().trim().min(8, "Enter the full https:// URL of the endpoint.").max(2048, "URL is too long.").optional(),
+    network: z.enum(["mainnet", "testnet"]).optional(),
+    txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Transaction hash must be 0x followed by 64 hex characters.").optional(),
+    expect: verifyExpect.optional(),
+  })
+  .superRefine((b, ctx) => {
+    if (!b.url && !b.txHash) ctx.addIssue({ code: "custom", message: "Give the endpoint URL, or a transaction hash with the expected recipient and amount." });
+    else if (b.expect && !b.txHash) ctx.addIssue({ code: "custom", message: "expect is only used together with a transaction hash." });
+    else if (b.txHash && !b.url && !(b.expect && b.network)) ctx.addIssue({ code: "custom", message: "With a transaction hash and no URL, give expect (payTo and amount) and the network." });
+  });
 export const sessionPostBody = z.object({
   address: EVM_ADDRESS,
   signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/, "Invalid signature format."),
