@@ -47,6 +47,12 @@ export const chainQuery = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("revenue") }),
   z.object({ kind: z.literal("balance"), address: EVM_ADDRESS }),
 ]);
+// MicroAI Verify: the endpoint to check. The URL is only ever fetched through
+// safeFetch (https only, no private addresses, size and time limits).
+export const verifyBody = z.object({
+  url: z.string().trim().min(8, "Enter the full https:// URL of the endpoint.").max(2048, "URL is too long."),
+  network: z.enum(["mainnet", "testnet"]).optional(),
+});
 export const sessionPostBody = z.object({
   address: EVM_ADDRESS,
   signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/, "Invalid signature format."),

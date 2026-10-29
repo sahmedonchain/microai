@@ -52,7 +52,7 @@ Paying with USDC on Arc looks simple, but the mistakes are easy to make and usua
 
 MicroAI already does part of this work in production: it verifies USDC payments on-chain, protects against replays, recovers lost payments and explains transactions. **MicroAI Verify** builds on that foundation. A developer gives it an x402 endpoint (and optionally a transaction hash), and it reports what is right and what is wrong, with evidence and a fix.
 
-**Planned for Verify v1** (not built yet):
+**Planned for Verify v1** (engine and API built, web page and proof still to come):
 
 - Reads the endpoint's `402` response **without sending any payment**
 - Checks the network (Arc Mainnet `5042` or Testnet `5042002`), the USDC address, amount decimals (6 versus 18), the recipient address and the x402 response format
@@ -147,7 +147,7 @@ Implemented controls:
 - **Sign-in:** Sign-In with Ethereum (EIP-4361) bound to the app domain and Arc Mainnet chain ID. Nonces are stored in Redis, expire after 5 minutes and work once.
 - **Payments:** verified on the server from the Arc receipt: the RPC is checked to be Arc Mainnet, the transaction succeeded, and every USDC transfer in it is read. Transfers from the signed-in wallet to the MicroAI wallet are summed and must match the amount. Each transaction hash can be credited once, enforced atomically in Redis. Payments are verifiable for 7 days.
 - **Credits:** never expire. If the AI fails or returns nothing, the credit is refunded automatically.
-- **Emergency pause:** AI answers and new credit purchases can each be paused with an environment variable (`PAUSE_AI`, `PAUSE_PURCHASES`) and a redeploy.
+- **Emergency pause:** AI answers, new credit purchases and the Verify checker can each be paused with an environment variable (`PAUSE_AI`, `PAUSE_PURCHASES`, `PAUSE_VERIFY`) and a redeploy.
 - **Same-site checks:** write requests from other sites are rejected on every API route.
 - **Headers:** HSTS, `X-Frame-Options: DENY`, `nosniff`, a strict referrer policy and a permissions policy on every response. A Content-Security-Policy is sent in report-only mode. It applies to pages, not to API responses.
 - **Abuse limits:** Redis sliding-window rate limits on every API route, keyed by wallet or IP, plus daily caps on the public AI endpoints.
@@ -155,7 +155,7 @@ Implemented controls:
 - **Outbound requests:** server-side fetches go through a guarded client that allows only https, blocks private and internal addresses, limits redirects and response size, and applies a timeout.
 - **Keys:** the app never asks for a private key or seed phrase.
 - **Repository:** the `main` branch is protected: changes go through pull requests, CI must pass, and force pushes are blocked. CodeQL and Dependabot run on the repository.
-- **Tests:** 435 tests in 26 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the x402 response checks (engine only, not yet exposed in the app). Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
+- **Tests:** 473 tests in 29 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the Verify checks, fetcher and test fixtures. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
 
 Known limitations:
 
@@ -175,7 +175,7 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md). Please do not open a 
 
 <br>
 
-All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In with Ethereum. Every route is rate limited.
+All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In with Ethereum. Every route is rate limited except the read-only `/lab` fixtures.
 
 | Route | Method | Sign-in | Purpose |
 |---|---|---|---|
@@ -193,9 +193,11 @@ All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In
 | `/news` | GET | no | News feed |
 | `/stats` | GET | no | MicroAI payment wallet activity |
 | `/chain` | GET | no | Fixed read-only chain reads for the Stats page (block, gas price, chain ID, balances) |
+| `/verify` | POST | no | Check an x402 endpoint's 402 answer against Arc (no payment sent; 5 a minute, 40 a day per caller) |
 | `/github-status` | GET | no | Activity of tracked GitHub repositories |
 | `/achswap-onchain` | GET | no | On-chain check of the AchSwap contracts |
 | `/csp-report` | POST | no | Receives Content-Security-Policy violation reports |
+| `/lab/x402/{case}` | GET | no | Test fixtures for Verify: answer 402 on purpose with one known mistake each, never take a payment |
 
 </details>
 
@@ -216,6 +218,7 @@ lib/
   safeFetch.ts    Guarded outbound fetch
   siwe.ts, session.ts, nonce.ts   Sign-in
   killSwitch.ts, csrf.ts, csp.ts, rateLimit.ts   Protections
+  verify/         MicroAI Verify: x402 parser, checks, guarded fetch, test fixtures
 tests/            Vitest suites (Redis, RPC and AI are mocked)
 scripts/          One-off maintenance scripts
 docs/assets/      Banner and social preview images
@@ -260,6 +263,7 @@ pnpm dev                     # http://localhost:3000
 | `CSP_ENFORCE` | no | `1` enforces the Content-Security-Policy; unset or `0` is report-only |
 | `PAUSE_AI` | no | `1` pauses Chat, Copilot and Debug analysis |
 | `PAUSE_PURCHASES` | no | `1` pauses new credit purchases |
+| `PAUSE_VERIFY` | no | `1` pauses the Verify endpoint checker |
 
 Buying credits needs an injected wallet on Arc Mainnet with USDC. Never commit `.env.local`.
 
@@ -283,7 +287,7 @@ This is a direction, not a promise. **A stage starts only when the previous one 
 | **Foundation** | Pay-per-use AI, credits, on-chain payment verification and recovery, wallet and transaction analysis | Live on Mainnet |
 | **Hardening** | Automatic credit refund, emergency pause switches, same-site checks, protected `main`, public Security, Terms and Privacy pages, server-side chain reads, Node 24 | Done |
 | | Enforce the Content-Security-Policy in production | Next |
-| **MicroAI Verify v1** | Check an x402 or USDC payment setup on Arc and verify a transaction on-chain, with a plain-language report | Planned |
+| **MicroAI Verify v1** | Check an x402 or USDC payment setup on Arc and verify a transaction on-chain, with a plain-language report | In progress: check engine and API built; web page, transaction check and proof still to come |
 | **Testnet proof** | Run a real x402 endpoint on Arc Testnet and publish proof for success, timeout, wrong amount and no response | Planned |
 | **Delivery checks** | Catch "payment went through but the service was not delivered" | Planned |
 | **Shareable reports** | One link per check, with history, to share with a team | Later |
