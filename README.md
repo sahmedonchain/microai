@@ -52,7 +52,7 @@ Paying with USDC on Arc looks simple, but the mistakes are easy to make and usua
 
 MicroAI already does part of this work in production: it verifies USDC payments on-chain, protects against replays, recovers lost payments and explains transactions. **MicroAI Verify** builds on that foundation. A developer gives it an x402 endpoint (and optionally a transaction hash), and it reports what is right and what is wrong, with evidence and a fix.
 
-**Planned for Verify v1** (engine, API and transaction check built; web page and proof still to come):
+**Planned for Verify v1** (engine, API, transaction check and an early-preview page built; proof from outside builders still to come):
 
 - Reads the endpoint's `402` response **without sending any payment**
 - Checks the network (Arc Mainnet `5042` or Testnet `5042002`), the USDC address, amount decimals (6 versus 18), the recipient address and the x402 response format
@@ -61,6 +61,8 @@ MicroAI already does part of this work in production: it verifies USDC payments 
 - Runs in the browser, nothing to install, free with rate limits
 
 What it will **not** do: send payments, give services a score, call other services good or bad, or check any network other than Arc.
+
+**Try the early preview:** [microai-tan.vercel.app/verify](https://microai-tan.vercel.app/verify). It is not in the app menu yet, it sends no payment, and it is experimental. If it misses something or gets something wrong, please [tell me](https://github.com/sahmedonchain/microai/issues/new?title=Verify%20feedback%3A%20).
 
 <details>
 <summary>Illustrative mock-up of a Verify report (not live)</summary>
@@ -155,7 +157,7 @@ Implemented controls:
 - **Outbound requests:** server-side fetches go through a guarded client that allows only https, blocks private and internal addresses, limits redirects and response size, and applies a timeout.
 - **Keys:** the app never asks for a private key or seed phrase.
 - **Repository:** the `main` branch is protected: changes go through pull requests, CI must pass, and force pushes are blocked. CodeQL and Dependabot run on the repository.
-- **Tests:** 504 tests in 31 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the Verify checks, fetcher and test fixtures. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
+- **Tests:** 526 tests in 32 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the Verify checks, fetcher and test fixtures. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
 
 Known limitations:
 
@@ -287,7 +289,7 @@ This is a direction, not a promise. **A stage starts only when the previous one 
 | **Foundation** | Pay-per-use AI, credits, on-chain payment verification and recovery, wallet and transaction analysis | Live on Mainnet |
 | **Hardening** | Automatic credit refund, emergency pause switches, same-site checks, protected `main`, public Security, Terms and Privacy pages, server-side chain reads, Node 24 | Done |
 | | Enforce the Content-Security-Policy in production | Next |
-| **MicroAI Verify v1** | Check an x402 or USDC payment setup on Arc and verify a transaction on-chain, with a plain-language report | In progress: check engine, API and transaction check built; web page and proof still to come |
+| **MicroAI Verify v1** | Check an x402 or USDC payment setup on Arc and verify a transaction on-chain, with a plain-language report | In progress: check engine, API, transaction check and an early-preview page built; proof from outside builders still to come |
 | **Testnet proof** | Run a real x402 endpoint on Arc Testnet and publish proof for success, timeout, wrong amount and no response | Planned |
 | **Delivery checks** | Catch "payment went through but the service was not delivered" | Planned |
 | **Shareable reports** | One link per check, with history, to share with a team | Later |
