@@ -24,6 +24,10 @@ const TEN_POW_12 = pow10(12);
 const LARGE_AMOUNT_UNITS = pow10(9); // 1,000 USDC at 6 decimals
 const MIN_TIMEOUT_SECONDS = 5;
 const MAX_TIMEOUT_SECONDS = 86_400;
+// Circle Gateway batched payments are signed against a balance and settled later,
+// so sellers using them (for example agent402.tools) advertise a window of about
+// 7 days (604800 seconds minimum) instead of a few minutes.
+const GATEWAY_MIN_TIMEOUT_SECONDS = 604_800;
 
 export const CHECKED = [
   "HTTP status and the x402 response format",
@@ -108,19 +112,41 @@ function checkEntry(raw: unknown, i: number, out: Finding[]): EntryResult {
 
   // ---- network
   const network = raw.network;
-  const match = typeof network === "string" ? /^eip155:(\d+)$/.exec(network) : null;
-  if (!match) {
+  // CAIP-2 ids are "namespace:reference", for example eip155:5042, solana:5eykt4... or stellar:pubnet.
+  const caip = typeof network === "string" ? /^([a-z0-9-]{3,8}):([A-Za-z0-9_-]{1,32})$/.exec(network) : null;
+  if (!caip) {
     add({
       field: "network",
       severity: "error",
       title: "Network is not written as a chain id",
-      reason: 'x402 v2 names networks as CAIP-2 ids like "eip155:5042". Names such as "arc" or a bare number are not understood by clients.',
+      reason: 'x402 v2 names networks as CAIP-2 ids like "eip155:5042". Names such as "arc" or "base-sepolia", or a bare number, are not understood by v2 clients.',
       evidence: `network: ${JSON.stringify(network)}`,
       fix: "Use eip155:5042 for Arc Mainnet or eip155:5042002 for Arc Testnet.",
     });
     return {};
   }
-  const chainId = Number(match[1]);
+  if (caip[1] !== "eip155") {
+    add({
+      field: "network",
+      severity: "info",
+      title: "Not an Arc network",
+      reason: "MicroAI Verify checks Arc only, so this option was not verified.",
+      evidence: `network: ${network}`,
+    });
+    return {};
+  }
+  if (!/^\d+$/.test(caip[2])) {
+    add({
+      field: "network",
+      severity: "error",
+      title: "Chain id is not a number",
+      reason: "An eip155 network must end in the numeric chain id, for example eip155:5042.",
+      evidence: `network: ${network}`,
+      fix: "Use eip155:5042 for Arc Mainnet or eip155:5042002 for Arc Testnet.",
+    });
+    return {};
+  }
+  const chainId = Number(caip[2]);
   const arcNetwork = NETWORK_BY_CHAIN.get(chainId);
   if (!arcNetwork) {
     const nearArc = String(chainId).startsWith("5042");
@@ -269,6 +295,21 @@ function checkEntry(raw: unknown, i: number, out: Finding[]): EntryResult {
   const timeout = raw.maxTimeoutSeconds;
   if (typeof timeout !== "number" || !Number.isInteger(timeout) || timeout <= 0) {
     add({ field: "maxTimeoutSeconds", severity: "error", title: "maxTimeoutSeconds is missing or invalid", reason: "It must be a positive whole number of seconds, so clients know how long a signed payment stays valid.", evidence: `maxTimeoutSeconds: ${JSON.stringify(timeout)}`, fix: "Set it to a value such as 60 to 300." });
+  } else if (batched) {
+    // A long window is the normal setting for Gateway batching, not a mistake.
+    const days = (timeout / 86_400).toFixed(1);
+    if (timeout < GATEWAY_MIN_TIMEOUT_SECONDS) {
+      add({
+        field: "maxTimeoutSeconds",
+        severity: "warning",
+        title: "Timeout may be too short for Gateway batching",
+        reason: `Sellers using Circle Gateway batching report that it needs a validity window of at least 7 days (604800 seconds). This option allows ${days} days, so payments may be refused as expired.`,
+        evidence: `maxTimeoutSeconds: ${timeout}`,
+        fix: "Raise maxTimeoutSeconds to at least 604800 and check Circle's Gateway documentation.",
+      });
+    } else {
+      add({ field: "maxTimeoutSeconds", severity: "ok", title: `Timeout is ${days} days`, reason: "A window of at least 7 days is what Gateway batching sellers report it needs.", evidence: `maxTimeoutSeconds: ${timeout}` });
+    }
   } else if (timeout < MIN_TIMEOUT_SECONDS) {
     add({ field: "maxTimeoutSeconds", severity: "warning", title: "Timeout is very short", reason: `${timeout} seconds may expire before the payment is signed and settled.`, evidence: `maxTimeoutSeconds: ${timeout}` });
   } else if (timeout > MAX_TIMEOUT_SECONDS) {
