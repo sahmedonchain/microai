@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { Finding, Severity, VerifyReport } from "@/lib/verify/types";
-import { SEVERITY_LABEL, reportToText, sumCounts, usdcToUnits, verdict } from "@/lib/verify/ui";
+import { SEVERITY_LABEL, groupFindings, reportToText, sumCounts, usdcToUnits, verdict } from "@/lib/verify/ui";
 
 interface TxResult {
   network?: "mainnet" | "testnet";
@@ -44,7 +44,8 @@ const BTN_PRIMARY =
 const BTN_SECONDARY =
   "inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm text-text hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-function FindingCard({ f }: { f: Finding }) {
+function FindingCard({ f, level }: { f: Finding; level: "h3" | "h4" }) {
+  const Heading = level;
   return (
     <li className="rounded-lg border border-border bg-surface p-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -52,7 +53,7 @@ function FindingCard({ f }: { f: Finding }) {
           <span aria-hidden="true">{MARK[f.severity]}</span>
           {SEVERITY_LABEL[f.severity]}
         </span>
-        <h3 className="min-w-0 text-base font-semibold">{f.title}</h3>
+        <Heading className="min-w-0 text-base font-semibold">{f.title}</Heading>
       </div>
       <p className="mt-2 text-sm leading-relaxed text-muted">{f.reason}</p>
       {f.evidence && (
@@ -68,13 +69,46 @@ function FindingCard({ f }: { f: Finding }) {
   );
 }
 
-function Findings({ items }: { items: Finding[] }) {
+function Findings({ items, level = "h3" }: { items: Finding[]; level?: "h3" | "h4" }) {
   return (
     <ul className="mt-3 space-y-3">
       {items.map((f, i) => (
-        <FindingCard key={`${f.id}-${i}`} f={f} />
+        <FindingCard key={`${f.id}-${i}`} f={f} level={level} />
       ))}
     </ul>
+  );
+}
+
+function EndpointFindings({ findings }: { findings: Finding[] }) {
+  const g = groupFindings(findings);
+  return (
+    <>
+      <h2 className="mt-6 text-lg font-semibold">Endpoint</h2>
+      {g.general.length > 0 && <Findings items={g.general} />}
+      {g.arcOptions.map((o) => (
+        <div key={o.index} className="mt-6">
+          <h3 className="text-base font-semibold">
+            Option {o.index + 1}: <span className="text-accent-text">{o.label}</span>
+          </h3>
+          <Findings items={o.findings} level="h4" />
+        </div>
+      ))}
+      {g.otherNetworks.length > 0 && (
+        <details className="mt-6 rounded-lg border border-border bg-surface p-4">
+          <summary className="min-h-6 cursor-pointer text-sm font-medium">
+            {g.otherNetworks.length} option{g.otherNetworks.length === 1 ? "" : "s"} on other networks, not verified
+          </summary>
+          <p className="mt-3 text-sm leading-relaxed text-muted">MicroAI Verify checks Arc only. These networks were listed by the endpoint and were not checked.</p>
+          <ul className="mt-2 space-y-1 font-mono text-xs">
+            {g.otherNetworks.map((n) => (
+              <li key={n.index} className="break-all">
+                Option {n.index + 1}: {n.network}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
   );
 }
 
@@ -274,12 +308,7 @@ export function VerifyClient() {
               </button>
             </div>
 
-            {result.report && (
-              <>
-                <h2 className="mt-6 text-lg font-semibold">Endpoint</h2>
-                <Findings items={result.report.findings} />
-              </>
-            )}
+            {result.report && <EndpointFindings findings={result.report.findings} />}
 
             {result.transaction && (
               <>

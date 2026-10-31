@@ -31,6 +31,57 @@ export function verdict(counts: Record<Severity, number>): { tone: Tone; text: s
   return { tone: "ok", text: "No problems found in the checks we ran" };
 }
 
+export interface OptionGroup {
+  /** Position of the option in the endpoint's accepts list. */
+  index: number;
+  label: string;
+  findings: Finding[];
+}
+
+export interface GroupedFindings {
+  /** Findings that are not about one payment option (status, headers, version, network summary). */
+  general: Finding[];
+  /** Arc options, each with its own findings. */
+  arcOptions: OptionGroup[];
+  /** Options on other networks: only noted, never verified. */
+  otherNetworks: { index: number; network: string }[];
+}
+
+/**
+ * Groups a report's findings by payment option, so the options that matter (Arc)
+ * come first and the long tail of other networks is one short list instead of
+ * a page of identical notes.
+ */
+export function groupFindings(findings: Finding[]): GroupedFindings {
+  const general: Finding[] = [];
+  const byIndex = new Map<number, Finding[]>();
+  for (const f of findings) {
+    const m = /^accepts\[(\d+)\]\./.exec(f.id);
+    if (!m) {
+      general.push(f);
+      continue;
+    }
+    const i = Number(m[1]);
+    byIndex.set(i, [...(byIndex.get(i) ?? []), f]);
+  }
+
+  const arcOptions: OptionGroup[] = [];
+  const otherNetworks: { index: number; network: string }[] = [];
+  for (const [index, fs] of Array.from(byIndex.entries()).sort((a, b) => a[0] - b[0])) {
+    const only = fs.length === 1 ? fs[0] : undefined;
+    if (only && only.id.endsWith(".network") && only.severity === "info" && only.title === "Not an Arc network") {
+      otherNetworks.push({ index, network: (only.evidence ?? "").replace(/^network:\s*/, "") || "unknown" });
+      continue;
+    }
+    const net = fs.find((f) => f.id.endsWith(".network") && f.severity === "ok");
+    const netName = net ? net.title.replace(/^Network is /, "") : undefined;
+    const batched = fs.some((f) => f.id.endsWith(".scheme") && f.title === "Circle Gateway batched payment");
+    const label = netName ? `${netName}, ${batched ? "Circle Gateway batched" : "exact payment"}` : "needs attention";
+    arcOptions.push({ index, label, findings: fs });
+  }
+  return { general, arcOptions, otherNetworks };
+}
+
 function findingLines(f: Finding): string[] {
   const lines = [`[${SEVERITY_LABEL[f.severity]}] ${f.title}`, `  ${f.reason}`];
   if (f.evidence) lines.push(`  Evidence: ${f.evidence}`);
@@ -49,7 +100,12 @@ export function reportToText(input: {
 }): string {
   const out: string[] = ["MicroAI Verify (early preview)"];
   if (input.url) out.push(`Endpoint: ${input.url}${input.httpStatus !== undefined ? ` (HTTP ${input.httpStatus})` : ""}`);
-  if (input.findings.length) out.push("", ...input.findings.flatMap(findingLines));
+  if (input.findings.length) {
+    const g = groupFindings(input.findings);
+    if (g.general.length) out.push("", ...g.general.flatMap(findingLines));
+    for (const o of g.arcOptions) out.push("", `Option ${o.index + 1}: ${o.label}`, ...o.findings.flatMap(findingLines));
+    if (g.otherNetworks.length) out.push("", `Other networks, not verified (${g.otherNetworks.length}): ${g.otherNetworks.map((n) => n.network).join(", ")}`);
+  }
   if (input.txHash) {
     out.push("", `Transaction: ${input.txHash}`);
     if (input.explorerUrl) out.push(`Explorer: ${input.explorerUrl}`);
