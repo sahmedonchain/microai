@@ -272,7 +272,7 @@ describe("timeout, scheme and report shape", () => {
   });
 
   it("a Circle Gateway batched option is explained, not flagged", () => {
-    const r = verifyEndpointResponse(res(v2([entry({ extra: { name: "GatewayWalletBatched", version: "1" } })])));
+    const r = verifyEndpointResponse(res(v2([entry({ extra: { name: "GatewayWalletBatched", version: "1" }, maxTimeoutSeconds: 604900 })])));
     expect(severities(r, "accepts[0].scheme")).toEqual(["info"]);
     expect(r.counts.error + r.counts.warning).toBe(0);
   });
@@ -294,5 +294,75 @@ describe("timeout, scheme and report shape", () => {
     const r = verifyEndpointResponse(res(v2([entry()])));
     expect(r.checked.length).toBeGreaterThan(0);
     expect(r.notChecked.join(" ")).toContain("No payment was sent");
+  });
+});
+
+// A multi-chain seller of the kind that exists on Arc today: one 402 that
+// offers the same price on many networks, EVM and not, plus a Circle Gateway
+// batched option with a window of about 7 days. The shape follows the public
+// manifest of agent402.tools; the non-Arc asset values are placeholders.
+describe("a multi-chain seller with a Gateway batched option", () => {
+  const SELLER = "0xaBF4FAbd7c416fB67202E5f9002389Fc75e2a9D0";
+  const multi = () => [
+    entry({ network: "eip155:8453", amount: "1000", asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", payTo: SELLER, maxTimeoutSeconds: 60, extra: { name: "USD Coin", version: "2" } }),
+    entry({ network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", amount: "1000", asset: "placeholder-solana-mint", payTo: "placeholder-solana-address", extra: {} }),
+    entry({ network: "stellar:pubnet", amount: "1000", asset: "placeholder-stellar-asset", payTo: "placeholder-stellar-address", extra: {} }),
+    entry({ network: "algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73k", amount: "1000", asset: "placeholder-algorand-asset", payTo: "placeholder-algorand-address", extra: {} }),
+    entry({ network: "eip155:5042", amount: "1000", payTo: SELLER, maxTimeoutSeconds: 60, extra: { name: "USDC", version: "2" } }),
+    entry({ network: "eip155:5042", amount: "1000", payTo: SELLER, maxTimeoutSeconds: 604900, extra: { name: "GatewayWalletBatched", version: "1", verifyingContract: "0x77777777dcc4d5a8b6e418fd04d8997ef11000ee" } }),
+  ];
+
+  it("raises no error and no warning for any option", () => {
+    const r = verifyEndpointResponse(res(v2(multi())));
+    expect(r.counts.error).toBe(0);
+    expect(r.counts.warning).toBe(0);
+  });
+
+  it("notes the non-Arc networks (EVM and not) instead of calling them wrong", () => {
+    const r = verifyEndpointResponse(res(v2(multi())));
+    for (const i of [0, 1, 2, 3]) expect(severities(r, `accepts[${i}].network`)).toEqual(["info"]);
+    expect(one(r, "accepts[1].network").title).toBe("Not an Arc network");
+  });
+
+  it("checks both Arc options and treats a 7-day window as normal for Gateway batching", () => {
+    const r = verifyEndpointResponse(res(v2(multi())), { expectedNetwork: "mainnet" });
+    expect(severities(r, "accepts[4].network")).toEqual(["ok"]);
+    expect(severities(r, "accepts[5].scheme")).toEqual(["info"]);
+    expect(one(r, "accepts[5].maxTimeoutSeconds").title).toBe("Timeout is 7.0 days");
+    expect(severities(r, "accepts[5].maxTimeoutSeconds")).toEqual(["ok"]);
+  });
+
+  it("a Gateway batched option with a 4-day window gets a hedged warning", () => {
+    const short = entry({ extra: { name: "GatewayWalletBatched", version: "1" }, maxTimeoutSeconds: 345600 });
+    const r = verifyEndpointResponse(res(v2([short])));
+    const f = one(r, "accepts[0].maxTimeoutSeconds");
+    expect(f.severity).toBe("warning");
+    expect(f.title).toBe("Timeout may be too short for Gateway batching");
+    expect(f.reason).toContain("report");
+    expect(f.fix).toContain("604800");
+  });
+
+  it("a long window on a plain exact option is still flagged", () => {
+    const r = verifyEndpointResponse(res(v2([entry({ maxTimeoutSeconds: 604900 })])));
+    expect(severities(r, "accepts[0].maxTimeoutSeconds")).toEqual(["warning"]);
+  });
+});
+
+describe("network spelling", () => {
+  it('v1-style names such as "base-sepolia" are an error', () => {
+    const r = verifyEndpointResponse(res(v2([entry({ network: "base-sepolia" })])));
+    expect(severities(r, "accepts[0].network")).toEqual(["error"]);
+  });
+
+  it("an eip155 id that is not a number is an error", () => {
+    const r = verifyEndpointResponse(res(v2([entry({ network: "eip155:abc" })])));
+    expect(one(r, "accepts[0].network").title).toBe("Chain id is not a number");
+  });
+
+  it("only non-Arc networks give a note per option and one warning that nothing was verified", () => {
+    const r = verifyEndpointResponse(res(v2([entry({ network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp" })])));
+    expect(severities(r, "accepts[0].network")).toEqual(["info"]);
+    expect(severities(r, "network")).toEqual(["warning"]);
+    expect(r.counts.error).toBe(0);
   });
 });
