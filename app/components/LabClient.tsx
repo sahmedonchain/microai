@@ -1,21 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LAB_SCENARIOS, TESTNET, TESTNET_CHAIN_PARAMS, encodeErc20Transfer, tokenAddress, verifyLink, type LabScenario } from "@/lib/verify/lab";
+import { LAB_SCENARIOS, TESTNET, TESTNET_CHAIN_PARAMS, encodeErc20Transfer, tokenAddress, verifyLink, walletErrorMessage, type LabScenario } from "@/lib/verify/lab";
 
 interface Eip1193 {
   request(args: { method: string; params?: unknown[] | object }): Promise<unknown>;
+  on?(event: string, handler: (...args: unknown[]) => void): void;
+  removeListener?(event: string, handler: (...args: unknown[]) => void): void;
 }
 
 function getProvider(): Eip1193 | undefined {
   return (window as unknown as { ethereum?: Eip1193 }).ethereum;
-}
-
-function errorText(err: unknown): string {
-  const e = err as { code?: number; message?: string };
-  if (e?.code === 4001) return "You rejected the request in your wallet.";
-  return (e?.message || "Something went wrong.").slice(0, 200);
 }
 
 const SEVERITY_STYLE = {
@@ -34,6 +30,33 @@ export function LabClient() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<Record<string, string>>({});
+
+  // Keep the page in step with the wallet: another account or network chosen in
+  // the wallet must never leave the page holding a stale account.
+  useEffect(() => {
+    const provider = getProvider();
+    if (!provider?.on || !provider.removeListener) return;
+    const onAccounts = (accounts: unknown) => {
+      const list = Array.isArray(accounts) ? (accounts as string[]) : [];
+      setAccount(list[0] ?? null);
+      setError(null);
+    };
+    const onChain = () => setError(null);
+    provider.on("accountsChanged", onAccounts);
+    provider.on("chainChanged", onChain);
+    return () => {
+      provider.removeListener?.("accountsChanged", onAccounts);
+      provider.removeListener?.("chainChanged", onChain);
+    };
+  }, []);
+
+  /** The account the wallet currently allows this site to use, asking again if needed. */
+  async function currentAccount(provider: Eip1193): Promise<string> {
+    let accounts = (await provider.request({ method: "eth_accounts" })) as string[];
+    if (!accounts?.length) accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
+    if (!accounts?.length) throw new Error("No account is connected. Click Connect wallet.");
+    return accounts[0];
+  }
 
   // Only called for a payment that has been sent, so the browser is always there.
   const origin = () => window.location.origin;
@@ -58,29 +81,45 @@ export function LabClient() {
     const provider = getProvider();
     if (!provider) return setError("No wallet found. Install a browser wallet such as MetaMask.");
     try {
-      const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
+      await provider.request({ method: "eth_requestAccounts" });
       await ensureTestnet(provider);
-      setAccount(accounts[0] ?? null);
+      // Read the account again after the network switch: some wallets change it.
+      setAccount(await currentAccount(provider));
     } catch (err) {
-      setError(errorText(err));
+      setError(walletErrorMessage(err));
     }
   }
 
   async function send(s: LabScenario) {
     setError(null);
     const provider = getProvider();
-    if (!provider || !account) return setError("Connect your wallet first.");
+    if (!provider) return setError("No wallet found. Install a browser wallet such as MetaMask.");
     setBusy(s.id);
     try {
-      // Checked again right before sending: this page only ever sends on Arc Testnet.
+      // This page only ever sends on Arc Testnet, so the network is checked again
+      // right before sending, and the account is read fresh from the wallet.
       await ensureTestnet(provider);
-      const hash = (await provider.request({
-        method: "eth_sendTransaction",
-        params: [{ from: account, to: tokenAddress(s.token), data: encodeErc20Transfer(s.to, s.units), value: "0x0" }],
-      })) as string;
+      const transfer = async () => {
+        const from = await currentAccount(provider);
+        setAccount(from);
+        return (await provider.request({
+          method: "eth_sendTransaction",
+          params: [{ from, to: tokenAddress(s.token), data: encodeErc20Transfer(s.to, s.units), value: "0x0" }],
+        })) as string;
+      };
+      let hash: string;
+      try {
+        hash = await transfer();
+      } catch (err) {
+        // 4100: the wallet no longer lists this site as connected (it can happen
+        // after a network switch). Ask for permission once more and retry once.
+        if ((err as { code?: number }).code !== 4100) throw err;
+        await provider.request({ method: "eth_requestAccounts" });
+        hash = await transfer();
+      }
       setSent((prev) => ({ ...prev, [s.id]: hash }));
     } catch (err) {
-      setError(errorText(err));
+      setError(walletErrorMessage(err));
     } finally {
       setBusy(null);
     }

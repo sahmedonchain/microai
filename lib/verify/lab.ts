@@ -73,3 +73,20 @@ export function verifyLink(origin: string, opts: { txHash: string; network: "mai
   q.set("run", "1");
   return `/verify?${q.toString()}`;
 }
+
+/** Turns a wallet error into a plain sentence. Wallets follow EIP-1193 error codes. */
+export function walletErrorMessage(err: unknown): string {
+  const e = err as { code?: number; message?: string } | null;
+  switch (e?.code) {
+    case 4001:
+      return "You rejected the request in your wallet.";
+    case 4100:
+      return "Your wallet has not approved this site for the selected account. Click Connect wallet again, approve the account and the Arc Testnet switch, then try once more.";
+    case -32002:
+      return "Your wallet already has a request waiting. Open the wallet, finish or reject it, then try again.";
+    case 4902:
+      return "Your wallet does not know Arc Testnet yet. Approve adding the network when it asks.";
+    default:
+      return (e?.message || "Something went wrong.").slice(0, 200);
+  }
+}

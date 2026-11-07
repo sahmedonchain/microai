@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { LAB_SCENARIOS, LAB_RECIPIENT, LAB_OTHER_RECIPIENT, LAB_PRICE_UNITS, TESTNET_USDC, TESTNET_EURC, TESTNET_CHAIN_PARAMS, encodeErc20Transfer, tokenAddress, verifyLink } from "@/lib/verify/lab";
+import { LAB_SCENARIOS, LAB_RECIPIENT, LAB_OTHER_RECIPIENT, LAB_PRICE_UNITS, TESTNET_USDC, TESTNET_EURC, TESTNET_CHAIN_PARAMS, encodeErc20Transfer, tokenAddress, verifyLink, walletErrorMessage } from "@/lib/verify/lab";
 import { parsePrefill } from "@/lib/verify/ui";
 import { verifyTransaction, type TxReceipt } from "@/lib/verify/txVerify";
 import { findLabCase, buildLabAnswer } from "@/lib/verify/labFixtures";
@@ -118,5 +118,21 @@ describe("verifyLink and parsePrefill", () => {
     const headers: Record<string, string> = {};
     for (const [k, v] of Object.entries(a.headers)) headers[k.toLowerCase()] = v;
     expect(verifyEndpointResponse({ status: a.status, headers, body: a.body }).counts.error).toBe(0);
+  });
+});
+
+describe("walletErrorMessage", () => {
+  it("explains the EIP-1193 codes in plain words", () => {
+    expect(walletErrorMessage({ code: 4001 })).toBe("You rejected the request in your wallet.");
+    expect(walletErrorMessage({ code: 4100, message: "The requested account and/or method has not been authorized by the user." })).toContain("Click Connect wallet again");
+    expect(walletErrorMessage({ code: -32002 })).toContain("already has a request waiting");
+    expect(walletErrorMessage({ code: 4902 })).toContain("Arc Testnet");
+  });
+
+  it("falls back to the wallet's own message, shortened, and never throws", () => {
+    expect(walletErrorMessage(new Error("boom"))).toBe("boom");
+    expect(walletErrorMessage({ message: "x".repeat(500) }).length).toBe(200);
+    expect(walletErrorMessage(null)).toBe("Something went wrong.");
+    expect(walletErrorMessage(undefined)).toBe("Something went wrong.");
   });
 });
