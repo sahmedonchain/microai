@@ -64,6 +64,8 @@ What it will **not** do: send payments, give services a score, call other servic
 
 **Try the early preview:** [microai-tan.vercel.app/verify](https://microai-tan.vercel.app/verify). It is not in the app menu yet, it sends no payment, and it is experimental. If it misses something or gets something wrong, please [tell me](https://github.com/sahmedonchain/microai/issues/new?title=Verify%20feedback%3A%20).
 
+**Test it with Testnet payments, no real money:** [microai-tan.vercel.app/lab](https://microai-tan.vercel.app/lab) sends small test payments from your own wallet and shows how Verify judges each one.
+
 <details>
 <summary>Illustrative mock-up of a Verify report (not live)</summary>
 
@@ -157,7 +159,7 @@ Implemented controls:
 - **Outbound requests:** server-side fetches go through a guarded client that allows only https, blocks private and internal addresses, limits redirects and response size, and applies a timeout.
 - **Keys:** the app never asks for a private key or seed phrase.
 - **Repository:** the `main` branch is protected: changes go through pull requests, CI must pass, and force pushes are blocked. CodeQL and Dependabot run on the repository.
-- **Tests:** 539 tests in 32 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the Verify checks, fetcher and test fixtures. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
+- **Tests:** 561 tests in 33 files cover sign-in, payment verification, replay and recovery, credit refunds, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the Verify checks, fetcher and test fixtures. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
 
 Known limitations:
 
@@ -199,7 +201,7 @@ All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In
 | `/github-status` | GET | no | Activity of tracked GitHub repositories |
 | `/achswap-onchain` | GET | no | On-chain check of the AchSwap contracts |
 | `/csp-report` | POST | no | Receives Content-Security-Policy violation reports |
-| `/lab/x402/{case}` | GET | no | Test fixtures for Verify: answer 402 on purpose with one known mistake each, never take a payment |
+| `/lab/x402/{case}` | GET | no | Test fixtures for Verify: answer 402 with one known mistake each (or answer too slowly, or with a server error). They never take a payment |
 
 </details>
 
@@ -290,7 +292,7 @@ This is a direction, not a promise. **A stage starts only when the previous one 
 | **Hardening** | Automatic credit refund, emergency pause switches, same-site checks, protected `main`, public Security, Terms and Privacy pages, server-side chain reads, Node 24 | Done |
 | | Enforce the Content-Security-Policy in production | Next |
 | **MicroAI Verify v1** | Check an x402 or USDC payment setup on Arc and verify a transaction on-chain, with a plain-language report | In progress: check engine, API, transaction check and an early-preview page built; proof from outside builders still to come |
-| **Testnet proof** | Run a real x402 endpoint on Arc Testnet and publish proof for success, timeout, wrong amount and no response | Planned |
+| **Testnet proof** | Publish proof that Verify judges real Arc Testnet payments correctly: right amount, too little, too much, wrong recipient, wrong token, plus a slow endpoint and a failing one | In progress: Testnet lab page and test endpoints built; proof from 10 test payments still to come |
 | **Delivery checks** | Catch "payment went through but the service was not delivered" | Planned |
 | **Shareable reports** | One link per check, with history, to share with a team | Later |
 
