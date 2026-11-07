@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Finding, Severity, VerifyReport } from "@/lib/verify/types";
-import { SEVERITY_LABEL, groupFindings, reportToText, sumCounts, usdcToUnits, verdict } from "@/lib/verify/ui";
+import { SEVERITY_LABEL, groupFindings, parsePrefill, reportToText, sumCounts, usdcToUnits, verdict } from "@/lib/verify/ui";
 
 interface TxResult {
   network?: "mainnet" | "testnet";
@@ -27,6 +27,8 @@ const EXAMPLES = [
   { id: "decimals18", label: "18-decimals mistake" },
   { id: "testnet-address-on-mainnet", label: "Testnet address on Mainnet" },
   { id: "bad-recipient", label: "Wrong recipient" },
+  { id: "slow", label: "Too slow (7 s)" },
+  { id: "server-error", label: "Server error (503)" },
 ] as const;
 
 const PILL: Record<Severity, string> = {
@@ -122,6 +124,22 @@ export function VerifyClient() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VerifyResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const [autoRun, setAutoRun] = useState(false);
+
+  // A link such as /verify?url=...&tx=...&run=1 fills the form and can start the check.
+  useEffect(() => {
+    // The form must render empty on the server and on first paint, then take the
+    // link's values once, so this one-time state set is intended.
+    /* eslint-disable react-hooks/set-state-in-effect */
+    const p = parsePrefill(window.location.search);
+    if (p.url) setUrl(p.url);
+    if (p.tx) setTxHash(p.tx);
+    if (p.network) setNetwork(p.network);
+    if (p.to) setPayTo(p.to);
+    if (p.amount) setAmount(p.amount);
+    if (p.run && (p.url || p.tx)) setAutoRun(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
 
   function fillExample(id: string) {
     setUrl(`${window.location.origin}/api/lab/x402/${id}`);
@@ -132,8 +150,12 @@ export function VerifyClient() {
     setError(null);
   }
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
+    void runCheck();
+  }
+
+  async function runCheck() {
     if (loading) return;
     setError(null);
     setCopied(false);
@@ -177,6 +199,15 @@ export function VerifyClient() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!autoRun) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAutoRun(false);
+    void runCheck();
+    // runCheck reads the state set by the prefill effect, which has been applied by now.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun]);
 
   const counts = result ? sumCounts(result.report?.counts, result.transaction?.counts) : undefined;
   const v = counts ? verdict(counts) : undefined;
@@ -242,6 +273,13 @@ export function VerifyClient() {
               </button>
             ))}
           </div>
+          <p className="mt-3 text-xs leading-relaxed text-muted">
+            Want to test with real payments, without real money?{" "}
+            <Link href="/lab" className="text-accent-text hover:underline">
+              Open the Testnet lab
+            </Link>
+            .
+          </p>
         </div>
 
         <div>

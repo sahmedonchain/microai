@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { GET } from "@/app/api/lab/x402/[case]/route";
 import { LAB_CASES, buildLabAnswer } from "@/lib/verify/labFixtures";
 import { verifyEndpointResponse } from "@/lib/verify/checks";
@@ -47,12 +47,24 @@ describe("lab fixtures through the check engine", () => {
     expect(errorIds(report("malformed-header"))).toContain("header");
   });
 
-  it("every broken fixture has at least one error, the good one has none", () => {
-    for (const c of LAB_CASES) {
+  it("every config fixture has at least one error, the good one has none", () => {
+    for (const c of LAB_CASES.filter((x) => (x.kind ?? "config") !== "timeout")) {
       const errors = report(c.id).counts.error;
       if (c.id === "good") expect(errors).toBe(0);
       else expect(errors, c.id).toBeGreaterThan(0);
     }
+  });
+
+  it("server-error is caught as a status error", () => {
+    const r = report("server-error");
+    expect(errorIds(r)).toContain("status");
+    expect(r.findings[0].title).toBe("Endpoint did not answer with 402");
+  });
+
+  it("the slow fixture's answer is itself correct; only the delay is the problem", () => {
+    const r = report("slow");
+    expect(r.counts.error + r.counts.warning).toBe(0);
+    expect(LAB_CASES.find((c) => c.id === "slow")?.delayMs).toBeGreaterThan(5000);
   });
 });
 
@@ -78,6 +90,30 @@ describe("GET /api/lab/x402/[case]", () => {
         if (mainnetAndValid) expect(c.id).toBe("testnet-address-on-mainnet");
       }
     }
+  });
+
+  it("the slow fixture waits before answering and the others do not", async () => {
+    vi.useFakeTimers();
+    try {
+      let done = false;
+      const p = call("slow").then((r) => {
+        done = true;
+        return r;
+      });
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(done).toBe(false);
+      await vi.advanceTimersByTimeAsync(1500);
+      const res = await p;
+      expect(res.status).toBe(402);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect((await call("good")).status).toBe(402);
+  });
+
+  it("answers 503 for the server-error fixture", async () => {
+    const res = await call("server-error");
+    expect(res.status).toBe(503);
   });
 
   it("answers 404 for an unknown fixture", async () => {

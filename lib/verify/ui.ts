@@ -114,3 +114,29 @@ export function reportToText(input: {
   if (input.notChecked?.length) out.push("", "Not checked:", ...input.notChecked.map((n) => `  - ${n}`));
   return out.join("\n");
 }
+
+export interface Prefill {
+  url?: string;
+  tx?: string;
+  network?: "mainnet" | "testnet";
+  to?: string;
+  amount?: string;
+  run: boolean;
+}
+
+/** Reads a /verify link's query string. Anything that does not look valid is ignored. */
+export function parsePrefill(search: string): Prefill {
+  const q = new URLSearchParams(search);
+  const out: Prefill = { run: q.get("run") === "1" };
+  const url = q.get("url");
+  if (url && url.length <= 2048 && /^https:\/\//i.test(url)) out.url = url;
+  const tx = q.get("tx");
+  if (tx && /^0x[0-9a-fA-F]{64}$/.test(tx)) out.tx = tx;
+  const network = q.get("network");
+  if (network === "mainnet" || network === "testnet") out.network = network;
+  const to = q.get("to");
+  if (to && /^0x[0-9a-fA-F]{40}$/.test(to)) out.to = to;
+  const amount = q.get("amount");
+  if (amount && usdcToUnits(amount) !== null) out.amount = amount;
+  return out;
+}

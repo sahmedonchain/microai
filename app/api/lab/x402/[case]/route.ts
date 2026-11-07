@@ -10,6 +10,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ case: s
   if (!c) {
     return Response.json({ error: "Unknown fixture" }, { status: 404, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
   }
+  if (c.delayMs) await new Promise((resolve) => setTimeout(resolve, c.delayMs));
   const a = buildLabAnswer(c);
   return new Response(a.body, { status: a.status, headers: a.headers });
 }

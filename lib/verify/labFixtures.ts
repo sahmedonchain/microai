@@ -29,6 +29,14 @@ export interface LabCase {
   /** Header value for PAYMENT-REQUIRED, or undefined to build it from the payload. */
   headerOverride?: string;
   accepts: unknown[];
+  /**
+   * "config": the 402 answer itself is what is checked.
+   * "timeout": the answer is correct but arrives too late for Verify's 5 second limit.
+   * "no-answer": the endpoint answers with a server error instead of 402.
+   */
+  kind?: "config" | "timeout" | "no-answer";
+  /** Wait this long before answering (kind "timeout"). */
+  delayMs?: number;
 }
 
 export const LAB_CASES: LabCase[] = [
@@ -42,6 +50,8 @@ export const LAB_CASES: LabCase[] = [
   { id: "wrong-chain-id", mistake: "chain id that looks like Arc but is not", accepts: [option({ network: "eip155:50420" })] },
   { id: "bad-recipient", mistake: "recipient is the USDC token contract itself", accepts: [option({ payTo: USDC_ADDRESS })] },
   { id: "malformed-header", mistake: "PAYMENT-REQUIRED header is not base64", headerOverride: "this-is-not-base64!!", accepts: [option()] },
+  { id: "slow", mistake: "the endpoint answers after 7 seconds, past Verify's 5 second limit", kind: "timeout", delayMs: 7000, accepts: [option()] },
+  { id: "server-error", mistake: "the endpoint answers HTTP 503 instead of 402", kind: "no-answer", accepts: [] },
 ];
 
 export function findLabCase(id: string): LabCase | undefined {
@@ -55,6 +65,13 @@ export interface LabAnswer {
 }
 
 export function buildLabAnswer(c: LabCase): LabAnswer {
+  if (c.kind === "no-answer") {
+    return {
+      status: 503,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" },
+      body: JSON.stringify({ error: "MicroAI Verify test fixture: this endpoint is down on purpose." }),
+    };
+  }
   const payload = {
     x402Version: 2,
     error: "Payment required",
