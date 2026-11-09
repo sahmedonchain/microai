@@ -97,6 +97,7 @@ The app is a single page with a sidebar. Each entry below is a panel in it.
 | **Payload inspector** | Decode `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` in the browser and compare them. Nothing is sent or stored. |
 | **Testnet lab** | Send small test payments on Arc Testnet and see how Verify judges each one. |
 | **Trust API** | Machine-readable endpoint check for agents (`GET /api/trust`). Read-only. |
+| **Facilitator check** | `GET /api/facilitator?url=...` asks a facilitator's `/supported` whether it lists Arc and with which schemes. That is the facilitator's own claim. MicroAI never calls a facilitator's `/verify` or `/settle`: they take a signed payment and `/settle` moves money, so they are left out on purpose. Also available as the MCP tool `check_x402_facilitator`. |
 | **MCP server** | Read-only MCP tools for agents over HTTP (`POST /api/mcp`): `check_x402_endpoint`, `explain_x402_error`, `arc_network_info`. No payments, no keys, and no tool accepts a signed payload. Same rate limits and `PAUSE_VERIFY` switch as Verify. |
 | **Wallet** | Look up any address, no sign-in. Native and token balances, the 20 most recent transactions, four rule-based risk signals (unlimited approval, high-value transfer, recent contract call, many transactions in 24 hours) and a short AI summary. |
 | **Debug** | Paste a transaction hash. Shows status, token transfers, internal transactions and the decoded function, then a **diagnosis from chain data**: the revert reason (Error, Panic or known custom error) and the receipt events (ERC-20 Transfer, EIP-3009 AuthorizationUsed) are decoded locally, and each finding is labelled confirmed, probable or unknown. x402 reasons are only read for EIP-3009 settlement calls. An AI explanation follows and is marked as possibly wrong. No sign-in. |
@@ -173,6 +174,7 @@ All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In
 | `/health` | GET | no | Uptime check: 200 when Redis and the Arc RPC answer, 503 and the name of the failing dependency otherwise. See [docs/incident-response.md](docs/incident-response.md) |
 | `/session/nonce` | GET | no | Issue a single-use sign-in nonce |
 | `/session` | GET, POST | no | Read the session; verify a signed message and start a session |
+| `/facilitator` | GET | no | Read-only facilitator `/supported` check (never `/verify` or `/settle`) |
 | `/mcp` | POST | no | Read-only MCP server (JSON-RPC 2.0, one request per call, `initialize`, `tools/list`, `tools/call`) |
 | `/debug-analyze` | POST | optional | Transaction explanation |
 | `/wallet` | POST | optional | Wallet analysis |
