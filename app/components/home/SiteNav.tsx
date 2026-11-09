@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 
 const LINKS = [
@@ -28,6 +29,7 @@ function targetTop(id: string): number | null {
 export function SiteNav() {
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
   const raf = useRef<number | null>(null);
 
   useEffect(() => {
@@ -118,7 +120,22 @@ export function SiteNav() {
     };
   }, []);
 
+  // Mobile menu: Escape closes it, and so does growing past the breakpoint.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const mq = window.matchMedia("(min-width: 768px)");
+    const onChange = () => mq.matches && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    mq.addEventListener("change", onChange);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      mq.removeEventListener("change", onChange);
+    };
+  }, [open]);
+
   const toTop = (e: React.MouseEvent) => {
+    setOpen(false);
     if (window.scrollY === 0) return;
     e.preventDefault();
     if (reducedMotion()) return window.scrollTo(0, 0);
@@ -128,7 +145,7 @@ export function SiteNav() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-300 ${
-        scrolled ? "border-b border-border/70 bg-space/70 backdrop-blur-xl" : "border-b border-transparent"
+        scrolled || open ? "border-b border-border/70 bg-space/85 backdrop-blur-xl" : "border-b border-transparent"
       }`}
     >
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6" aria-label="Main">
@@ -155,13 +172,47 @@ export function SiteNav() {
           ))}
         </ul>
 
-        <Link
-          href="/overview"
-          className="hm-btn inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text"
-        >
-          Launch tools
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/overview"
+            className="hm-btn inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text sm:px-5"
+          >
+            Launch tools
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            className="flex size-10 items-center justify-center rounded-full border border-border bg-surface/70 text-text transition hover:bg-surface-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text md:hidden"
+          >
+            {open ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
+          </button>
+        </div>
       </nav>
+
+      {open && (
+        <div id="mobile-menu" className="hm-menu-in border-t border-border/70 px-4 pb-4 pt-2 md:hidden">
+          <ul className="mx-auto max-w-6xl">
+            {LINKS.map(({ label, id }) => (
+              <li key={id}>
+                <a
+                  href={`#${id}`}
+                  onClick={() => setOpen(false)}
+                  aria-current={active === id ? "true" : undefined}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3.5 text-base transition-colors ${
+                    active === id ? "bg-accent-dim text-accent-text ring-1 ring-accent/40" : "text-text/90 active:bg-surface-raised"
+                  }`}
+                >
+                  {label}
+                  {active === id && <span className="size-1.5 rounded-full bg-accent-text" aria-hidden="true" />}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </header>
   );
 }
