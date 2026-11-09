@@ -14,8 +14,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MicroAI — Payment tools for builders on Arc",
-  description: "MicroAI — Payment tools for builders on Arc",
+  title: "MicroAI: x402 and USDC Payment Verification Toolkit for Arc",
+  description: "Read-only tools to inspect, verify and debug USDC and x402 payments on Arc. Live on Arc Mainnet, early preview.",
 };
 
 // Pages render per request so Next.js can stamp the CSP nonce (proxy.ts) on its

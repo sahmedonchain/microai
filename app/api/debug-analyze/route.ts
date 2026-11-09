@@ -44,7 +44,7 @@ interface InternalTx {
 }
 
 function buildCorrectedFlow(txData: TxData): string[] {
-  if (txData.result === "success") return ["Transaction succeeded — no correction needed"];
+  if (txData.result === "success") return ["Transaction succeeded, no correction needed"];
   const revert = (txData.revert_reason || "").toLowerCase();
   const error = (txData.error || "").toLowerCase();
   if (revert.includes("allowance")) return ["approve(spender, amount)", "transfer(to, amount)"];
