@@ -67,6 +67,8 @@ export const verifyBody = z
     txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Transaction hash must be 0x followed by 64 hex characters.").optional(),
     expect: verifyExpect.optional(),
     delivery: verifyDelivery.optional(),
+    // Ask for a shareable link to this result (stored on the server for 30 days).
+    share: z.boolean().optional(),
   })
   .superRefine((b, ctx) => {
     if (b.delivery && !b.txHash) ctx.addIssue({ code: "custom", message: "delivery is only used together with a transaction hash." });
