@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { Brand } from "./Brand";
+import { FlowDiagram } from "./FlowDiagram";
 import { MouseEffects } from "./MouseEffects";
 import { SiteNav } from "./SiteNav";
 import "./home.css";
@@ -277,6 +278,19 @@ function Why() {
             <p className="relative z-10 mt-2 text-sm leading-relaxed text-muted">{text}</p>
           </article>
         ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- How it works ---------------- */
+
+function How() {
+  return (
+    <section id="how" className="relative mx-auto max-w-6xl px-4 pb-24 sm:px-6" aria-labelledby="how-title">
+      <SectionHead id="how-title" title={<>See where MicroAI fits<br className="hidden sm:block" /> in an x402 payment</>} text="An x402 payment is a short conversation between a client, a server and a facilitator. MicroAI reads it from the side and never touches the money." />
+      <div className="mt-14">
+        <FlowDiagram />
       </div>
     </section>
   );
@@ -608,6 +622,7 @@ function Footer() {
           <ul className="mt-3 space-y-2 text-sm text-muted">
             {[
               ["Why", "#why"],
+              ["How it works", "#how"],
               ["Tools", "#tools"],
               ["Ways to use it", "#ways"],
               ["Limits", "#limits"],
@@ -655,6 +670,7 @@ export function Landing() {
         <Hero />
         <Standards />
         <Why />
+        <How />
         <Tools />
         <Audience />
         <Ways />
