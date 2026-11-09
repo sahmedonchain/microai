@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "export-credit-balances": "tsx --env-file=.env.local scripts/export-credit-balances.ts",
     "backfill-stats": "tsx --env-file=.env.local scripts/backfill-stats.ts",
     "test": "vitest run",
     "test:watch": "vitest"
