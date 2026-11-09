@@ -209,7 +209,7 @@ function Hero() {
       <Moon variant="hero" />
       <Header />
 
-      <div className="relative z-20 mx-auto max-w-6xl px-4 pt-12 text-center sm:px-6 md:pt-16">
+      <div className="relative z-20 mx-auto max-w-6xl px-4 pt-20 text-center sm:px-6 md:pt-32">
         <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-4 py-1.5 text-xs text-muted backdrop-blur">
           <span className="hm-pulse size-1.5 rounded-full bg-success" aria-hidden="true" />
           Live on Arc Mainnet. Early preview.
@@ -601,7 +601,7 @@ function Limits() {
 
 function FinalCta() {
   return (
-    <section className="relative overflow-hidden pt-52 pb-40" aria-labelledby="cta-title">
+    <section className="relative overflow-hidden pt-48 pb-28" aria-labelledby="cta-title">
       <Moon variant="cta" />
       <div className="relative z-20 mx-auto max-w-3xl px-4 text-center sm:px-6">
         <h2 id="cta-title" className="hm-title text-3xl font-semibold leading-tight sm:text-5xl">
@@ -661,9 +661,16 @@ function Footer() {
         </nav>
       </div>
       <div className="border-t border-border/70">
-        <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted sm:px-6">
-          MicroAI is an independent project, not an official Arc or Circle product, and is not endorsed by either.
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-5 text-xs text-muted sm:px-6 md:flex-row md:items-center md:justify-between">
+          <p>
+            &copy; {new Date().getFullYear()} MicroAI. All rights reserved. A product of{" "}
+            <a href="https://buildorbit-phi.vercel.app/" target="_blank" rel="noopener noreferrer" className="font-semibold text-text transition hover:text-accent-text">
+              BuildOrbit
+            </a>
+            .
+          </p>
+          <p>MicroAI is an independent project, not an official Arc or Circle product, and is not endorsed by either.</p>
+        </div>
       </div>
     </footer>
   );

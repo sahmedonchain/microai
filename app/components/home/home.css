@@ -36,7 +36,7 @@
   pointer-events: none;
 }
 .hm-moon-wrap--hero { top: 105px; }
-.hm-moon-wrap--cta { top: 150px; }
+.hm-moon-wrap--cta { top: 70px; }
 .hm-moon-wrap--cta .hm-moon {
   box-shadow:
     inset 0 2px 1px rgb(184 158 234 / 0.85),
@@ -211,7 +211,7 @@
 @media (max-width: 767px) {
   .hm-moon-wrap { width: 1000px; height: 1000px; }
   .hm-moon-wrap--hero { top: 95px; }
-  .hm-moon-wrap--cta { top: 120px; }
+  .hm-moon-wrap--cta { top: 115px; }
   .hm-sweep { animation-name: hm-sweep-sm; }
   @keyframes hm-sweep-sm {
     from { transform: rotate(-26deg); }
