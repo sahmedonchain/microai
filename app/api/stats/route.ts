@@ -52,7 +52,7 @@ async function backgroundCatchUp(fromBlock: number, toBlock: number) {
   }
 }
 
-export const GET = withApi({ name: "stats", limits: [{ limit: 30, windowSec: 60 }] }, async () => {
+export const GET = withApi({ name: "stats", limits: [{ limit: 30, windowSec: 60 }], onLimiterError: "closed" }, async () => {
   try {
     const [state, currentBlock] = await Promise.all([loadState(), getCurrentBlock()]);
     const gap = currentBlock - state.lastScannedBlock;

@@ -86,8 +86,9 @@ describe("fail closed", () => {
 });
 
 describe("per-route fail mode (source of truth: route files)", () => {
-  const closed = ["wallet", "debug-analyze", "ecosystem-search"];
-  const open = ["news", "stats", "github-status", "ecosystem-tvl", "achswap-onchain"];
+  // Routes that reach Arc RPC or the Explorer, or spend AI, fail closed. The cached public feeds below keep the in-memory fallback on purpose.
+  const closed = ["wallet", "debug-analyze", "ecosystem-search", "chain", "stats", "achswap-onchain", "verify", "trust"];
+  const open = ["news", "github-status", "ecosystem-tvl"];
   const src = (r: string) => readFileSync(`app/api/${r}/route.ts`, "utf8");
 
   it.each(closed)("%s fails closed", (r) => expect(src(r)).toMatch(/onLimiterError:\s*"closed"/));

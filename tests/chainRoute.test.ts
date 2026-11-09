@@ -78,3 +78,17 @@ describe("/api/chain", () => {
     expect((await GET(get("kind=revenue", "198.51.100.2"))).status).toBe(200);
   });
 });
+
+describe("/api/chain when the rate limiter's Redis is down", () => {
+  it("answers 503 and never reaches the Arc RPC", async () => {
+    redis.multi = () => {
+      throw new Error("redis down");
+    };
+    const res = await GET(get("kind=network", "198.51.100.77"));
+    expect(res.status).toBe(503);
+    expect((await res.json()).code).toBe("rate_limiter_unavailable");
+    expect(res.headers.get("retry-after")).toBeTruthy();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+});
+
