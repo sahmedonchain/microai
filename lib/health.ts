@@ -8,6 +8,8 @@ import { getRedis } from "@/lib/redis";
 
 export type CheckState = "ok" | "down";
 export interface HealthReport {
+  /** The app itself answered, so this is always "ok" when a report exists. Dependencies are in `checks`. */
+  app: "ok";
   status: "ok" | "degraded";
   checks: { redis: CheckState; arcRpc: CheckState };
   checkedAt: string;
@@ -42,7 +44,7 @@ async function rpcState(): Promise<CheckState> {
 export async function getHealth(now: number = Date.now()): Promise<HealthReport> {
   if (cache && now - cache.at < CACHE_MS) return cache.report;
   const [redis, arcRpc] = await Promise.all([redisState(), rpcState()]);
-  const report: HealthReport = { status: redis === "ok" && arcRpc === "ok" ? "ok" : "degraded", checks: { redis, arcRpc }, checkedAt: new Date(now).toISOString() };
+  const report: HealthReport = { app: "ok", status: redis === "ok" && arcRpc === "ok" ? "ok" : "degraded", checks: { redis, arcRpc }, checkedAt: new Date(now).toISOString() };
   cache = { at: now, report };
   return report;
 }
