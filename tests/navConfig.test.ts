@@ -22,9 +22,7 @@ describe("menu config", () => {
       "Build: Debug",
       "Analyze: Wallet, Stats",
       "Explore: Ecosystem, News, Build status",
-      "Account: Credits",
       "Developer resources: Arc Developer Docs, Circle Documentation, USDC Resources",
-      "Legacy: Chat, Copilot",
     ]);
   });
 
@@ -41,7 +39,7 @@ describe("menu config", () => {
       expect(item.href).toMatch(/^https:\/\//);
       expect(item.panel).toBeUndefined();
     }
-    expect(panels.sort()).toEqual(["build-status", "chat", "copilot", "credits", "debugger", "ecosystem", "home", "inspect", "lab", "news", "stats", "trust", "verify", "wallet"]);
+    expect(panels.sort()).toEqual(["build-status", "debugger", "ecosystem", "home", "inspect", "lab", "news", "stats", "trust", "verify", "wallet"]);
   });
 
   it("labels are unique (they are used as React keys)", () => {
@@ -53,9 +51,7 @@ describe("menu config", () => {
     expect(groupOfPanel("debugger")).toBe("build");
     expect(groupOfPanel("stats")).toBe("analyze");
     expect(groupOfPanel("build-status")).toBe("ecosystem");
-    expect(groupOfPanel("credits")).toBe("account");
     expect(groupOfPanel("verify")).toBe("verify");
-    expect(groupOfPanel("chat")).toBe("legacy");
     expect(groupOfPanel("home")).toBeUndefined();
   });
 
@@ -68,10 +64,10 @@ describe("menu config", () => {
 
 describe("open-groups cookie", () => {
   it("round-trips known group ids", () => {
-    expect(parseOpenGroups(serializeOpenGroups(["build", "account"]))).toEqual(["build", "account"]);
+    expect(parseOpenGroups(serializeOpenGroups(["build", "analyze"]))).toEqual(["build", "analyze"]);
   });
   it("drops unknown ids, duplicates and junk", () => {
-    expect(parseOpenGroups("build,evil,build,,account")).toEqual(["build", "account"]);
+    expect(parseOpenGroups("build,evil,build,,analyze")).toEqual(["build", "analyze"]);
     expect(parseOpenGroups(undefined)).toEqual([]);
     expect(parseOpenGroups("")).toEqual([]);
   });

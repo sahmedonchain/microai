@@ -12,9 +12,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // The Grants page was removed; send old links to the overview.
+  // Pages that were retired: send old links to the overview.
   async redirects() {
-    return [{ source: "/grants", destination: "/", permanent: false }];
+    return ["/grants", "/chat", "/build", "/credits"].map((source) => ({ source, destination: "/", permanent: false }));
   },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

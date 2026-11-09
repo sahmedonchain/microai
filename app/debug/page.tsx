@@ -342,23 +342,6 @@ export default function DebugPage() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="border-t border-border bg-surface/40">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-          <p className="font-mono text-xs text-accent-text">Need more help?</p>
-          <h2 className="mt-2 text-2xl font-semibold text-text">Ask MicroAI</h2>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
-            Get deeper answers about Arc transactions, USDC, CCTP, or any Circle integration for $0.001 USDC.
-          </p>
-          <Link
-            href="/chat"
-            className="mt-6 inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
-          >
-            Launch chat terminal
-          </Link>
-        </div>
-      </section>
-
       {/* FOOTER */}
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-6 sm:px-6">
@@ -369,7 +352,7 @@ export default function DebugPage() {
           <div className="flex flex-wrap gap-5">
             {[
               { l: "Ecosystem", h: "/ecosystem" },
-              { l: "Chat", h: "/chat" },
+              { l: "Verify", h: "/verify" },
               { l: "Explorer", h: "https://explorer.arc.io" },
             ].map((link) => (
               <Link key={link.l} href={link.h} className="text-xs text-muted transition hover:text-text">

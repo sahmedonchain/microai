@@ -296,10 +296,6 @@ export default function WalletPage() {
             </div>
           )}
 
-          <p className="text-xs text-muted">
-            Need deeper answers?{" "}
-            <Link href="/chat" className="text-accent-text hover:underline">Ask MicroAI</Link>
-          </p>
         </div>
       </section>
 

@@ -125,7 +125,7 @@ export interface RouteOptions {
   // that spends AI/RPC budget or touches wallets or credits.
   onLimiterError?: "open" | "closed";
   // Emergency kill switch. "ai" routes answer 503 while PAUSE_AI is set,
-  // "purchases" routes while PAUSE_PURCHASES is set (see lib/killSwitch.ts).
+  // routes while the matching PAUSE_* variable is set (see lib/killSwitch.ts).
   pause?: PauseScope;
 }
 

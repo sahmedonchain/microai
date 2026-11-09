@@ -3,7 +3,7 @@ import { LegalPage, type LegalSection } from "@/app/components/LegalPage";
 
 export const metadata: Metadata = {
   title: "Terms of Use — MicroAI",
-  description: "The rules for using MicroAI, how credits and payments work, and what the service does not promise.",
+  description: "The rules for using MicroAI, what the service does not promise.",
 };
 
 const SECTIONS: LegalSection[] = [
@@ -18,19 +18,15 @@ const SECTIONS: LegalSection[] = [
     items: [
       "MicroAI is experimental and has not been independently audited. Do not rely on it for large amounts.",
       "AI answers can be wrong. Check addresses, chain IDs and parameters against docs.arc.io before sending funds.",
-      "Copilot output is not compiled or tested. Review and test generated code yourself before deploying it.",
       "Nothing from MicroAI is financial, legal, tax or security advice.",
     ],
   },
   {
     title: "Credits and payments",
     items: [
-      "One credit costs 0.001 USDC and covers one chat message or one Copilot request. You buy credits with USDC on Arc Mainnet.",
-      "Blockchain transactions are final. Check the network and the receiving address in your wallet before you confirm.",
-      "A payment is credited once, after the server confirms the transaction on Arc. If a confirmed payment has not been credited, use Recover a payment with its transaction hash.",
-      "Credits do not expire and have no cash value.",
-      "If your payment is confirmed on Arc but the credits were not added, tell us and we will fix it. Try Recover a payment first, then open an issue with the transaction hash.",
-      "If the AI fails to answer, the credit is returned automatically. We do not otherwise refund credits that were spent on an answer.",
+      "Credits, Chat and Copilot have been retired. MicroAI no longer sells credits and no longer takes payments of any kind.",
+      "If you hold unspent credits, or sent a payment that was never credited, open an issue at github.com/sahmedonchain/microai/issues with your wallet address and the transaction hash (no private information) and we will review it.",
+      "Blockchain transactions are final. Check the network and the receiving address in your wallet before you confirm any transaction, on MicroAI or anywhere else.",
     ],
   },
   {
@@ -51,10 +47,10 @@ const SECTIONS: LegalSection[] = [
     title: "A new network and a changing service",
     items: [
       "Arc Mainnet is new. Network, RPC or explorer outages and changes can affect payments, balances and answers, and we do not control Arc or Circle.",
-      "MicroAI changes often. Features can be added, changed or retired, and the focus is moving toward payment verification tools for Arc builders. Chat and Copilot may be wound down, and retired features are announced in advance where possible.",
+      "MicroAI changes often. Features can be added, changed or retired, and the focus is moving toward payment verification tools for Arc builders. Retired features are announced where possible.",
       "We work to improve security with each update, but no service is risk free and we make no guarantee.",
       "The service may be paused at any time, for example in an emergency.",
-      "Directory, grants and news listings link to third parties and are provided for information only. We do not guarantee that they are complete or current.",
+      "Directory and news listings link to third parties and are provided for information only. We do not guarantee that they are complete or current.",
     ],
   },
   {
