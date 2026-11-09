@@ -97,6 +97,7 @@ The app is a single page with a sidebar. Each entry below is a panel in it.
 | **Payload inspector** | Decode `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` in the browser and compare them. Nothing is sent or stored. |
 | **Testnet lab** | Send small test payments on Arc Testnet and see how Verify judges each one. |
 | **Trust API** | Machine-readable endpoint check for agents (`GET /api/trust`). Read-only. |
+| **MCP server** | Read-only MCP tools for agents over HTTP (`POST /api/mcp`): `check_x402_endpoint`, `explain_x402_error`, `arc_network_info`. No payments, no keys, and no tool accepts a signed payload. Same rate limits and `PAUSE_VERIFY` switch as Verify. |
 | **Wallet** | Look up any address, no sign-in. Native and token balances, the 20 most recent transactions, four rule-based risk signals (unlimited approval, high-value transfer, recent contract call, many transactions in 24 hours) and a short AI summary. |
 | **Debug** | Paste a transaction hash. Shows status, token transfers, internal transactions, the decoded function (8 common selectors), a suggested corrected flow and an AI explanation. No sign-in. |
 | **Ecosystem** | Directory of 81 Arc and Circle projects in 12 categories with search and filters, an AI search over the same list, and Arc-chain TVL for 5 protocols from DeFiLlama. |
@@ -171,6 +172,7 @@ All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In
 |---|---|---|---|
 | `/session/nonce` | GET | no | Issue a single-use sign-in nonce |
 | `/session` | GET, POST | no | Read the session; verify a signed message and start a session |
+| `/mcp` | POST | no | Read-only MCP server (JSON-RPC 2.0, one request per call, `initialize`, `tools/list`, `tools/call`) |
 | `/debug-analyze` | POST | optional | Transaction explanation |
 | `/wallet` | POST | optional | Wallet analysis |
 | `/ecosystem-search` | POST | optional | AI search over the ecosystem list |
