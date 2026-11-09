@@ -1,15 +1,12 @@
-import { cookies } from "next/headers";
-import { HomeTab } from "@/app/components/tabs/HomeTab";
+import type { Metadata } from "next";
+import { Landing } from "@/app/components/home/Landing";
 
-export default async function Page() {
-  // Read the remembered panel and sidebar state on the server so the first
-  // paint is already correct (no highlight or menu jump on reload).
-  const store = await cookies();
-  return (
-    <HomeTab
-      initialPanel={store.get("microai_active_tab")?.value}
-      initialSidebarCollapsed={store.get("microai_sidebar_collapsed")?.value === "1"}
-      initialNavGroups={store.get("microai_nav_groups")?.value}
-    />
-  );
+export const metadata: Metadata = {
+  title: "MicroAI — Check x402 payments on Arc",
+  description:
+    "Read-only tools to inspect, verify and debug USDC and x402 payments on Arc. Live on Arc Mainnet, early preview.",
+};
+
+export default function Page() {
+  return <Landing />;
 }
