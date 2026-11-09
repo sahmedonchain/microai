@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { Brand } from "./Brand";
 
 const LINKS = [
   { label: "Why", id: "why" },
@@ -148,10 +148,9 @@ export function SiteNav() {
         scrolled || open ? "border-b border-border/70 bg-space/85 backdrop-blur-xl" : "border-b border-transparent"
       }`}
     >
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6" aria-label="Main">
-        <Link href="/" onClick={toTop} className="flex items-center gap-3" aria-label="MicroAI home">
-          <LogoMark className="size-9 shrink-0" />
-          <span className="text-base font-semibold text-text">MicroAI</span>
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-4 sm:gap-4 sm:px-6" aria-label="Main">
+        <Link href="/" onClick={toTop} className="shrink-0" aria-label="MicroAI home">
+          <Brand />
         </Link>
 
         <ul className="hidden items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1.5 text-sm text-muted backdrop-blur md:flex">
@@ -172,10 +171,10 @@ export function SiteNav() {
           ))}
         </ul>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <Link
             href="/overview"
-            className="hm-btn inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text sm:px-5"
+            className="hm-btn inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-semibold text-white max-[359px]:px-3 max-[359px]:text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-text sm:px-5"
           >
             Launch tools
           </Link>

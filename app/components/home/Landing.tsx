@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { Brand } from "./Brand";
 import { SiteNav } from "./SiteNav";
 import "./home.css";
 
@@ -547,7 +548,7 @@ const LIMITS: { icon: LucideIcon; title: string; text: string }[] = [
 
 function Limits() {
   return (
-    <section id="limits" className="relative mx-auto max-w-6xl px-4 pb-24 sm:px-6" aria-labelledby="limits-title">
+    <section id="limits" className="relative mx-auto max-w-6xl px-4 pb-12 sm:px-6 md:pb-16" aria-labelledby="limits-title">
       <SectionHead id="limits-title" title="Honest about what it does and does not do" text="A payment tool should say where it stops. This is where MicroAI stops." />
       <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {LIMITS.map(({ icon: Icon, title, text }) => (
@@ -570,7 +571,7 @@ function Limits() {
 
 function FinalCta() {
   return (
-    <section className="relative overflow-hidden pt-48 pb-28" aria-labelledby="cta-title">
+    <section className="relative pt-36 pb-24 md:pt-44 md:pb-28" style={{ clipPath: "inset(-240px 0 0 0)" }} aria-labelledby="cta-title">
       <Moon variant="cta" />
       <div className="relative z-20 mx-auto max-w-3xl px-4 text-center sm:px-6">
         <h2 id="cta-title" className="hm-title text-3xl font-semibold leading-tight sm:text-5xl">
@@ -594,9 +595,8 @@ function Footer() {
     <footer className="relative z-20 border-t border-border bg-surface/40">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <Link href="/" className="flex items-center gap-3" aria-label="MicroAI home">
-            <LogoMark className="size-9" />
-            <span className="text-base font-semibold text-text">MicroAI</span>
+          <Link href="/" aria-label="MicroAI home" className="inline-flex">
+            <Brand />
           </Link>
           <p className="mt-4 max-w-[42ch] text-sm leading-relaxed text-muted">
             Read-only tools to inspect, verify and debug USDC and x402 payments on Arc. By BuildOrbit.
