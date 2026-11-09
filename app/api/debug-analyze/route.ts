@@ -4,6 +4,8 @@ import { explorerFetch } from "@/lib/arcExplorer";
 import { debugAnalyzeBody } from "@/lib/schemas";
 import { UNTRUSTED_DATA_NOTICE, dataBlock, sanitizeUntrusted as clean } from "@/lib/untrusted";
 import { ARC_MAINNET, USDC_ADDRESS } from "@/lib/arcConfig";
+import { rpcCall } from "@/lib/arcRpc";
+import { decodeFunction, decodeLogs, diagnose, normalizeRevert, type DecodedEvent, type Diagnosis, type RawLog } from "@/lib/debug/diagnose";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -39,22 +41,6 @@ interface InternalTx {
   to: string;
   value: string;
   type: string;
-}
-
-const KNOWN_SELECTORS: Record<string, string> = {
-  a9059cbb: "transfer(address,uint256)",
-  "23b872dd": "transferFrom(address,address,uint256)",
-  "095ea7b3": "approve(address,uint256)",
-  "40c10f19": "mint(address,uint256)",
-  "42966c68": "burn(uint256)",
-  "3593564c": "execute(bytes,bytes[],uint256) [Uniswap]",
-  d0e30db0: "deposit()",
-  "2e1a7d4d": "withdraw(uint256)",
-};
-
-function decodeFunction(rawInput?: string): string {
-  if (!rawInput || !/^0x[0-9a-fA-F]{8}/.test(rawInput)) return "unknown";
-  return KNOWN_SELECTORS[rawInput.slice(2, 10).toLowerCase()] ?? "unknown";
 }
 
 function buildCorrectedFlow(txData: TxData): string[] {
@@ -117,7 +103,8 @@ function buildPrompt(
   decodedFunction: string,
   tokenTransfers: TokenTransfer[],
   internalTxs: InternalTx[],
-  correctedFlow: string[]
+  correctedFlow: string[],
+  diagnosis: Diagnosis[]
 ): { system: string; user: string } {
   const system = `You analyze Arc MAINNET transactions and debug them.
 
@@ -131,6 +118,8 @@ Respond ONLY with valid JSON in this exact format, no other text:
   "solution": "exact steps to fix this or what the user should do next",
   "severity": "high or medium or low"
 }
+
+A "Deterministic findings" list is decoded from chain data by MicroAI. Items marked confirmed are facts: never contradict them. Items marked probable or unknown are not facts. In rootCause, say "confirmed" only for what the confirmed findings state, and use words like "probably" or "may" for anything else.
 
 If the transaction succeeded, set severity to "low" and explain what it did.
 If it failed, identify the root cause from: insufficient USDC balance, wrong chain, gas limit too low, contract revert, invalid input, nonce issue, or other.
@@ -156,6 +145,7 @@ ${UNTRUSTED_DATA_NOTICE}`;
     `Token Transfers: ${tokenTransfers.length}${tokenTransfers.length ? " (" + tokenTransfers.slice(0, 5).map((t) => `${clean(t.value, 40)} ${clean(t.symbol, 12)}`).join(", ") + ")" : ""}`,
     `Internal Transactions: ${internalTxs.length}`,
     `Suggested Corrected Flow: ${correctedFlow.map((c) => clean(c, 80)).join(" -> ")}`,
+    ...diagnosis.slice(0, 6).map((d) => `Deterministic finding (${d.confidence}): ${clean(d.title, 120)}. ${clean(d.evidence.join("; "), 200)}`),
   ];
   return { system, user: `Analyze this transaction:\n${dataBlock("transaction", lines, { maxLineLen: 420 })}` };
 }
@@ -192,11 +182,33 @@ export const POST = withApi(
   const decodedFunction = decodeFunction(txData.raw_input);
   const correctedFlow = buildCorrectedFlow(txData);
 
+  // Logs come from the receipt (RPC) because the Explorer does not always return them.
+  // Best effort: without them the diagnosis simply has no events.
+  let events: DecodedEvent[] = [];
+  let unknownEvents = 0;
+  let eventsAvailable = false;
+  try {
+    const receipt = await rpcCall<{ logs?: RawLog[] } | null>("eth_getTransactionReceipt", [txHash], { timeoutMs: 4000, retries: 0 });
+    if (receipt && Array.isArray(receipt.logs)) {
+      const decoded = decodeLogs(receipt.logs);
+      events = decoded.events;
+      unknownEvents = decoded.unknown;
+      eventsAvailable = true;
+    }
+  } catch {
+    /* no logs this time */
+  }
+  const revert = normalizeRevert(txData.revert_reason);
+  const diagnosis = diagnose({
+    result: txData.result, status: txData.status, error: txData.error, revert,
+    rawInput: txData.raw_input, gasUsed: txData.gas_used, gasLimit: txData.gas_limit, events,
+  });
+
   try {
     const completion = await groq.chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: (() => {
-        const prompt = buildPrompt(txData, decodedFunction, tokenTransfers, internalTxs, correctedFlow);
+        const prompt = buildPrompt(txData, decodedFunction, tokenTransfers, internalTxs, correctedFlow, diagnosis);
         return [
           { role: "system" as const, content: prompt.system },
           { role: "user" as const, content: prompt.user },
@@ -221,7 +233,7 @@ export const POST = withApi(
       };
     }
 
-    return { ...parsed, txData, tokenTransfers, internalTxs, decodedFunction, correctedFlow };
+    return { ...parsed, txData, tokenTransfers, internalTxs, decodedFunction, correctedFlow, diagnosis, revert, events, unknownEvents, eventsAvailable };
   } catch (err) {
     log.error("Debug analysis error", { err });
     throw apiErrors.internal("Analysis failed. Please try again.");

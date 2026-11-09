@@ -34,6 +34,27 @@ interface InternalTx {
   type: string;
 }
 
+type Confidence = "confirmed" | "probable" | "unknown";
+interface Diagnosis {
+  id: string;
+  confidence: Confidence;
+  title: string;
+  detail: string;
+  evidence: string[];
+  fix: string[];
+}
+interface DecodedEvent {
+  name: string;
+  address: string;
+  args: Record<string, string>;
+}
+
+const CONFIDENCE_STYLE: Record<Confidence, { pill: string; label: string }> = {
+  confirmed: { pill: "border-success/25 bg-success/10 text-success", label: "Confirmed by chain data" },
+  probable: { pill: "border-warning/25 bg-warning/10 text-warning", label: "Probable, not confirmed" },
+  unknown: { pill: "border-border bg-surface text-muted", label: "Cause unknown" },
+};
+
 interface DebugResult {
   summary: string;
   rootCause: string;
@@ -44,6 +65,9 @@ interface DebugResult {
   internalTxs: InternalTx[];
   decodedFunction: string;
   correctedFlow: string[];
+  diagnosis: Diagnosis[];
+  events: DecodedEvent[];
+  eventsAvailable: boolean;
 }
 
 const shortAddr = (a: string) => (a ? `${a.slice(0, 8)}...${a.slice(-6)}` : "—");
@@ -112,6 +136,9 @@ export function DebuggerTab() {
         internalTxs: data.internalTxs ?? [],
         decodedFunction: data.decodedFunction ?? "unknown",
         correctedFlow: data.correctedFlow ?? [],
+        diagnosis: Array.isArray(data.diagnosis) ? data.diagnosis : [],
+        events: Array.isArray(data.events) ? data.events : [],
+        eventsAvailable: !!data.eventsAvailable,
       });
       setHistory((prev) => [hash, ...prev.filter((h) => h !== hash).slice(0, 4)]);
       setStatus("done");
@@ -198,14 +225,71 @@ export function DebuggerTab() {
             </div>
 
             <div className={CARD}>
+              <h2 className={CARD_TITLE}>Diagnosis from chain data</h2>
+              {result.diagnosis.length === 0 ? (
+                <p className="text-sm leading-relaxed text-muted">
+                  {ok ? "Nothing failed, so there is nothing to diagnose." : "No decoded finding. See the AI explanation below, and treat it as a guess."}
+                </p>
+              ) : (
+                <ul className="flex flex-col gap-4">
+                  {result.diagnosis.map((d) => (
+                    <li key={d.id} className="rounded-md border border-border bg-space p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-text">{d.title}</p>
+                        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${CONFIDENCE_STYLE[d.confidence].pill}`}>{CONFIDENCE_STYLE[d.confidence].label}</span>
+                      </div>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted">{d.detail}</p>
+                      {d.evidence.length > 0 && (
+                        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all rounded border border-border bg-surface p-2 font-mono text-xs text-text">{d.evidence.join("\n")}</pre>
+                      )}
+                      {d.fix.length > 0 && (
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted">
+                          {d.fix.map((f) => (
+                            <li key={f}>{f}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className={CARD}>
+              <h2 className={CARD_TITLE}>Events decoded from the receipt</h2>
+              {!result.eventsAvailable ? (
+                <p className="text-sm text-muted">The receipt could not be read this time, so events are not shown.</p>
+              ) : result.events.length === 0 ? (
+                <p className="text-sm text-muted">No ERC-20 or EIP-3009 events in this transaction.</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {result.events.map((e, i) => (
+                    <li key={i} className="rounded-md border border-border bg-space p-3">
+                      <p className="font-mono text-xs font-medium text-accent-text">{e.name}</p>
+                      <p className="mt-1 break-all font-mono text-xs text-muted">token {e.address}</p>
+                      <dl className="mt-1 space-y-0.5">
+                        {Object.entries(e.args).map(([k, v]) => (
+                          <div key={k} className="flex gap-2 text-xs">
+                            <dt className="shrink-0 text-muted">{k}</dt>
+                            <dd className="break-all font-mono text-text">{v}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className={CARD}>
               <h2 className={`${CARD_TITLE} ${SEVERITY_TEXT[result.severity] ?? "text-muted"}`}>
-                Root cause, {result.severity} severity
+                AI explanation, {result.severity} severity (can be wrong)
               </h2>
               <p className="text-sm leading-relaxed text-muted">{result.rootCause}</p>
             </div>
 
             <div className={CARD}>
-              <h2 className={CARD_TITLE}>How to fix</h2>
+              <h2 className={CARD_TITLE}>AI suggestion (can be wrong)</h2>
               <p className="text-sm leading-relaxed text-muted">{result.solution}</p>
             </div>
 
