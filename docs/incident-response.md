@@ -18,7 +18,7 @@ The health endpoint is cached 15 seconds per server instance and rate limited, s
 
 1. **Decide the size.** Wrong results shown to users, funds at risk, or a leaked secret: treat as serious. A dependency being down with correct 503s: minor.
 2. **Stop the harm first.**
-   - Set `PAUSE_VERIFY=1` to stop outbound endpoint checks and the Trust API/MCP server.
+   - Set `PAUSE_VERIFY=1` to stop outbound endpoint checks and the Trust API.
    - Set `PAUSE_AI=1` to stop Debug analysis and the wallet summary (AI spend).
    - In Vercel: Settings, Environment Variables, add the variable, redeploy. Remove and redeploy to resume.
 3. **Roll back a bad release.** In Vercel Deployments, promote the last known good deployment.
