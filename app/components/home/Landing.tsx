@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { Brand } from "./Brand";
+import { MouseEffects } from "./MouseEffects";
 import { SiteNav } from "./SiteNav";
 import "./home.css";
 
@@ -649,6 +650,7 @@ export function Landing() {
   return (
     <div className="hm-root font-sans text-text">
       <SiteNav />
+      <MouseEffects />
       <main>
         <Hero />
         <Standards />
