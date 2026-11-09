@@ -62,7 +62,7 @@ MicroAI already does part of this work in production: it verifies USDC payments 
 
 What it will **not** do: send payments, give services a score, call other services good or bad, or check any network other than Arc.
 
-**Try the early preview:** [microai-tan.vercel.app/verify](https://microai-tan.vercel.app/verify). It is not in the app menu yet, it sends no payment, and it is experimental. If it misses something or gets something wrong, please [tell me](https://github.com/sahmedonchain/microai/issues/new?title=Verify%20feedback%3A%20).
+**Try the early preview:** [microai-tan.vercel.app/verify](https://microai-tan.vercel.app/verify). It is in the app menu under Verify, it sends no payment, and it is experimental. If it misses something or gets something wrong, please [tell me](https://github.com/sahmedonchain/microai/issues/new?title=Verify%20feedback%3A%20).
 
 **Test it with Testnet payments, no real money:** [microai-tan.vercel.app/lab](https://microai-tan.vercel.app/lab) sends small test payments from your own wallet and shows how Verify judges each one.
 

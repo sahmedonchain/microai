@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LabClient } from "@/app/components/LabClient";
+import { ShellPage } from "@/app/components/tabs/ShellPage";
 
 export const metadata: Metadata = {
   title: "Testnet lab — MicroAI Verify",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function LabPage() {
-  return <LabClient />;
+  return <ShellPage panel="lab" />;
 }

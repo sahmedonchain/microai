@@ -3,7 +3,10 @@ import { ARC_MAINNET, PAYMENT_RECEIVER, USDC_ADDRESS } from "@/lib/arcConfig";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TabLink as Link, TabNavContext, type TabId } from "@/app/components/tabs/TabNav";
 import { EcosystemTab } from "@/app/components/tabs/EcosystemTab";
-import { GrantsTab } from "@/app/components/tabs/GrantsTab";
+import { OverviewTab } from "@/app/components/tabs/OverviewTab";
+import { VerifyClient } from "@/app/components/VerifyClient";
+import { LabClient } from "@/app/components/LabClient";
+import { TrustClient } from "@/app/components/TrustClient";
 import { BuildStatusTab } from "@/app/components/tabs/BuildStatusTab";
 import { StatsTab } from "@/app/components/tabs/StatsTab";
 import { NewsTab } from "@/app/components/tabs/NewsTab";
@@ -473,7 +476,7 @@ export function HomeTab({
 
   const selectFromMenu = (tab: TabId) => {
     goToPanel(tab);
-    if (tab === "home") inputRef.current?.focus();
+    if (tab === "chat") inputRef.current?.focus();
   };
 
   // Mobile drawer: Escape closes it, growing past the breakpoint closes it,
@@ -696,10 +699,13 @@ export function HomeTab({
           </div>
         )}
 
-        {activePanel !== "home" && (
+        {activePanel !== "chat" && (
           <div className="min-h-0 flex-1 overflow-y-auto">
             {activePanel === "ecosystem" && <EcosystemTab />}
-            {activePanel === "grants" && <GrantsTab />}
+            {activePanel === "home" && <OverviewTab />}
+            {activePanel === "verify" && <VerifyClient embedded />}
+            {activePanel === "lab" && <LabClient embedded />}
+            {activePanel === "trust" && <TrustClient />}
             {activePanel === "build-status" && <BuildStatusTab />}
             {activePanel === "stats" && <StatsTab />}
             {activePanel === "news" && <NewsTab />}
@@ -710,7 +716,7 @@ export function HomeTab({
           </div>
         )}
 
-        {activePanel === "home" && (
+        {activePanel === "chat" && (
         <div className="flex min-h-0 flex-1">
           {/* CENTER COLUMN */}
           <motion.main

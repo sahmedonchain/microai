@@ -6,11 +6,15 @@ import {
   Coins,
   Code2,
   Compass,
-  Gift,
+  FlaskConical,
   Globe,
   Hammer,
+  History,
+  LayoutDashboard,
   MessageSquare,
   Newspaper,
+  Plug,
+  ShieldCheck,
   User,
   Wallet,
   Wrench,
@@ -37,24 +41,28 @@ export type NavItem = {
 } & ({ panel: TabId; href?: undefined; external?: undefined } | { href: string; external: true; panel?: undefined });
 
 export const NAV_GROUPS: readonly NavGroup[] = [
+  { id: "verify", label: "Verify", icon: ShieldCheck },
   { id: "build", label: "Build", icon: Wrench },
   { id: "analyze", label: "Analyze", icon: Activity },
   { id: "ecosystem", label: "Explore", icon: Globe },
   { id: "account", label: "Account", icon: User },
   { id: "developer", label: "Developer resources", icon: BookOpen },
+  { id: "legacy", label: "Legacy", icon: History },
 ];
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { label: "Chat", icon: MessageSquare, panel: "home" },
+  { label: "Overview", icon: LayoutDashboard, panel: "home" },
 
-  { group: "build", label: "Copilot", icon: Code2, panel: "copilot" },
+  { group: "verify", label: "Verify", icon: ShieldCheck, panel: "verify" },
+  { group: "verify", label: "Testnet lab", icon: FlaskConical, panel: "lab" },
+  { group: "verify", label: "Trust API", icon: Plug, panel: "trust" },
+
   { group: "build", label: "Debug", icon: Bug, panel: "debugger" },
 
   { group: "analyze", label: "Wallet", icon: Wallet, panel: "wallet" },
   { group: "analyze", label: "Stats", icon: BarChart3, panel: "stats" },
 
   { group: "ecosystem", label: "Ecosystem", icon: Compass, panel: "ecosystem" },
-  { group: "ecosystem", label: "Grants", icon: Gift, panel: "grants" },
   { group: "ecosystem", label: "News", icon: Newspaper, panel: "news" },
   { group: "ecosystem", label: "Build status", icon: Hammer, panel: "build-status" },
 
@@ -63,6 +71,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { group: "developer", label: "Arc Developer Docs", icon: BookOpen, href: "https://arc.io/docs", external: true },
   { group: "developer", label: "Circle Documentation", icon: BookOpen, href: "https://circle.com/docs", external: true },
   { group: "developer", label: "USDC Resources", icon: BookOpen, href: "https://www.circle.com/usdc", external: true },
+
+  // Kept for people who still hold credits; no new development.
+  { group: "legacy", label: "Chat", icon: MessageSquare, panel: "chat" },
+  { group: "legacy", label: "Copilot", icon: Code2, panel: "copilot" },
 ];
 
 export const NAV_GROUPS_COOKIE = "microai_nav_groups";

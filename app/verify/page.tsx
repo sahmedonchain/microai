@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { VerifyClient } from "@/app/components/VerifyClient";
+import { ShellPage } from "@/app/components/tabs/ShellPage";
 
 export const metadata: Metadata = {
   title: "Verify: check an x402 payment setup on Arc — MicroAI",
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function VerifyPage() {
-  return <VerifyClient />;
+  return <ShellPage panel="verify" />;
 }

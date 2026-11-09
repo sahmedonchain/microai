@@ -11,7 +11,6 @@ import { SCAN_WINDOW_LABEL } from "@/lib/achswapTypes";
 const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "Ecosystem", href: "/ecosystem" },
-  { label: "Grants", href: "/grants" },
   { label: "Build status", href: "/build-status" },
   { label: "Stats", href: "/stats" },
   { label: "News", href: "/news" },
