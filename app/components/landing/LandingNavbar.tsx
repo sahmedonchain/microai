@@ -5,21 +5,43 @@ import { AnimatePresence } from "framer-motion";
 import { WalletModal } from "@/app/components/WalletModal";
 import { truncateAddress } from "@/lib/format";
 
-// M monogram: two overlapping arcs forming an "M", on an Arc violet → Circle
-// blue gradient. Abstract, geometric, reads clean at favicon size.
+// MicroAI mark: split "M" on a dark tile with a cyan → blue → violet gradient.
+// Same artwork as app/icon.svg (the browser favicon).
 export function LogoMark({ className = "" }: { className?: string }) {
-  const gradientId = useId();
+  const uid = useId();
+  const mark = `${uid}-mark`;
+  const border = `${uid}-border`;
+  const bg = `${uid}-bg`;
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className={className}>
+    <svg viewBox="0 0 512 512" aria-hidden="true" className={className}>
       <defs>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="var(--color-accent)" />
-          <stop offset="100%" stopColor="var(--color-secondary)" />
+        <linearGradient id={mark} gradientUnits="userSpaceOnUse" x1="222" y1="441" x2="548" y2="197">
+          <stop offset="0" stopColor="#22D3EE" />
+          <stop offset="0.5" stopColor="#1D4FFF" />
+          <stop offset="1" stopColor="#A855F7" />
         </linearGradient>
+        <linearGradient id={border} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#22D3EE" />
+          <stop offset="1" stopColor="#A855F7" />
+        </linearGradient>
+        <radialGradient id={bg} cx="50%" cy="40%" r="75%">
+          <stop offset="0" stopColor="#0E1530" />
+          <stop offset="1" stopColor="#050816" />
+        </radialGradient>
       </defs>
-      <rect width="32" height="32" rx="8" fill={`url(#${gradientId})`} />
-      <path d="M8 23 V10 A4 4 0 0 1 16 10 V23" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M16 23 V10 A4 4 0 0 1 24 10 V23" fill="none" stroke="white" strokeOpacity="0.6" strokeWidth="2.4" strokeLinecap="round" />
+      <rect x="8" y="8" width="496" height="496" rx="112" fill={`url(#${bg})`} stroke={`url(#${border})`} strokeWidth="6" />
+      <g
+        transform="translate(-71.25 -15.15) scale(0.85)"
+        fill={`url(#${mark})`}
+        stroke={`url(#${mark})`}
+        strokeWidth="6"
+        strokeLinejoin="round"
+      >
+        <polygon points="222,197 362,277 367,285 367,385 307,385 307,345 222,272" />
+        <polygon points="222,328 307,385 307,441 222,441" />
+        <polygon points="548,197 408,277 403,285 403,385 463,385 463,345 548,272" />
+        <polygon points="548,328 463,385 463,441 548,441" />
+      </g>
     </svg>
   );
 }

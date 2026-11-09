@@ -1,11 +1,24 @@
-<svg width="64" height="64" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#664c88"/>
-      <stop offset="100%" stop-color="#2775ca"/>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="222" y1="441" x2="548" y2="197">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="0.5" stop-color="#1D4FFF"/>
+      <stop offset="1" stop-color="#A855F7"/>
     </linearGradient>
+    <linearGradient id="b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
+      <stop offset="0" stop-color="#0E1530"/>
+      <stop offset="1" stop-color="#050816"/>
+    </radialGradient>
   </defs>
-  <rect width="32" height="32" rx="8" fill="url(#g)"/>
-  <path d="M8 23 V10 A4 4 0 0 1 16 10 V23" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M16 23 V10 A4 4 0 0 1 24 10 V23" fill="none" stroke="white" stroke-opacity="0.6" stroke-width="2.6" stroke-linecap="round"/>
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="url(#bg)" stroke="url(#b)" stroke-width="6"/>
+  <g transform="translate(-71.25 -15.15) scale(0.85)" fill="url(#g)" stroke="url(#g)" stroke-width="6" stroke-linejoin="round">
+    <polygon points="222,197 362,277 367,285 367,385 307,385 307,345 222,272"/>
+    <polygon points="222,328 307,385 307,441 222,441"/>
+    <polygon points="548,197 408,277 403,285 403,385 463,385 463,345 548,272"/>
+    <polygon points="548,328 463,385 463,441 548,441"/>
+  </g>
 </svg>
