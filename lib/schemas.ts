@@ -81,3 +81,14 @@ export const sessionPostBody = z.object({
   signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/, "Invalid signature format."),
   message: z.string().min(1, "Sign-in message is required. Reload the page and sign in again.").max(2000),
 });
+
+// Trust API (read-only): the endpoint to check, and optionally which Arc network to expect.
+export const trustQuery = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(8, "Give the full https:// URL of the endpoint.")
+    .max(2048, "URL is too long.")
+    .refine((u) => /^https:\/\//i.test(u), "Only https:// URLs can be checked."),
+  network: z.enum(["mainnet", "testnet"]).optional(),
+});

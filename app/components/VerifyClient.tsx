@@ -386,7 +386,10 @@ export function VerifyClient() {
         >
           Share feedback on GitHub
         </a>
-        <p className="mt-6 text-xs text-muted">
+        <p className="mt-6 max-w-prose text-xs leading-relaxed text-muted">
+          Building an agent? There is a read-only JSON version of the endpoint check: <code className="font-mono">GET /api/trust?url=https://…</code>. It is a configuration check, not a reputation score.
+        </p>
+        <p className="mt-3 text-xs text-muted">
           MicroAI is an independent project, not an official Arc or Circle product. <Link href="/security" className="text-accent-text hover:underline">Security</Link>
         </p>
       </section>
