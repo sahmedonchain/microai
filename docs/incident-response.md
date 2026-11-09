@@ -12,6 +12,8 @@ MicroAI is live on Arc Mainnet, early preview, not independently audited. This p
 | Kill switch active | Routes answer 503 `paused` | You set it, so confirm it is intended |
 | Payment wallet | Watch `0x78C144A76614A8674285129810555C8bCa78f044` on the Arc explorer (it still holds funds from retired credits) | Any outgoing transfer you did not make |
 
+`/api/health` separates the app from its dependencies: `app: "ok"` means the app itself answered, `checks` says whether Redis and the Arc RPC did, and the HTTP status is 503 when any dependency is down (so a monitor alerts on a dependency problem too). A missing response or a 5xx without this body means the app itself is down.
+
 The health endpoint is cached 15 seconds per server instance and rate limited, so a monitor cannot load the RPC.
 
 ## First 10 minutes
