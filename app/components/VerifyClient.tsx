@@ -2,27 +2,29 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { DeliveryVerdict, DeliveryStatus } from "@/lib/verify/delivery";
-import type { Finding, Severity, VerifyReport } from "@/lib/verify/types";
-import { SEVERITY_LABEL, groupFindings, parsePrefill, reportToText, sumCounts, usdcToUnits, verdict } from "@/lib/verify/ui";
-
-interface TxResult {
-  network?: "mainnet" | "testnet";
-  txHash: string;
-  explorerUrl?: string;
-  findings: Finding[];
-  counts: Record<Severity, number>;
-}
-
-interface VerifyResponse {
-  url?: string;
-  httpStatus?: number;
-  report?: VerifyReport;
-  transaction?: TxResult;
-  delivery?: DeliveryVerdict;
-}
+import { VerifyResult, type VerifyResponse } from "@/app/components/VerifyResult";
+import { HISTORY_KEY, addEntry, labelFor, parseHistory, removeEntry, type HistoryEntry } from "@/lib/verify/history";
+import { parsePrefill, sumCounts, usdcToUnits, verdict } from "@/lib/verify/ui";
 
 type NetworkChoice = "" | "mainnet" | "testnet";
+
+interface SharedLink {
+  id: string;
+  path: string;
+  deleteToken: string;
+  expiresAt: string;
+}
+type ApiResult = VerifyResponse & { share?: SharedLink; shareError?: string; error?: string };
+
+const day = (iso: string) => iso.slice(0, 10);
+
+function saveHistory(list: HistoryEntry[]) {
+  try {
+    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch {
+    /* storage can be blocked; the list then lives only until the page closes */
+  }
+}
 
 const EXAMPLES = [
   { id: "good", label: "A correct setup" },
@@ -33,130 +35,12 @@ const EXAMPLES = [
   { id: "server-error", label: "Server error (503)" },
 ] as const;
 
-const PILL: Record<Severity, string> = {
-  error: "border-danger/20 bg-danger/10 text-danger",
-  warning: "border-warning/25 bg-warning/10 text-warning",
-  info: "border-secondary/30 bg-secondary-dim text-secondary-text",
-  ok: "border-success/25 bg-success/10 text-success",
-};
-const MARK: Record<Severity, string> = { error: "✕", warning: "▲", info: "●", ok: "✓" };
-
-const DELIVERY_LOOK: Record<DeliveryStatus, { label: string; tone: Severity }> = {
-  delivered: { label: "Delivered", tone: "ok" },
-  mismatch: { label: "Mismatch", tone: "error" },
-  pending: { label: "Pending", tone: "warning" },
-  failed: { label: "Failed", tone: "error" },
-  unknown: { label: "Unknown", tone: "info" },
-};
-
-function DeliveryCard({ d }: { d: DeliveryVerdict }) {
-  const look = DELIVERY_LOOK[d.status];
-  return (
-    <section className="mt-6" aria-labelledby="delivery-heading">
-      <h2 id="delivery-heading" className="text-lg font-semibold">
-        Delivery
-      </h2>
-      <div className="mt-2 rounded-lg border border-border bg-surface p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL[look.tone]}`}>
-            <span aria-hidden="true">{MARK[look.tone]}</span>
-            {look.label}
-          </span>
-          <h3 className="min-w-0 text-base font-semibold">{d.title}</h3>
-        </div>
-        <p className="mt-2 text-sm leading-relaxed text-muted">{d.reason}</p>
-        {d.evidence.length > 0 && (
-          <ul className="mt-2 list-disc space-y-1 pl-5 font-mono text-xs text-muted">
-            {d.evidence.map((e) => (
-              <li key={e} className="break-all">{e}</li>
-            ))}
-          </ul>
-        )}
-        {d.fix && <p className="mt-2 text-sm"><span className="font-medium">Next step: </span>{d.fix}</p>}
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted">
-          {d.notes.map((n) => (
-            <li key={n}>{n}</li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
 const FIELD =
   "w-full rounded-lg border border-border bg-space px-3.5 py-3 text-base text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const BTN_PRIMARY =
   "inline-flex min-h-11 items-center justify-center rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const BTN_SECONDARY =
   "inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm text-text hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-
-function FindingCard({ f, level }: { f: Finding; level: "h3" | "h4" }) {
-  const Heading = level;
-  return (
-    <li className="rounded-lg border border-border bg-surface p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL[f.severity]}`}>
-          <span aria-hidden="true">{MARK[f.severity]}</span>
-          {SEVERITY_LABEL[f.severity]}
-        </span>
-        <Heading className="min-w-0 text-base font-semibold">{f.title}</Heading>
-      </div>
-      <p className="mt-2 text-sm leading-relaxed text-muted">{f.reason}</p>
-      {f.evidence && (
-        <p className="mt-2 break-all rounded-sm border border-border bg-space px-2.5 py-1.5 font-mono text-xs text-text">{f.evidence}</p>
-      )}
-      {f.fix && (
-        <p className="mt-2 text-sm leading-relaxed">
-          <span className="font-medium text-accent-text">How to fix: </span>
-          <span className="text-text">{f.fix}</span>
-        </p>
-      )}
-    </li>
-  );
-}
-
-function Findings({ items, level = "h3" }: { items: Finding[]; level?: "h3" | "h4" }) {
-  return (
-    <ul className="mt-3 space-y-3">
-      {items.map((f, i) => (
-        <FindingCard key={`${f.id}-${i}`} f={f} level={level} />
-      ))}
-    </ul>
-  );
-}
-
-function EndpointFindings({ findings }: { findings: Finding[] }) {
-  const g = groupFindings(findings);
-  return (
-    <>
-      <h2 className="mt-6 text-lg font-semibold">Endpoint</h2>
-      {g.general.length > 0 && <Findings items={g.general} />}
-      {g.arcOptions.map((o) => (
-        <div key={o.index} className="mt-6">
-          <h3 className="text-base font-semibold">
-            Option {o.index + 1}: <span className="text-accent-text">{o.label}</span>
-          </h3>
-          <Findings items={o.findings} level="h4" />
-        </div>
-      ))}
-      {g.otherNetworks.length > 0 && (
-        <details className="mt-6 rounded-lg border border-border bg-surface p-4">
-          <summary className="min-h-6 cursor-pointer text-sm font-medium">
-            {g.otherNetworks.length} option{g.otherNetworks.length === 1 ? "" : "s"} on other networks, not verified
-          </summary>
-          <p className="mt-3 text-sm leading-relaxed text-muted">MicroAI Verify checks Arc only. These networks were listed by the endpoint and were not checked.</p>
-          <ul className="mt-2 space-y-1 font-mono text-xs">
-            {g.otherNetworks.map((n) => (
-              <li key={n.index} className="break-all">
-                Option {n.index + 1}: {n.network}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-    </>
-  );
-}
 
 export function VerifyClient() {
   const [url, setUrl] = useState("");
@@ -169,8 +53,12 @@ export function VerifyClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VerifyResponse | null>(null);
-  const [copied, setCopied] = useState(false);
   const [autoRun, setAutoRun] = useState(false);
+  const [wantLink, setWantLink] = useState(false);
+  const [shared, setShared] = useState<SharedLink | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   // A link such as /verify?url=...&tx=...&run=1 fills the form and can start the check.
   useEffect(() => {
@@ -184,6 +72,11 @@ export function VerifyClient() {
     if (p.to) setPayTo(p.to);
     if (p.amount) setAmount(p.amount);
     if (p.run && (p.url || p.tx)) setAutoRun(true);
+    try {
+      setHistory(parseHistory(window.localStorage.getItem(HISTORY_KEY)));
+    } catch {
+      /* storage blocked: start with an empty list */
+    }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
@@ -204,7 +97,6 @@ export function VerifyClient() {
   async function runCheck() {
     if (loading) return;
     setError(null);
-    setCopied(false);
 
     const u = url.trim();
     const h = txHash.trim();
@@ -234,22 +126,71 @@ export function VerifyClient() {
       }
     }
 
+    if (wantLink) body.share = true;
+    setShared(null);
+    setShareError(null);
+    setLinkCopied(false);
+
     setLoading(true);
     try {
       const res = await fetch("/api/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-      const json = (await res.json().catch(() => ({}))) as VerifyResponse & { error?: string };
+      const json = (await res.json().catch(() => ({}))) as ApiResult;
       if (!res.ok) {
         setResult(null);
         setError(res.status === 429 ? "Too many checks. Wait a minute and try again." : json.error || "Something went wrong. Try again.");
         return;
       }
       setResult(json);
+      if (json.share) {
+        setShared(json.share);
+        const v = verdict(sumCounts(json.report?.counts, json.transaction?.counts));
+        const next = addEntry(history, {
+          id: json.share.id,
+          createdAt: new Date().toISOString(),
+          expiresAt: json.share.expiresAt,
+          label: labelFor({ url: json.url, txHash: json.transaction?.txHash }),
+          verdict: v.text,
+          deleteToken: json.share.deleteToken,
+        });
+        setHistory(next);
+        saveHistory(next);
+      } else if (json.shareError) {
+        setShareError(json.shareError);
+      }
     } catch {
       setResult(null);
       setError("Could not reach MicroAI. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function copyLink() {
+    if (!shared) return;
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${shared.path}`);
+      setLinkCopied(true);
+    } catch {
+      setShareError("Could not copy. Select the link and copy it by hand.");
+    }
+  }
+
+  async function removeReport(id: string, token: string) {
+    try {
+      const res = await fetch(`/api/verify/report/${id}`, { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ token }) });
+      // 404 means it is already gone (expired or deleted), so drop it from the list too.
+      if (!res.ok && res.status !== 404) {
+        setShareError("Could not delete the report. Try again.");
+        return;
+      }
+    } catch {
+      setShareError("Could not reach MicroAI. Try again.");
+      return;
+    }
+    const next = removeEntry(history, id);
+    setHistory(next);
+    saveHistory(next);
+    if (shared?.id === id) setShared(null);
   }
 
   useEffect(() => {
@@ -260,29 +201,6 @@ export function VerifyClient() {
     // runCheck reads the state set by the prefill effect, which has been applied by now.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRun]);
-
-  const counts = result ? sumCounts(result.report?.counts, result.transaction?.counts) : undefined;
-  const v = counts ? verdict(counts) : undefined;
-
-  async function copyReport() {
-    if (!result) return;
-    const text = reportToText({
-      url: result.url,
-      httpStatus: result.httpStatus,
-      findings: result.report?.findings ?? [],
-      txHash: result.transaction?.txHash,
-      explorerUrl: result.transaction?.explorerUrl,
-      txFindings: result.transaction?.findings,
-      notChecked: result.report?.notChecked,
-      delivery: result.delivery,
-    });
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-    } catch {
-      setError("Could not copy. Select the report text and copy it by hand.");
-    }
-  }
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 text-text sm:px-5 sm:py-12">
@@ -387,6 +305,14 @@ export function VerifyClient() {
           </div>
         </details>
 
+        <label className="flex items-start gap-3 text-sm">
+          <input type="checkbox" checked={wantLink} onChange={(e) => setWantLink(e.target.checked)} className="mt-1 size-4 shrink-0 accent-[var(--color-accent)]" />
+          <span>
+            <span className="font-medium">Create a link to share this result</span>
+            <span className="block text-xs leading-relaxed text-muted">Anyone with the link can read the report for 30 days. It is not listed anywhere, and you can delete it.</span>
+          </span>
+        </label>
+
         <button type="submit" disabled={loading} className={`${BTN_PRIMARY} w-full sm:w-auto`}>
           {loading ? "Checking…" : "Check"}
         </button>
@@ -395,61 +321,57 @@ export function VerifyClient() {
       <div aria-live="polite" className="mt-8">
         {error && <p role="alert" className="rounded-lg border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>}
 
-        {result && v && counts && (
-          <section>
-            <div className="rounded-lg border border-border bg-surface p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL[v.tone === "ok" ? "ok" : v.tone]}`}>
-                  <span aria-hidden="true">{MARK[v.tone === "ok" ? "ok" : v.tone]}</span>
-                  {v.text}
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-muted">
-                {counts.error} error{counts.error === 1 ? "" : "s"}, {counts.warning} warning{counts.warning === 1 ? "" : "s"}, {counts.info} note{counts.info === 1 ? "" : "s"}, {counts.ok} passed
-                {result.httpStatus !== undefined && <> · the endpoint answered HTTP {result.httpStatus}</>}
-              </p>
-              <button type="button" onClick={copyReport} className={`${BTN_SECONDARY} mt-3`}>
-                {copied ? "Copied" : "Copy report as text"}
-              </button>
-            </div>
-
-            {result.report && <EndpointFindings findings={result.report.findings} />}
-
-            {result.transaction && (
-              <>
-                <h2 className="mt-6 text-lg font-semibold">Transaction</h2>
-                <p className="mt-1 break-all font-mono text-xs text-muted">{result.transaction.txHash}</p>
-                {result.transaction.explorerUrl && (
-                  <a href={result.transaction.explorerUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-sm text-accent-text hover:underline">
-                    View on Arc Explorer
-                  </a>
-                )}
-                <Findings items={result.transaction.findings} />
-              </>
-            )}
-
-            {result.delivery && <DeliveryCard d={result.delivery} />}
-
-            {result.report && (
-              <details className="mt-6 rounded-lg border border-border bg-surface p-4">
-                <summary className="min-h-6 cursor-pointer text-sm font-medium">What was and was not checked</summary>
-                <h3 className="mt-3 text-sm font-semibold">Checked</h3>
-                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-muted">
-                  {result.report.checked.map((c) => (
-                    <li key={c}>{c}</li>
-                  ))}
-                </ul>
-                <h3 className="mt-3 text-sm font-semibold">Not checked</h3>
-                <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-muted">
-                  {result.report.notChecked.map((c) => (
-                    <li key={c}>{c}</li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </section>
+        {result && (
+          <VerifyResult
+            result={result}
+            top={
+              shared ? (
+                <div className="mt-3 rounded-lg border border-border bg-surface p-4">
+                  <p className="text-sm font-medium">Shareable link</p>
+                  <p className="mt-1 break-all rounded-sm border border-border bg-space px-2.5 py-1.5 font-mono text-xs text-text">{typeof window !== "undefined" ? window.location.origin : ""}{shared.path}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">Works until {day(shared.expiresAt)}. It shows this check as it is now, not later.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={copyLink} className={BTN_SECONDARY}>
+                      {linkCopied ? "Link copied" : "Copy link"}
+                    </button>
+                    <button type="button" onClick={() => void removeReport(shared.id, shared.deleteToken)} className={BTN_SECONDARY}>
+                      Delete this link
+                    </button>
+                  </div>
+                </div>
+              ) : shareError ? (
+                <p role="alert" className="mt-3 rounded-lg border border-warning/25 bg-warning/10 px-4 py-3 text-sm">{shareError}</p>
+              ) : null
+            }
+          />
         )}
       </div>
+
+      {history.length > 0 && (
+        <section className="mt-12 border-t border-border pt-6" aria-labelledby="history-heading">
+          <h2 id="history-heading" className="text-lg font-semibold">
+            Your shared reports
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted">Kept only in this browser. Clearing your browser data removes this list, not the links.</p>
+          <ul className="mt-3 space-y-2">
+            {history.map((h) => (
+              <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-3">
+                <div className="min-w-0">
+                  <Link href={`/verify/r/${h.id}`} className="break-all text-sm font-medium text-accent-text hover:underline">
+                    {h.label}
+                  </Link>
+                  <p className="text-xs text-muted">
+                    {h.verdict} · {day(h.createdAt)} · until {day(h.expiresAt)}
+                  </p>
+                </div>
+                <button type="button" onClick={() => void removeReport(h.id, h.deleteToken)} className={BTN_SECONDARY}>
+                  Delete
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="mt-12 border-t border-border pt-6">
         <h2 className="text-lg font-semibold">Did Verify miss something, or get it wrong?</h2>
@@ -464,7 +386,10 @@ export function VerifyClient() {
         >
           Share feedback on GitHub
         </a>
-        <p className="mt-6 text-xs text-muted">
+        <p className="mt-6 max-w-prose text-xs leading-relaxed text-muted">
+          Building an agent? There is a read-only JSON version of the endpoint check: <code className="font-mono">GET /api/trust?url=https://…</code>. It is a configuration check, not a reputation score.
+        </p>
+        <p className="mt-3 text-xs text-muted">
           MicroAI is an independent project, not an official Arc or Circle product. <Link href="/security" className="text-accent-text hover:underline">Security</Link>
         </p>
       </section>

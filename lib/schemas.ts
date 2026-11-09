@@ -67,6 +67,8 @@ export const verifyBody = z
     txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Transaction hash must be 0x followed by 64 hex characters.").optional(),
     expect: verifyExpect.optional(),
     delivery: verifyDelivery.optional(),
+    // Ask for a shareable link to this result (stored on the server for 30 days).
+    share: z.boolean().optional(),
   })
   .superRefine((b, ctx) => {
     if (b.delivery && !b.txHash) ctx.addIssue({ code: "custom", message: "delivery is only used together with a transaction hash." });
@@ -78,4 +80,15 @@ export const sessionPostBody = z.object({
   address: EVM_ADDRESS,
   signature: z.string().regex(/^0x[0-9a-fA-F]{130}$/, "Invalid signature format."),
   message: z.string().min(1, "Sign-in message is required. Reload the page and sign in again.").max(2000),
+});
+
+// Trust API (read-only): the endpoint to check, and optionally which Arc network to expect.
+export const trustQuery = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(8, "Give the full https:// URL of the endpoint.")
+    .max(2048, "URL is too long.")
+    .refine((u) => /^https:\/\//i.test(u), "Only https:// URLs can be checked."),
+  network: z.enum(["mainnet", "testnet"]).optional(),
 });

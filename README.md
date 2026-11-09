@@ -198,6 +198,8 @@ All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In
 | `/stats` | GET | no | MicroAI payment wallet activity |
 | `/chain` | GET | no | Fixed read-only chain reads for the Stats page (block, gas price, chain ID, balances) |
 | `/verify` | POST | no | Check an x402 endpoint's 402 answer against Arc, and/or a transaction against what the endpoint asked for (no payment sent; 5 a minute, 40 a day per caller) |
+| `/verify/report/[id]` | DELETE | delete token | Remove a shared Verify report early (20 an hour per caller). A wrong token and a missing report look the same |
+| `/trust` | GET | no | Read-only JSON summary of an endpoint's payment setup for agents: `?url=https://...&network=mainnet\|testnet`. A configuration check, not a reputation score. Sends no payment, writes nothing on-chain. Cached 60 s; 5 a minute and 40 a day per caller; one host is fetched at most 30 times an hour |
 | `/github-status` | GET | no | Activity of tracked GitHub repositories |
 | `/achswap-onchain` | GET | no | On-chain check of the AchSwap contracts |
 | `/csp-report` | POST | no | Receives Content-Security-Policy violation reports |
@@ -294,7 +296,8 @@ This is a direction, not a promise. **A stage starts only when the previous one 
 | **MicroAI Verify v1** | Check an x402 or USDC payment setup on Arc and verify a transaction on-chain, with a plain-language report | In progress: check engine, API, transaction check and an early-preview page built; proof from outside builders still to come |
 | **Testnet proof** | Publish proof that Verify judges real Arc Testnet payments correctly: right amount, too little, too much, wrong recipient, wrong token, plus a slow endpoint and a failing one | In progress: Testnet lab page and test endpoints built; proof from 10 test payments still to come |
 | **Delivery checks** | Catch "payment went through but the service was not delivered": a Delivered / Mismatch / Pending / Failed / Unknown verdict from the on-chain check plus what the service answered | Built into Verify, uses the answer you report (MicroAI sends no payment and cannot see it); outside builder feedback still to come |
-| **Shareable reports** | One link per check, with history, to share with a team | Later |
+| **Shareable reports** | One link per check, with history, to share with a team | Built into Verify: opt-in link, stored 30 days, server-made content only, delete token; history is kept in your own browser |
+| **Trust API** | Let an agent ask "is this service's payment setup sound?" before paying | Read-only version built (`GET /api/trust`). Paying per call with x402 and writing proof to an ERC-8004 registry are deliberately not built until there is proven demand, because both handle real money or on-chain state |
 
 **Definition of done for Verify v1:** at least 20 test cases pass (good and bad configurations), 5 deliberately broken endpoints are each caught correctly, at least 5 real Mainnet transactions are verified correctly, at least 3 outside builders have used it and given feedback, and at least 1 says it caught a real problem. If builders do not find it useful, the plan changes. Chat and Copilot stay available with no major new development planned, and any wind-down would be announced in advance.
 
