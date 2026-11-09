@@ -123,7 +123,7 @@ async function fetchOnchainData(): Promise<AchSwapOnchainPayload> {
   };
 }
 
-export const GET = withApi({ name: "achswap-onchain", limits: [{ limit: 30, windowSec: 60 }] }, async ({ log }) => {
+export const GET = withApi({ name: "achswap-onchain", limits: [{ limit: 30, windowSec: 60 }], onLimiterError: "closed" }, async ({ log }) => {
   try {
     const cached = await getRedis().get<AchSwapOnchainPayload>(CACHE_KEY);
     if (cached) return cached;
