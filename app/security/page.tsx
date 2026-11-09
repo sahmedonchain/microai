@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LegalLinks } from "@/app/components/LegalLinks";
 
 export const metadata: Metadata = {
-  title: "Security — MicroAI",
+  title: "MicroAI Security: Controls and Limits",
   description: "How MicroAI protects sign-in and checks, and what it does not guarantee.",
 };
 

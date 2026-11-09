@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LegalPage, type LegalSection } from "@/app/components/LegalPage";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — MicroAI",
+  title: "MicroAI Privacy Policy",
   description: "What data MicroAI collects, why, who processes it, and the choices you have.",
 };
 
