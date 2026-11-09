@@ -42,7 +42,7 @@ const BTN_PRIMARY =
 const BTN_SECONDARY =
   "inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 py-2.5 text-sm text-text hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
-export function VerifyClient() {
+export function VerifyClient({ embedded = false }: { embedded?: boolean } = {}) {
   const [url, setUrl] = useState("");
   const [network, setNetwork] = useState<NetworkChoice>("");
   const [txHash, setTxHash] = useState("");
@@ -203,12 +203,14 @@ export function VerifyClient() {
   }, [autoRun]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-8 text-text sm:px-5 sm:py-12">
-      <Link href="/" className="text-sm text-accent-text hover:underline">
-        ← MicroAI
-      </Link>
+    <main className="mx-auto w-full max-w-3xl px-4 py-8 text-text sm:px-5 sm:py-10">
+      {!embedded && (
+        <Link href="/" className="mb-6 block text-sm text-accent-text hover:underline">
+          ← MicroAI
+        </Link>
+      )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">MicroAI Verify</h1>
         <span className="inline-flex items-center rounded-full border border-warning/25 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">Early preview</span>
       </div>

@@ -17,12 +17,14 @@ describe("menu config", () => {
       ...NAV_GROUPS.map((g) => `${g.label}: ${itemsOfGroup(g.id).map((i) => i.label).join(", ")}`),
     ];
     expect(shape).toEqual([
-      "Chat",
-      "Build: Copilot, Debug",
+      "Overview",
+      "Verify: Verify, Testnet lab, Trust API",
+      "Build: Debug",
       "Analyze: Wallet, Stats",
-      "Explore: Ecosystem, Grants, News, Build status",
+      "Explore: Ecosystem, News, Build status",
       "Account: Credits",
       "Developer resources: Arc Developer Docs, Circle Documentation, USDC Resources",
+      "Legacy: Chat, Copilot",
     ]);
   });
 
@@ -39,7 +41,7 @@ describe("menu config", () => {
       expect(item.href).toMatch(/^https:\/\//);
       expect(item.panel).toBeUndefined();
     }
-    expect(panels.sort()).toEqual(["build-status", "copilot", "credits", "debugger", "ecosystem", "grants", "home", "news", "stats", "wallet"]);
+    expect(panels.sort()).toEqual(["build-status", "chat", "copilot", "credits", "debugger", "ecosystem", "home", "lab", "news", "stats", "trust", "verify", "wallet"]);
   });
 
   it("labels are unique (they are used as React keys)", () => {
@@ -52,6 +54,8 @@ describe("menu config", () => {
     expect(groupOfPanel("stats")).toBe("analyze");
     expect(groupOfPanel("build-status")).toBe("ecosystem");
     expect(groupOfPanel("credits")).toBe("account");
+    expect(groupOfPanel("verify")).toBe("verify");
+    expect(groupOfPanel("chat")).toBe("legacy");
     expect(groupOfPanel("home")).toBeUndefined();
   });
 
@@ -76,7 +80,7 @@ describe("open-groups cookie", () => {
     expect(initialOpenGroups("build", "wallet").sort()).toEqual(["analyze", "build"]);
     expect(initialOpenGroups("analyze", "wallet")).toEqual(["analyze"]);
   });
-  it("opens nothing extra for the standalone Chat page", () => {
+  it("opens nothing extra for the Overview page", () => {
     expect(initialOpenGroups(undefined, "home")).toEqual([]);
     expect(initialOpenGroups("developer", "home")).toEqual(["developer"]);
   });

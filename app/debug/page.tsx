@@ -369,7 +369,6 @@ export default function DebugPage() {
           <div className="flex flex-wrap gap-5">
             {[
               { l: "Ecosystem", h: "/ecosystem" },
-              { l: "Grants", h: "/grants" },
               { l: "Chat", h: "/chat" },
               { l: "Explorer", h: "https://explorer.arc.io" },
             ].map((link) => (

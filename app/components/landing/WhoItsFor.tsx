@@ -10,7 +10,7 @@ const ROLES: { name: string; icon: LucideIcon; pitch: string; ask: string }[] = 
   {
     name: "Builders",
     icon: Hammer,
-    pitch: "Find grants, track what other teams are shipping and get unblocked on your next milestone.",
+    pitch: "Track what other teams are shipping and get unblocked on your next milestone.",
     ask: "Which Arc projects are hiring contributors?",
   },
   {
