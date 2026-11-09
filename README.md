@@ -93,7 +93,7 @@ The app is a single page with a sidebar. Each entry below is a panel in it.
 
 | Panel | What it does |
 |---|---|
-| **Verify** | Check an x402 endpoint's payment setup, match a transaction against it, check delivery, and share a report. Sends no payment. |
+| **Verify** | Check an x402 endpoint's payment setup, match a transaction against it, check delivery, and share a report. Sends no payment. A transaction hash that was checked before gets a note (kept 30 days); it is a hint, not replay protection, because MicroAI does not know your orders: accept each hash once in your own system. |
 | **Payload inspector** | Decode `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` in the browser and compare them. Nothing is sent or stored. |
 | **Testnet lab** | Send small test payments on Arc Testnet and see how Verify judges each one. |
 | **Trust API** | Machine-readable endpoint check for agents (`GET /api/trust`). Read-only. |
