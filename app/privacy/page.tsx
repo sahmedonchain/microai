@@ -18,7 +18,7 @@ const SECTIONS: LegalSection[] = [
     items: [
       "Wallet address: when you sign in with Ethereum. It identifies your session. Wallet addresses are public on the blockchain.",
       "Session cookie: one httpOnly cookie that keeps you signed in for up to 24 hours. There are no advertising or analytics cookies.",
-      "Earlier credit records: if you bought credits before they were retired, we still hold your balance and a record of each credited payment (transaction hash, wallet, number of credits, time) so a payment cannot be credited twice and so we can review any request about it.",
+      "Earlier credit records: if you bought credits before they were retired, we still hold your balance and a record of each credited payment (transaction hash, wallet, number of credits, time) so we can check and pay refund requests. Unclaimed credit records are deleted after 8 February 2027.",
       "Sign-in codes: a one-time code, kept for 5 minutes.",
       "Rate-limit counters: counts tied to your IP address and wallet, which expire when their time window ends (up to 24 hours).",
       "Technical logs: our hosting setup records request details such as IP address, time, a request ID and error information, and browsers may send content-security reports with URLs shortened to the address without the query. Retention follows our hosting provider settings. MicroAI is hosted on Vercel for now, and this page will be updated if that changes.",
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy Policy"
-      updated="October 2026"
+      updated="November 2026"
       intro="This page explains what MicroAI collects and why. It describes how the service works today, in plain language."
       sections={SECTIONS}
     />

@@ -22,10 +22,15 @@ const SECTIONS: LegalSection[] = [
     ],
   },
   {
-    title: "Credits and payments",
+    title: "Credits are retired: refunds for everyone who paid",
     items: [
-      "Credits, Chat and Copilot have been retired. MicroAI no longer sells credits and no longer takes payments of any kind.",
-      "If you hold unspent credits, or sent a payment that was never credited, open an issue at github.com/sahmedonchain/microai/issues with your wallet address and the transaction hash (no private information) and we will review it.",
+      "On 10 November 2026 MicroAI retired credits, Chat and Copilot. MicroAI no longer sells credits and no longer takes payments of any kind.",
+      "If you bought credits and have not used them all, you can get the unspent ones back in USDC. The refund is 0.001 USDC per unspent credit, the same price you paid.",
+      "If you sent a payment that was never turned into credits, you can get all of it back.",
+      "Refunds are sent on Arc Mainnet, only to the same wallet that made the payment, never to a different address. MicroAI pays the network fee.",
+      "To ask, open an issue at github.com/sahmedonchain/microai/issues with your wallet address (and the transaction hash for an uncredited payment). Do not post private information, and never share a private key or seed phrase. We check your wallet against our payment records and the Arc blockchain, reply in the issue, and send the refund.",
+      "You can ask until 8 February 2027. After that date unclaimed credit records are deleted and can no longer be refunded.",
+      "Credits spent on answers that were already delivered are not refunded.",
       "Blockchain transactions are final. Check the network and the receiving address in your wallet before you confirm any transaction, on MicroAI or anywhere else.",
     ],
   },
@@ -71,7 +76,7 @@ export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of Use"
-      updated="October 2026"
+      updated="November 2026"
       intro="By connecting a wallet or using MicroAI you agree to these terms. They are written in plain language and describe how the service works today."
       sections={SECTIONS}
     />
