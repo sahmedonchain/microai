@@ -236,6 +236,17 @@ describe("Permit2 and upto", () => {
     expect(run(p2({}, {}, { amount: "5000" }), "upto").findings.find((f) => f.id === "match.amount")!.severity).toBe("info");
     expect(run(p2({}, {}, { amount: "10" }), "upto").findings.find((f) => f.id === "match.amount")!.severity).toBe("warning");
   });
+  it("upto: shows the facilitator binding, and never claims the scheme is verified", () => {
+    const fac = "0x" + "fa".repeat(20);
+    const withFac = run(p2({}, { facilitator: fac }), "upto");
+    expect(withFac.findings.find((f) => f.id === "payload.facilitator")).toMatchObject({ severity: "info", evidence: `facilitator: ${fac}` });
+    const without = run(p2(), "upto").findings.find((f) => f.id === "payload.facilitator")!;
+    expect(without.severity).toBe("info");
+    expect(without.reason).toMatch(/has not checked the upto scheme against its specification/);
+    expect(ids(run(p2({}, { facilitator: "junk" }), "upto"), "error")).toEqual([]);
+    expect(run(p2(), "exact").findings.some((f) => f.id === "payload.facilitator")).toBe(false);
+    expect(run(p2({}, {}, { amount: "5000" }), "upto").findings.find((f) => f.id === "match.amount")!.reason).toMatch(/could not confirm/);
+  });
   it("rejects malformed Permit2 fields", () => {
     const r = run(p2({ from: "nope", nonce: "abc", deadline: undefined }));
     expect(ids(r, "error")).toEqual(expect.arrayContaining(["payload.from", "payload.nonce", "payload.validBefore"]));

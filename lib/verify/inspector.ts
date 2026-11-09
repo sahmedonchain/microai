@@ -132,8 +132,12 @@ export const explainReason = (code: string): string | undefined => REASONS[code]
 // ------------------------------------------------------------------ inspect
 
 // Permit2 payments (asset transfer method "permit2"), used for `exact` with tokens
-// that lack EIP-3009, and for `upto`. Field names follow the exact-EVM scheme spec.
-// The signature is NOT verified: it needs the Permit2 contract's own domain.
+// that lack EIP-3009, and for `upto`. For `exact`, field names follow the exact-EVM
+// scheme spec. For `upto` only Coinbase's CDP type reference could be read (not the
+// scheme spec itself): its witness also carries a `facilitator` that binds the payment
+// to one facilitator. The `upto` rules here are therefore checks of field shape, not a
+// verified implementation of the scheme. The signature is NOT verified in either case:
+// it needs the Permit2 contract's own domain.
 function inspectPermit2(p2: Obj, signature: string | undefined, accepted: Obj | undefined, want: Obj | undefined, scheme: string | undefined, nowSec: number, out: Finding[]): void {
   const permitted = isObj(p2.permitted) ? p2.permitted : undefined;
   const witness = isObj(p2.witness) ? p2.witness : undefined;
@@ -142,6 +146,15 @@ function inspectPermit2(p2: Obj, signature: string | undefined, accepted: Obj | 
   const nonce = num(p2.nonce), deadline = num(p2.deadline), to = str(witness?.to), validAfter = num(witness?.validAfter);
 
   out.push({ id: "payload.kind", severity: "info", title: scheme === "upto" ? "Permit2 payment (upto)" : "Permit2 payment", reason: "This payment uses a Permit2 authorization instead of an EIP-3009 one. The signature is not verified here, because it needs the Permit2 contract's signing domain." });
+
+  if (scheme === "upto") {
+    const facilitator = str(witness?.facilitator);
+    out.push(
+      facilitator && ADDRESS.test(facilitator)
+        ? { id: "payload.facilitator", severity: "info", title: "Bound to one facilitator", reason: "witness.facilitator ties this authorization to a specific facilitator address. MicroAI does not check that this is the facilitator that will settle it, or that the spender is the genuine upto contract.", evidence: `facilitator: ${facilitator}` }
+        : { id: "payload.facilitator", severity: "info", title: "No facilitator in the witness", reason: "Coinbase's reference for the upto Permit2 payload lists a facilitator in the witness. It is missing or not an address here. MicroAI has not checked the upto scheme against its specification, so it cannot say whether that matters.", evidence: facilitator ? `facilitator: ${facilitator.slice(0, 60)}` : undefined }
+    );
+  }
 
   for (const [k, v] of [["from", from], ["spender", spender], ["permitted.token", token], ["witness.to", to]] as const) {
     if (!v || !ADDRESS.test(v)) out.push({ id: `payload.${k}`, severity: "error", title: `${k} is not a valid address`, reason: `permit2Authorization.${k} must be a 0x address of 40 hex digits.`, evidence: `${k}: ${String(v).slice(0, 60)}` });
@@ -180,10 +193,9 @@ function inspectPermit2(p2: Obj, signature: string | undefined, accepted: Obj | 
   if (wantAmount && amount && DECIMAL.test(wantAmount) && DECIMAL.test(amount)) {
     const a2 = BigInt(amount), w = BigInt(wantAmount);
     if (scheme === "upto") {
-      // For upto the buyer authorizes a maximum and the seller charges actual usage. How the
-      // requirements amount relates to that maximum is defined by the scheme spec, which
-      // MicroAI does not check, so this is a note and not a verdict.
-      out.push({ id: "match.amount", severity: a2 < w ? "warning" : "info", title: a2 < w ? "Authorizes less than the requirements amount" : "upto: the authorized amount is a maximum", reason: a2 < w ? "The authorized maximum is below the amount in the requirements." : "With the upto scheme the seller charges actual usage up to this maximum, so it is not compared for equality.", evidence: `requirements: ${wantAmount}\nauthorized maximum: ${amount}` });
+      // The upto scheme spec could not be read, so how the requirements amount relates to the
+      // authorized amount is NOT known here. This is a note and never an error.
+      out.push({ id: "match.amount", severity: a2 < w ? "warning" : "info", title: a2 < w ? "Authorizes less than the requirements amount" : "upto: amount differs from the requirements", reason: a2 < w ? "The authorized amount is below the amount in the requirements. MicroAI could not confirm from the specification whether upto allows that." : "Under upto the authorized amount is not expected to equal the requirements amount, so it is not compared for equality. MicroAI could not confirm the exact settlement rules from the specification.", evidence: `requirements: ${wantAmount}\nauthorized maximum: ${amount}` });
     } else if (a2 === w) out.push({ id: "match.amount", severity: "ok", title: "Authorizes the requested amount", reason: "permitted.amount equals the amount in the requirements.", evidence: `amount: ${amount}` });
     else out.push({ id: "match.amount", severity: a2 < w ? "error" : "warning", title: a2 < w ? "Authorizes less than asked" : "Authorizes more than asked", reason: a2 < w ? "The service would reject it as underpaid." : "The payer would authorize more than the service asked for.", evidence: `asked: ${wantAmount}\nauthorized: ${amount}`, fix: "Sign for exactly the amount in the requirements." });
   }
