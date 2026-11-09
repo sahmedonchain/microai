@@ -97,7 +97,30 @@ export function FlowDiagram() {
   const [running, setRunning] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const dot = useRef<HTMLSpanElement>(null);
+  const list = useRef<HTMLOListElement>(null);
+  const hl = useRef<HTMLSpanElement>(null);
   const s = STEPS[step];
+
+  // Slide the highlight onto the active step (and re-fit on resize).
+  useEffect(() => {
+    const place = (animate: boolean) => {
+      const box = hl.current;
+      const btn = list.current?.querySelectorAll("li")[step];
+      if (!box || !btn) return;
+      const calm = isCalm();
+      box.style.transition =
+        animate && !calm
+          ? "transform 0.8s cubic-bezier(0.22, 1, 0.36, 1), height 0.8s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s"
+          : "none";
+      box.style.height = `${btn.offsetHeight}px`;
+      box.style.transform = `translateY(${btn.offsetTop}px)`;
+      box.style.opacity = "1";
+    };
+    place(true);
+    const onResize = () => place(false);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [step]);
 
   // Autoplay only while the diagram is on screen.
   useEffect(() => {
@@ -179,7 +202,8 @@ export function FlowDiagram() {
         </div>
 
         <p
-          className="mt-6 min-h-6 text-center font-mono text-xs text-secondary-text sm:text-sm"
+          key={step}
+          className="hm-fade mt-6 min-h-6 text-center font-mono text-xs text-secondary-text sm:text-sm"
           aria-hidden="true"
         >
           {s.label}
@@ -207,23 +231,29 @@ export function FlowDiagram() {
       </div>
 
       <div className="relative z-10">
-        <ol className="space-y-1.5" aria-label="Steps of an x402 payment">
+        <ol
+          ref={list}
+          className="relative space-y-1.5"
+          aria-label="Steps of an x402 payment"
+        >
+          {/* One highlight that glides from step to step. */}
+          <span
+            ref={hl}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 rounded-xl border border-accent/40 bg-accent-dim opacity-0 shadow-[0_0_28px_-10px_rgb(139_107_192/0.7)]"
+          />
           {STEPS.map((st, i) => {
             const on = i === step;
             return (
-              <li key={st.title}>
+              <li key={st.title} className="relative">
                 <button
                   type="button"
                   onClick={() => setStep(i)}
                   aria-current={on ? "step" : undefined}
-                  className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-300 ${
-                    on
-                      ? "border-accent/40 bg-accent-dim"
-                      : "border-transparent hover:bg-surface-raised/60"
-                  }`}
+                  className="flex w-full items-start gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-colors duration-500 hover:bg-surface-raised/40"
                 >
                   <span
-                    className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] ${
+                    className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] transition-colors duration-500 ${
                       on
                         ? "border-accent-text text-accent-text"
                         : "border-border text-muted"
@@ -232,7 +262,7 @@ export function FlowDiagram() {
                     {i + 1}
                   </span>
                   <span
-                    className={`min-w-0 text-sm font-medium ${on ? "text-text" : "text-text/80"}`}
+                    className={`min-w-0 text-sm font-medium transition-colors duration-500 ${on ? "text-text" : "text-text/70"}`}
                   >
                     {st.title}
                   </span>
@@ -250,7 +280,7 @@ export function FlowDiagram() {
             <p
               key={st.title}
               aria-hidden={i !== step}
-              className={`col-start-1 row-start-1 text-xs leading-relaxed text-muted transition-opacity duration-300 sm:text-sm ${i === step ? "opacity-100" : "opacity-0"}`}
+              className={`col-start-1 row-start-1 text-xs leading-relaxed text-muted transition-opacity duration-500 sm:text-sm ${i === step ? "opacity-100" : "opacity-0"}`}
             >
               {st.text}
             </p>
