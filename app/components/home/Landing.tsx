@@ -21,6 +21,7 @@ import { LogoMark } from "@/app/components/landing/LandingNavbar";
 import { Brand } from "./Brand";
 import { MouseEffects } from "./MouseEffects";
 import { SiteNav } from "./SiteNav";
+import { TryIt } from "./TryIt";
 import "./home.css";
 
 // Every tool link on this page goes through one button.
@@ -192,6 +193,8 @@ function Hero() {
         <p className="mx-auto mt-5 max-w-[56ch] text-base leading-relaxed text-muted sm:text-lg">
           Read-only tools to inspect, verify and debug USDC and x402 payments. Built for API sellers, AI agent builders and Arc developers.
         </p>
+
+        <TryIt />
 
         <div className="mt-8 flex justify-center">
           <LaunchButton />
