@@ -77,3 +77,14 @@ export const trustQuery = z.object({
     .refine((u) => /^https:\/\//i.test(u), "Only https:// URLs can be checked."),
   network: z.enum(["mainnet", "testnet"]).optional(),
 });
+
+// Facilitator check (read-only): the facilitator's base address, not a payment.
+export const facilitatorQuery = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(8, "Give the full https:// address of the facilitator.")
+    .max(2048, "URL is too long.")
+    .refine((u) => /^https:\/\//i.test(u), "Only https:// URLs can be checked."),
+  network: z.enum(["mainnet", "testnet"]).optional(),
+});

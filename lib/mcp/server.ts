@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { ARC_NETWORKS, USDC_ADDRESS } from "@/lib/arcConfig";
 import { explainReason } from "@/lib/verify/inspector";
-import { trustQuery } from "@/lib/schemas";
+import { facilitatorQuery, trustQuery } from "@/lib/schemas";
 
 // A small, read-only MCP (Model Context Protocol) server over plain HTTP JSON-RPC.
 //
@@ -33,6 +33,7 @@ export interface ToolResult {
 
 export interface ToolDeps {
   checkEndpoint: (url: string, network: "mainnet" | "testnet" | undefined) => Promise<unknown>;
+  checkFacilitator: (url: string, network: "mainnet" | "testnet" | undefined) => Promise<unknown>;
 }
 
 interface Tool {
@@ -61,6 +62,24 @@ export const TOOLS: Tool[] = [
     run: async (args, deps) => {
       const { url, network } = trustQuery.parse(args);
       return deps.checkEndpoint(url, network);
+    },
+  },
+  {
+    name: "check_x402_facilitator",
+    description:
+      "Read-only: asks an x402 facilitator's GET /supported whether it lists Arc Mainnet or Testnet and with which schemes. The answer is the facilitator's own claim, not proof that it settles payments. It never calls /verify or /settle and sends no payment.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "The facilitator's base https:// address." },
+        network: { type: "string", enum: ["mainnet", "testnet"], description: "Arc network you plan to use." },
+      },
+      required: ["url"],
+      additionalProperties: false,
+    },
+    run: async (args, deps) => {
+      const { url, network } = facilitatorQuery.parse(args);
+      return deps.checkFacilitator(url, network);
     },
   },
   {

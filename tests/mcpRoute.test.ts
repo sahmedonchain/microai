@@ -45,7 +45,7 @@ describe("MCP protocol", () => {
   });
   it("lists exactly the read-only tools", async () => {
     const j = await (await rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" })).json();
-    expect(j.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(["arc_network_info", "check_x402_endpoint", "explain_x402_error"]);
+    expect(j.result.tools.map((t: { name: string }) => t.name).sort()).toEqual(["arc_network_info", "check_x402_endpoint", "check_x402_facilitator", "explain_x402_error"]);
   });
   it("notifications get 202 and no body", async () => {
     const res = await rpc({ jsonrpc: "2.0", method: "notifications/initialized" });
