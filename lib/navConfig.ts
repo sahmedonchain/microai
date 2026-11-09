@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Newspaper,
   Plug,
+  ScanSearch,
   ShieldCheck,
   User,
   Wallet,
@@ -54,6 +55,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Overview", icon: LayoutDashboard, panel: "home" },
 
   { group: "verify", label: "Verify", icon: ShieldCheck, panel: "verify" },
+  { group: "verify", label: "Payload inspector", icon: ScanSearch, panel: "inspect" },
   { group: "verify", label: "Testnet lab", icon: FlaskConical, panel: "lab" },
   { group: "verify", label: "Trust API", icon: Plug, panel: "trust" },
 

@@ -4,6 +4,7 @@ import { createContext, useContext, type AnchorHTMLAttributes } from "react";
 export type TabId =
   | "home"
   | "verify"
+  | "inspect"
   | "lab"
   | "trust"
   | "chat"
@@ -19,6 +20,7 @@ export type TabId =
 const HREF_TO_TAB: Record<string, TabId> = {
   "/": "home",
   "/verify": "verify",
+  "/inspect": "inspect",
   "/lab": "lab",
   "/trust": "trust",
   "/chat": "chat",

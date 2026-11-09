@@ -6,7 +6,11 @@ import { EcosystemTab } from "@/app/components/tabs/EcosystemTab";
 import { OverviewTab } from "@/app/components/tabs/OverviewTab";
 import { VerifyClient } from "@/app/components/VerifyClient";
 import { LabClient } from "@/app/components/LabClient";
+import dynamic from "next/dynamic";
 import { TrustClient } from "@/app/components/TrustClient";
+
+// Loaded on demand: it pulls in the Verify checks (and ethers), which the other panels do not need.
+const InspectorClient = dynamic(() => import("@/app/components/InspectorClient").then((m) => m.InspectorClient), { ssr: false });
 import { BuildStatusTab } from "@/app/components/tabs/BuildStatusTab";
 import { StatsTab } from "@/app/components/tabs/StatsTab";
 import { NewsTab } from "@/app/components/tabs/NewsTab";
@@ -704,6 +708,7 @@ export function HomeTab({
             {activePanel === "ecosystem" && <EcosystemTab />}
             {activePanel === "home" && <OverviewTab />}
             {activePanel === "verify" && <VerifyClient embedded />}
+            {activePanel === "inspect" && <InspectorClient embedded />}
             {activePanel === "lab" && <LabClient embedded />}
             {activePanel === "trust" && <TrustClient />}
             {activePanel === "build-status" && <BuildStatusTab />}
