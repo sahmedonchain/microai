@@ -5,7 +5,9 @@ import { SafeFetchError } from "@/lib/safeFetch";
 import { describeFetchError, fetchChallenge } from "@/lib/verify/fetchEndpoint";
 import { countFindings, sortFindings, verifyEndpointResponse } from "@/lib/verify/checks";
 import { selectPaymentOption } from "@/lib/verify/option";
+import { consume, RateLimiterUnavailableError } from "@/lib/rateLimit";
 import { classifyDelivery } from "@/lib/verify/delivery";
+import { saveReport } from "@/lib/verify/reportStore";
 import { verifyTransaction, type ExpectedPayment } from "@/lib/verify/txVerify";
 import type { EndpointResponse, Finding, VerifyReport } from "@/lib/verify/types";
 import { verifyBody } from "@/lib/schemas";
@@ -47,8 +49,8 @@ export const POST = withApi(
       { limit: 2000, windowSec: 86_400, scope: "global" },
     ],
   },
-  async ({ req, log }) => {
-    const { url, network, txHash, expect, delivery: reported } = await parseJson(req, verifyBody);
+  async ({ req, log, ip }) => {
+    const { url, network, txHash, expect, delivery: reported, share } = await parseJson(req, verifyBody);
 
     let response: EndpointResponse | undefined;
     let report: VerifyReport | undefined;
@@ -104,6 +106,21 @@ export const POST = withApi(
     // Delivery verdict: only meaningful once there is a transaction result.
     const delivery = transaction && txHash ? classifyDelivery({ txHash, findings: transaction.findings, reported }) : undefined;
 
-    return { url, httpStatus: response?.status, report, transaction, delivery };
+    const result = { url, httpStatus: response?.status, report, transaction, delivery };
+    if (!share) return result;
+
+    // A shareable link is stored on the server, so it has its own, tighter budget.
+    // If anything about it fails, the check result is still returned.
+    try {
+      const perIp = await consume(`verify-share:ip:${ip}`, 10, 3_600_000, { failClosed: true });
+      const global = perIp.ok ? await consume("verify-share:global", 1000, 86_400_000, { failClosed: true }) : perIp;
+      if (!global.ok) return { ...result, shareError: "Too many shared reports right now. Try again later." };
+      const saved = await saveReport(result);
+      if (!saved) return { ...result, shareError: "This report could not be saved as a link." };
+      return { ...result, share: { id: saved.id, path: `/verify/r/${saved.id}`, deleteToken: saved.deleteToken, expiresAt: saved.expiresAt } };
+    } catch (err) {
+      if (!(err instanceof RateLimiterUnavailableError)) log.error("verify share failed", { err });
+      return { ...result, shareError: "Sharing is unavailable right now. Your check result is shown above." };
+    }
   }
 );
