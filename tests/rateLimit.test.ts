@@ -86,7 +86,7 @@ describe("fail closed", () => {
 });
 
 describe("per-route fail mode (source of truth: route files)", () => {
-  const closed = ["chat", "copilot", "credits/purchase", "payment-history", "wallet", "debug-analyze", "ecosystem-search"];
+  const closed = ["wallet", "debug-analyze", "ecosystem-search"];
   const open = ["news", "stats", "github-status", "ecosystem-tvl", "achswap-onchain"];
   const src = (r: string) => readFileSync(`app/api/${r}/route.ts`, "utf8");
 

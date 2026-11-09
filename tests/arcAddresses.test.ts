@@ -2,8 +2,6 @@ import { describe, it, expect } from "vitest";
 import { ethers } from "ethers";
 import { ARC_ADDRESSES, describeAddress, getAddress, type AddressEntry } from "@/lib/arcAddresses";
 import { ARC_NETWORKS } from "@/lib/arcConfig";
-import { knowledgeBase } from "@/lib/knowledge";
-import { buildSystemPrompt } from "@/lib/copilotPrompt";
 
 const entries = Object.entries(ARC_ADDRESSES) as [string, AddressEntry][];
 const allAddresses = entries.flatMap(([k, e]) => (["mainnet", "testnet"] as const).flatMap((n) => (e[n] ? [{ key: k, network: n, address: e[n]! }] : [])));
@@ -45,31 +43,5 @@ describe("network config", () => {
     expect(ARC_NETWORKS.mainnet.chainId).toBe(5042);
     expect(ARC_NETWORKS.testnet.chainId).toBe(5042002);
     for (const n of Object.values(ARC_NETWORKS)) expect(n.chainIdHex).toBe("0x" + n.chainId.toString(16));
-  });
-});
-
-describe("knowledge base and prompts use the registry", () => {
-  const testnetOnly = allAddresses.filter((a) => a.network === "testnet" && getAddress(a.key as never, "mainnet") !== a.address && a.address.toLowerCase() !== getAddress(a.key as never, "mainnet")?.toLowerCase());
-  const lines = knowledgeBase.flatMap((item) => item.content.split("\n"));
-
-  it("never prints a Testnet-only address without saying Testnet", () => {
-    for (const { address } of testnetOnly) {
-      for (const line of lines.filter((l) => l.toLowerCase().includes(address.toLowerCase()))) {
-        expect(line.toLowerCase(), `${address}: ${line}`).toMatch(/testnet/);
-      }
-    }
-  });
-
-  it("no longer lists the removed unverifiable addresses", () => {
-    const text = lines.join("\n");
-    expect(text).not.toContain("0xb43db544E2c27092c107639Ad201b3dEfAbcF192"); // TokenMinterV2, not in docs
-    expect(text).not.toContain("0x867650F5eAe8df91445971f14d89fd84F0C9a9f8"); // old FxEscrow value, matches neither network
-  });
-
-  it("copilot prompt carries both networks and Testnet-only notes", () => {
-    const p = buildSystemPrompt("GENERAL");
-    expect(p).toContain("5042002");
-    expect(p).toContain("0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d");
-    expect(p).toContain("Mainnet not published");
   });
 });

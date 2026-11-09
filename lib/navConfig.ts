@@ -3,20 +3,15 @@ import {
   BarChart3,
   BookOpen,
   Bug,
-  Coins,
-  Code2,
   Compass,
   FlaskConical,
   Globe,
   Hammer,
-  History,
   LayoutDashboard,
-  MessageSquare,
   Newspaper,
   Plug,
   ScanSearch,
   ShieldCheck,
-  User,
   Wallet,
   Wrench,
   type LucideIcon,
@@ -46,9 +41,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   { id: "build", label: "Build", icon: Wrench },
   { id: "analyze", label: "Analyze", icon: Activity },
   { id: "ecosystem", label: "Explore", icon: Globe },
-  { id: "account", label: "Account", icon: User },
   { id: "developer", label: "Developer resources", icon: BookOpen },
-  { id: "legacy", label: "Legacy", icon: History },
 ];
 
 export const NAV_ITEMS: readonly NavItem[] = [
@@ -68,15 +61,11 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { group: "ecosystem", label: "News", icon: Newspaper, panel: "news" },
   { group: "ecosystem", label: "Build status", icon: Hammer, panel: "build-status" },
 
-  { group: "account", label: "Credits", icon: Coins, panel: "credits" },
 
   { group: "developer", label: "Arc Developer Docs", icon: BookOpen, href: "https://arc.io/docs", external: true },
   { group: "developer", label: "Circle Documentation", icon: BookOpen, href: "https://circle.com/docs", external: true },
   { group: "developer", label: "USDC Resources", icon: BookOpen, href: "https://www.circle.com/usdc", external: true },
 
-  // Kept for people who still hold credits; no new development.
-  { group: "legacy", label: "Chat", icon: MessageSquare, panel: "chat" },
-  { group: "legacy", label: "Copilot", icon: Code2, panel: "copilot" },
 ];
 
 export const NAV_GROUPS_COOKIE = "microai_nav_groups";

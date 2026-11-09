@@ -7,15 +7,12 @@ export type TabId =
   | "inspect"
   | "lab"
   | "trust"
-  | "chat"
   | "ecosystem"
   | "build-status"
   | "stats"
   | "news"
-  | "copilot"
   | "wallet"
-  | "debugger"
-  | "credits";
+  | "debugger";
 
 const HREF_TO_TAB: Record<string, TabId> = {
   "/": "home",
@@ -23,15 +20,12 @@ const HREF_TO_TAB: Record<string, TabId> = {
   "/inspect": "inspect",
   "/lab": "lab",
   "/trust": "trust",
-  "/chat": "chat",
   "/ecosystem": "ecosystem",
   "/build-status": "build-status",
   "/stats": "stats",
   "/news": "news",
-  "/build": "copilot",
   "/wallet": "wallet",
   "/debug": "debugger",
-  "/credits": "credits",
 };
 
 export const TabNavContext = createContext<((tab: TabId) => void) | null>(null);

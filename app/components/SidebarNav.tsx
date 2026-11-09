@@ -5,7 +5,7 @@ import { ChevronDown, ExternalLink } from "lucide-react";
 import type { TabId } from "@/app/components/tabs/TabNav";
 import { NAV_GROUPS, NAV_ITEMS, groupOfPanel, itemsOfGroup, type NavGroup, type NavItem } from "@/lib/navConfig";
 
-// Sidebar menu: one standalone entry (Chat) plus collapsible groups, all driven
+// Sidebar menu: one standalone entry (Overview) plus collapsible groups, all driven
 // by lib/navConfig.ts. Expanded mode shows accordion groups; icon-only mode
 // shows one icon per group with a flyout menu.
 
