@@ -55,14 +55,21 @@ const verifyExpect = z.object({
   amount: z.string().regex(/^\d{1,30}$/, "amount must be a whole number in the token's smallest unit."),
   asset: EVM_ADDRESS.optional(),
 });
+// What the person saw after paying. Optional, only used with a transaction hash.
+const verifyDelivery = z.object({
+  httpStatus: z.number().int("HTTP status must be a whole number.").min(100, "HTTP status must be between 100 and 599.").max(599, "HTTP status must be between 100 and 599."),
+  paymentResponse: z.string().trim().max(4096, "PAYMENT-RESPONSE is too long.").optional(),
+});
 export const verifyBody = z
   .object({
     url: z.string().trim().min(8, "Enter the full https:// URL of the endpoint.").max(2048, "URL is too long.").optional(),
     network: z.enum(["mainnet", "testnet"]).optional(),
     txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/, "Transaction hash must be 0x followed by 64 hex characters.").optional(),
     expect: verifyExpect.optional(),
+    delivery: verifyDelivery.optional(),
   })
   .superRefine((b, ctx) => {
+    if (b.delivery && !b.txHash) ctx.addIssue({ code: "custom", message: "delivery is only used together with a transaction hash." });
     if (!b.url && !b.txHash) ctx.addIssue({ code: "custom", message: "Give the endpoint URL, or a transaction hash with the expected recipient and amount." });
     else if (b.expect && !b.txHash) ctx.addIssue({ code: "custom", message: "expect is only used together with a transaction hash." });
     else if (b.txHash && !b.url && !(b.expect && b.network)) ctx.addIssue({ code: "custom", message: "With a transaction hash and no URL, give expect (payTo and amount) and the network." });

@@ -1,3 +1,4 @@
+import type { DeliveryVerdict } from "./delivery";
 import type { Finding, Severity } from "./types";
 
 // Small pure helpers for the Verify page, kept here so they can be tested.
@@ -97,6 +98,7 @@ export function reportToText(input: {
   explorerUrl?: string;
   txFindings?: Finding[];
   notChecked?: string[];
+  delivery?: DeliveryVerdict;
 }): string {
   const out: string[] = ["MicroAI Verify (early preview)"];
   if (input.url) out.push(`Endpoint: ${input.url}${input.httpStatus !== undefined ? ` (HTTP ${input.httpStatus})` : ""}`);
@@ -110,6 +112,13 @@ export function reportToText(input: {
     out.push("", `Transaction: ${input.txHash}`);
     if (input.explorerUrl) out.push(`Explorer: ${input.explorerUrl}`);
     out.push(...(input.txFindings ?? []).flatMap(findingLines));
+  }
+  if (input.delivery) {
+    const d = input.delivery;
+    out.push("", `Delivery: ${d.status.toUpperCase()}: ${d.title}`, `  ${d.reason}`);
+    for (const e of d.evidence) out.push(`  Evidence: ${e}`);
+    if (d.fix) out.push(`  Next step: ${d.fix}`);
+    for (const n of d.notes) out.push(`  Note: ${n}`);
   }
   if (input.notChecked?.length) out.push("", "Not checked:", ...input.notChecked.map((n) => `  - ${n}`));
   return out.join("\n");
