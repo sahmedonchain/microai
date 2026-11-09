@@ -1,0 +1,226 @@
+/* Homepage visuals: moon glow, sweeping light, depth. Colors come from the
+   MicroAI tokens in app/globals.css (Arc violet + Circle blue + logo cyan). */
+
+.hm-root {
+  --hm-violet: #8b6bc0;
+  --hm-violet-soft: #b89eea;
+  --hm-blue: #2775ca;
+  --hm-blue-soft: #5ea2ec;
+  --hm-cyan: #22d3ee;
+  position: relative;
+  background: var(--color-space);
+  overflow: hidden;
+}
+
+/* Faint grid behind the hero, fading out downward. */
+.hm-grid {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 900px;
+  background-image:
+    linear-gradient(to right, rgb(133 146 168 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(133 146 168 / 0.07) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 30%, #000, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 30%, #000, transparent 75%);
+  pointer-events: none;
+}
+
+/* ---------- Moon ---------- */
+.hm-moon-wrap {
+  position: absolute;
+  left: 50%;
+  width: 1500px;
+  height: 1500px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.hm-moon-wrap--hero { top: 105px; }
+.hm-moon-wrap--cta { top: 150px; }
+.hm-moon-wrap--cta .hm-moon {
+  box-shadow:
+    inset 0 2px 1px rgb(184 158 234 / 0.85),
+    inset 0 0 38px rgb(139 107 192 / 0.35),
+    inset 0 22px 70px rgb(94 162 236 / 0.12),
+    0 -6px 30px rgb(139 107 192 / 0.5),
+    0 -30px 90px rgb(102 76 136 / 0.4);
+}
+
+.hm-moon {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* Smooth, matte disc: dark body, soft inner violet haze near the rim. */
+  background:
+    radial-gradient(circle at 50% 0%, rgb(139 107 192 / 0.22) 0%, rgb(39 117 202 / 0.08) 22%, transparent 46%),
+    radial-gradient(circle at 50% 50%, #090d18 0%, #05080f 70%);
+  box-shadow:
+    inset 0 2px 1px rgb(184 158 234 / 0.85),
+    inset 0 0 38px rgb(139 107 192 / 0.35),
+    inset 0 22px 70px rgb(94 162 236 / 0.12),
+    0 -6px 30px rgb(139 107 192 / 0.55),
+    0 -30px 110px rgb(102 76 136 / 0.5),
+    0 -90px 260px rgb(39 117 202 / 0.28);
+}
+
+/* Light that glides from one side of the rim to the other and back. */
+.hm-sweep {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: hm-sweep 9s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  will-change: transform;
+}
+.hm-sweep::before,
+.hm-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -16deg at 50% 50%,
+    transparent 0deg,
+    rgb(34 211 238 / 0.0) 3deg,
+    rgb(94 162 236 / 0.9) 12deg,
+    #e9defc 16deg,
+    rgb(184 158 234 / 0.9) 20deg,
+    transparent 32deg,
+    transparent 360deg
+  );
+}
+/* Thin bright rim. */
+.hm-sweep::before {
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+}
+/* Wide soft bloom of the same light. */
+.hm-sweep::after {
+  filter: blur(26px);
+  opacity: 0.85;
+  mask: radial-gradient(farthest-side, transparent calc(100% - 70px), #000 calc(100% - 2px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 70px), #000 calc(100% - 2px));
+}
+
+.hm-sweep--slow { animation-duration: 12s; animation-delay: -4s; }
+
+@keyframes hm-sweep {
+  from { transform: rotate(-36deg); }
+  to { transform: rotate(36deg); }
+}
+
+/* ---------- Depth for cards ---------- */
+.hm-card {
+  position: relative;
+  border: 1px solid rgb(133 146 168 / 0.16);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgb(19 27 44 / 0.9), rgb(9 13 24 / 0.9));
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.05) inset,
+    0 24px 60px -24px rgb(0 0 0 / 0.8);
+  overflow: hidden;
+}
+/* Light edge on top that grows on hover. */
+.hm-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(184 158 234 / 0.7), transparent);
+  opacity: 0.55;
+  transition: opacity 0.3s;
+}
+.hm-card:hover::before { opacity: 1; }
+.hm-card::after {
+  content: "";
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 70%;
+  background: radial-gradient(ellipse at 50% 0%, rgb(139 107 192 / 0.16), transparent 65%);
+  pointer-events: none;
+}
+
+.hm-dash {
+  box-shadow:
+    0 0 0 1px rgb(184 158 234 / 0.1),
+    0 1px 0 rgb(255 255 255 / 0.06) inset,
+    0 40px 90px -20px rgb(0 0 0 / 0.9),
+    0 0 120px -20px rgb(139 107 192 / 0.45);
+  animation: hm-float 7s ease-in-out infinite;
+}
+@keyframes hm-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+
+/* Gradient headline text. */
+.hm-title {
+  background: linear-gradient(180deg, #fff 30%, #a9b6cf 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-wrap: balance;
+}
+
+/* Primary button with a light that passes across it. */
+.hm-btn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #7a5ca3, #664c88);
+  box-shadow: 0 0 0 1px rgb(184 158 234 / 0.35) inset, 0 10px 30px -8px rgb(139 107 192 / 0.7);
+  transition: filter 0.2s, transform 0.2s;
+}
+.hm-btn:hover { filter: brightness(1.12); }
+.hm-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: hm-shine 4.5s ease-in-out infinite;
+}
+@keyframes hm-shine {
+  0%, 55% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+/* Findings in the report appear one after another, then loop. */
+.hm-find { opacity: 0; animation: hm-find 9s ease-out infinite; animation-delay: calc(var(--i) * 0.45s); }
+@keyframes hm-find {
+  0% { opacity: 0; transform: translateX(-6px); }
+  6%, 88% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+
+/* Bars in the chart grow in. */
+.hm-bar { transform-origin: bottom; animation: hm-bar 3.6s ease-in-out infinite alternate; animation-delay: calc(var(--i) * 0.12s); }
+@keyframes hm-bar {
+  from { transform: scaleY(0.55); }
+  to { transform: scaleY(1); }
+}
+
+/* Marquee for the standards strip. */
+.hm-marquee { display: flex; width: max-content; animation: hm-marquee 32s linear infinite; }
+@keyframes hm-marquee { to { transform: translateX(-50%); } }
+
+.hm-pulse { animation: hm-pulse 2.4s ease-in-out infinite; }
+@keyframes hm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (max-width: 767px) {
+  .hm-moon-wrap { width: 1000px; height: 1000px; }
+  .hm-moon-wrap--hero { top: 95px; }
+  .hm-moon-wrap--cta { top: 120px; }
+  .hm-sweep { animation-name: hm-sweep-sm; }
+  @keyframes hm-sweep-sm {
+    from { transform: rotate(-26deg); }
+    to { transform: rotate(26deg); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-sweep, .hm-dash, .hm-btn::after, .hm-find, .hm-bar, .hm-marquee, .hm-pulse { animation: none; }
+  .hm-find { opacity: 1; }
+  .hm-sweep { transform: rotate(0deg); }
+}
