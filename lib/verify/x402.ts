@@ -1,3 +1,4 @@
+import { b64ToUtf8 } from "./b64";
 import type { EndpointResponse, Finding } from "./types";
 
 // Reads the payment requirements out of a 402 response. x402 v2 puts them in
@@ -83,8 +84,12 @@ export function parseResponse(res: EndpointResponse): ParseOutcome {
         fix: "Send PAYMENT-REQUIRED: base64(JSON.stringify(paymentRequired)).",
       });
     } else {
-      const normalized = compact.replace(/-/g, "+").replace(/_/g, "/");
-      const decoded = Buffer.from(normalized, "base64").toString("utf8");
+      let decoded = "";
+      try {
+        decoded = b64ToUtf8(compact);
+      } catch {
+        decoded = "";
+      }
       headerJson = tryJson(decoded);
       if (headerJson === undefined) {
         findings.push({
