@@ -110,16 +110,21 @@
 
 /* ---------- Depth for cards ---------- */
 .hm-card {
+  --cx: -300px;
+  --cy: -300px;
   position: relative;
   border: 1px solid rgb(133 146 168 / 0.16);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgb(19 27 44 / 0.9), rgb(9 13 24 / 0.9));
+  background:
+    radial-gradient(150px circle at var(--cx) var(--cy), rgb(139 107 192 / 0.13), transparent 70%),
+    radial-gradient(ellipse 80% 60% at 50% -12%, rgb(139 107 192 / 0.14), transparent 65%),
+    linear-gradient(180deg, rgb(19 27 44 / 0.9), rgb(9 13 24 / 0.9));
   box-shadow:
     0 1px 0 rgb(255 255 255 / 0.05) inset,
     0 24px 60px -24px rgb(0 0 0 / 0.8);
   overflow: hidden;
 }
-/* Light edge on top that grows on hover. */
+/* Light edge on top. */
 .hm-card::before {
   content: "";
   position: absolute;
@@ -127,15 +132,18 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, rgb(184 158 234 / 0.7), transparent);
   opacity: 0.55;
-  transition: opacity 0.3s;
 }
-.hm-card:hover::before { opacity: 1; }
+/* Border that glows where the cursor is. */
 .hm-card::after {
   content: "";
   position: absolute;
-  inset: -40% -20% auto -20%;
-  height: 70%;
-  background: radial-gradient(ellipse at 50% 0%, rgb(139 107 192 / 0.16), transparent 65%);
+  inset: -1px;
+  border-radius: 16px;
+  padding: 1px;
+  background: radial-gradient(130px circle at var(--cx) var(--cy), #b89eea, #5ea2ec 50%, transparent 75%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
   pointer-events: none;
 }
 
@@ -239,3 +247,6 @@
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hm-menu-in { animation: none; } }
+
+/* When the pointer script runs it drives the moon light itself. */
+.hm-js .hm-moon-wrap--hero .hm-sweep { animation: none; }
