@@ -224,3 +224,11 @@
   .hm-find { opacity: 1; }
   .hm-sweep { transform: rotate(0deg); }
 }
+
+/* Section heading eases in after a menu jump lands. */
+.hm-arrive { animation: hm-arrive 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes hm-arrive {
+  from { opacity: 0.15; transform: translateY(22px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) { .hm-arrive { animation: none; } }

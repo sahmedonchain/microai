@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { LogoMark } from "@/app/components/landing/LandingNavbar";
+import { SiteNav } from "./SiteNav";
 import "./home.css";
 
 // Every tool link on this page goes through one button.
@@ -63,38 +64,6 @@ function Pill({ tone, children }: { tone: "ok" | "error" | "info"; children: Rea
         ? "border-danger/30 bg-danger/10 text-danger"
         : "border-secondary/30 bg-secondary-dim text-secondary-text";
   return <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${cls}`}>{children}</span>;
-}
-
-/* ---------------- Header ---------------- */
-
-function Header() {
-  return (
-    <header className="relative z-30">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5 sm:px-6" aria-label="Main">
-        <Link href="/" className="flex items-center gap-3" aria-label="MicroAI home">
-          <LogoMark className="size-9 shrink-0" />
-          <span className="text-base font-semibold text-text">MicroAI</span>
-        </Link>
-
-        <ul className="hidden items-center gap-1 rounded-full border border-border bg-surface/70 px-2 py-1.5 text-sm text-muted backdrop-blur md:flex">
-          {[
-            ["Why", "#why"],
-            ["Tools", "#tools"],
-            ["Ways to use it", "#ways"],
-            ["Limits", "#limits"],
-          ].map(([label, href]) => (
-            <li key={href}>
-              <a href={href} className="rounded-full px-4 py-1.5 transition hover:bg-surface-raised hover:text-text">
-                {label}
-              </a>
-            </li>
-          ))}
-        </ul>
-
-        <LaunchButton className="!px-5 !py-2.5" />
-      </nav>
-    </header>
-  );
 }
 
 /* ---------------- Hero dashboard preview ---------------- */
@@ -207,7 +176,7 @@ function Hero() {
     <section id="top" className="relative overflow-hidden pb-24" aria-labelledby="hero-title">
       <div className="hm-grid" aria-hidden="true" />
       <Moon variant="hero" />
-      <Header />
+      <div className="h-[72px]" aria-hidden="true" />
 
       <div className="relative z-20 mx-auto max-w-6xl px-4 pt-20 text-center sm:px-6 md:pt-32">
         <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-4 py-1.5 text-xs text-muted backdrop-blur">
@@ -679,6 +648,7 @@ function Footer() {
 export function Landing() {
   return (
     <div className="hm-root font-sans text-text">
+      <SiteNav />
       <main>
         <Hero />
         <Standards />
