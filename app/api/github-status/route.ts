@@ -79,7 +79,7 @@ async function fetchGithubWithRetry(repo: string): Promise<GithubStatusPayload> 
 // The error strings are the literal values the Build status UI matches on.
 const log = createLogger({ route: "github-status" });
 
-export const GET = withApi({ name: "github-status", limits: [{ limit: 60, windowSec: 60 }] }, async ({ req }) => {
+export const GET = withApi({ name: "github-status", limits: [{ limit: 60, windowSec: 60 }], onLimiterError: "closed" }, async ({ req }) => {
   const { repo } = parseQuery(req, githubStatusQuery);
   const key = cacheKey(repo);
 

@@ -86,9 +86,9 @@ describe("fail closed", () => {
 });
 
 describe("per-route fail mode (source of truth: route files)", () => {
-  // Routes that reach Arc RPC or the Explorer, or spend AI, fail closed. The cached public feeds below keep the in-memory fallback on purpose.
-  const closed = ["wallet", "debug-analyze", "ecosystem-search", "chain", "stats", "achswap-onchain", "verify", "trust"];
-  const open = ["news", "github-status", "ecosystem-tvl"];
+  // Every route that reaches Arc RPC, the Explorer or another outside service, or spends AI, fails closed. The caches that protect those upstreams live in the same Redis, so when Redis is down a fail-open route would call upstream uncached with only a per-instance limit.
+  const closed = ["wallet", "debug-analyze", "ecosystem-search", "chain", "stats", "achswap-onchain", "news", "github-status", "ecosystem-tvl", "verify", "trust"];
+  const open = ["csp-report"];
   const src = (r: string) => readFileSync(`app/api/${r}/route.ts`, "utf8");
 
   it.each(closed)("%s fails closed", (r) => expect(src(r)).toMatch(/onLimiterError:\s*"closed"/));

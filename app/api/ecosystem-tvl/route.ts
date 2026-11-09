@@ -7,7 +7,7 @@ import { getArcTvlForProject } from "@/lib/ecosystemEnrichment";
 // projects that were never going to match.
 const ENRICHABLE_PROJECTS = ["Morpho", "Aave", "Aerodrome / Velodrome", "Synthra", "Argus"];
 
-export const GET = withApi({ name: "ecosystem-tvl", limits: [{ limit: 30, windowSec: 60 }] }, async () => {
+export const GET = withApi({ name: "ecosystem-tvl", limits: [{ limit: 30, windowSec: 60 }], onLimiterError: "closed" }, async () => {
   const entries = await Promise.all(
     ENRICHABLE_PROJECTS.map(async (name) => [name, await getArcTvlForProject(name)] as const)
   );
