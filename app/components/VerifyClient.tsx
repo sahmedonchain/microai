@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { DeliveryVerdict, DeliveryStatus } from "@/lib/verify/delivery";
 import type { Finding, Severity, VerifyReport } from "@/lib/verify/types";
 import { SEVERITY_LABEL, groupFindings, parsePrefill, reportToText, sumCounts, usdcToUnits, verdict } from "@/lib/verify/ui";
 
@@ -18,6 +19,7 @@ interface VerifyResponse {
   httpStatus?: number;
   report?: VerifyReport;
   transaction?: TxResult;
+  delivery?: DeliveryVerdict;
 }
 
 type NetworkChoice = "" | "mainnet" | "testnet";
@@ -38,6 +40,48 @@ const PILL: Record<Severity, string> = {
   ok: "border-success/25 bg-success/10 text-success",
 };
 const MARK: Record<Severity, string> = { error: "✕", warning: "▲", info: "●", ok: "✓" };
+
+const DELIVERY_LOOK: Record<DeliveryStatus, { label: string; tone: Severity }> = {
+  delivered: { label: "Delivered", tone: "ok" },
+  mismatch: { label: "Mismatch", tone: "error" },
+  pending: { label: "Pending", tone: "warning" },
+  failed: { label: "Failed", tone: "error" },
+  unknown: { label: "Unknown", tone: "info" },
+};
+
+function DeliveryCard({ d }: { d: DeliveryVerdict }) {
+  const look = DELIVERY_LOOK[d.status];
+  return (
+    <section className="mt-6" aria-labelledby="delivery-heading">
+      <h2 id="delivery-heading" className="text-lg font-semibold">
+        Delivery
+      </h2>
+      <div className="mt-2 rounded-lg border border-border bg-surface p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${PILL[look.tone]}`}>
+            <span aria-hidden="true">{MARK[look.tone]}</span>
+            {look.label}
+          </span>
+          <h3 className="min-w-0 text-base font-semibold">{d.title}</h3>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-muted">{d.reason}</p>
+        {d.evidence.length > 0 && (
+          <ul className="mt-2 list-disc space-y-1 pl-5 font-mono text-xs text-muted">
+            {d.evidence.map((e) => (
+              <li key={e} className="break-all">{e}</li>
+            ))}
+          </ul>
+        )}
+        {d.fix && <p className="mt-2 text-sm"><span className="font-medium">Next step: </span>{d.fix}</p>}
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted">
+          {d.notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
 
 const FIELD =
   "w-full rounded-lg border border-border bg-space px-3.5 py-3 text-base text-text placeholder:text-muted focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -120,6 +164,8 @@ export function VerifyClient() {
   const [txHash, setTxHash] = useState("");
   const [payTo, setPayTo] = useState("");
   const [amount, setAmount] = useState("");
+  const [answerStatus, setAnswerStatus] = useState("");
+  const [paymentResponse, setPaymentResponse] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VerifyResponse | null>(null);
@@ -180,6 +226,12 @@ export function VerifyClient() {
         if (!u && !network) return setError("Choose the network the transaction is on.");
         body.expect = { payTo: p, amount: units };
       }
+      const st = answerStatus.trim();
+      const pr = paymentResponse.trim();
+      if (st || pr) {
+        if (!/^[1-5][0-9]{2}$/.test(st)) return setError("Enter the HTTP status the service answered after you paid, for example 200 or 503.");
+        body.delivery = pr ? { httpStatus: Number(st), paymentResponse: pr } : { httpStatus: Number(st) };
+      }
     }
 
     setLoading(true);
@@ -222,6 +274,7 @@ export function VerifyClient() {
       explorerUrl: result.transaction?.explorerUrl,
       txFindings: result.transaction?.findings,
       notChecked: result.report?.notChecked,
+      delivery: result.delivery,
     });
     try {
       await navigator.clipboard.writeText(text);
@@ -317,6 +370,20 @@ export function VerifyClient() {
               </label>
               <input id="v-amt" type="text" inputMode="decimal" autoComplete="off" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.001" className={`${FIELD} mt-1.5 font-mono`} />
             </div>
+            <div className="border-t border-border pt-4">
+              <p className="text-sm font-medium">Did the service deliver? (optional)</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                Tell MicroAI what the service answered after you paid. MicroAI sends no payment and cannot see this itself, so it uses what you enter.
+              </p>
+              <label htmlFor="v-ans" className="mt-3 block text-sm font-medium">
+                HTTP status of the service&apos;s answer
+              </label>
+              <input id="v-ans" type="text" inputMode="numeric" autoComplete="off" value={answerStatus} onChange={(e) => setAnswerStatus(e.target.value)} placeholder="200" className={`${FIELD} mt-1.5 font-mono`} />
+              <label htmlFor="v-pr" className="mt-3 block text-sm font-medium">
+                PAYMENT-RESPONSE header (if you have it)
+              </label>
+              <input id="v-pr" type="text" autoComplete="off" spellCheck={false} value={paymentResponse} onChange={(e) => setPaymentResponse(e.target.value)} placeholder="base64…" className={`${FIELD} mt-1.5 font-mono`} />
+            </div>
           </div>
         </details>
 
@@ -360,6 +427,8 @@ export function VerifyClient() {
                 <Findings items={result.transaction.findings} />
               </>
             )}
+
+            {result.delivery && <DeliveryCard d={result.delivery} />}
 
             {result.report && (
               <details className="mt-6 rounded-lg border border-border bg-surface p-4">

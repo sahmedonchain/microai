@@ -5,13 +5,15 @@ import { SafeFetchError } from "@/lib/safeFetch";
 import { describeFetchError, fetchChallenge } from "@/lib/verify/fetchEndpoint";
 import { countFindings, sortFindings, verifyEndpointResponse } from "@/lib/verify/checks";
 import { selectPaymentOption } from "@/lib/verify/option";
+import { classifyDelivery } from "@/lib/verify/delivery";
 import { verifyTransaction, type ExpectedPayment } from "@/lib/verify/txVerify";
 import type { EndpointResponse, Finding, VerifyReport } from "@/lib/verify/types";
 import { verifyBody } from "@/lib/schemas";
 
 // MicroAI Verify: reads an x402 endpoint's 402 answer and checks it against
 // what is known about Arc, and/or checks a transaction against what the
-// endpoint asked for. It sends no payment and no body, only a GET without
+// endpoint asked for, and, given what the service answered after payment,
+// says whether it delivered. It sends no payment and no body, only a GET without
 // payment, through the guarded outbound client.
 
 function hostOf(url: string): string {
@@ -46,7 +48,7 @@ export const POST = withApi(
     ],
   },
   async ({ req, log }) => {
-    const { url, network, txHash, expect } = await parseJson(req, verifyBody);
+    const { url, network, txHash, expect, delivery: reported } = await parseJson(req, verifyBody);
 
     let response: EndpointResponse | undefined;
     let report: VerifyReport | undefined;
@@ -99,6 +101,9 @@ export const POST = withApi(
       }
     }
 
-    return { url, httpStatus: response?.status, report, transaction };
+    // Delivery verdict: only meaningful once there is a transaction result.
+    const delivery = transaction && txHash ? classifyDelivery({ txHash, findings: transaction.findings, reported }) : undefined;
+
+    return { url, httpStatus: response?.status, report, transaction, delivery };
   }
 );

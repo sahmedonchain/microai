@@ -143,3 +143,21 @@ describe("groupFindings", () => {
     expect(t.match(/Not an Arc network/g)).toBeNull();
   });
 });
+
+describe("reportToText with a delivery verdict", () => {
+  it("includes the status, next step and the honesty notes", async () => {
+    const { classifyDelivery } = await import("@/lib/verify/delivery");
+    const delivery = classifyDelivery({
+      txHash: "0x" + "ab".repeat(32),
+      findings: [
+        { id: "tx.status", severity: "ok", title: "ok", reason: "r" },
+        { id: "tx.amount", severity: "ok", title: "ok", reason: "r" },
+      ],
+      reported: { httpStatus: 503 },
+    });
+    const text = reportToText({ findings: [], txHash: "0x" + "ab".repeat(32), txFindings: [], delivery });
+    expect(text).toMatch(/Delivery: MISMATCH/);
+    expect(text).toMatch(/Next step:/);
+    expect(text).toMatch(/Note: .*you reported/);
+  });
+});
