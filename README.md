@@ -170,6 +170,7 @@ All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In
 
 | Route | Method | Sign-in | Purpose |
 |---|---|---|---|
+| `/health` | GET | no | Uptime check: 200 when Redis and the Arc RPC answer, 503 and the name of the failing dependency otherwise. See [docs/incident-response.md](docs/incident-response.md) |
 | `/session/nonce` | GET | no | Issue a single-use sign-in nonce |
 | `/session` | GET, POST | no | Read the session; verify a signed message and start a session |
 | `/mcp` | POST | no | Read-only MCP server (JSON-RPC 2.0, one request per call, `initialize`, `tools/list`, `tools/call`) |
