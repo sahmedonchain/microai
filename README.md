@@ -206,7 +206,7 @@ lib/
   killSwitch.ts, csrf.ts, csp.ts, rateLimit.ts   Protections
   verify/         MicroAI Verify: x402 parser, checks, guarded fetch, test fixtures
 tests/            Vitest suites (Redis, RPC and AI are mocked)
-scripts/          One-off maintenance scripts
+scripts/          One-off maintenance scripts (`pnpm export-credit-balances` is read-only: it lists leftover credit balances and their USDC value for refunds, sends nothing)
 docs/assets/      Banner and social preview images
 proxy.ts          Sets the Content-Security-Policy on page responses
 ```
