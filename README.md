@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="docs/assets/logo.svg" alt="MicroAI logo" width="96" height="96">
-</p>
-
-<p align="center">
   <img src="docs/assets/banner-v2.svg" alt="MicroAI: inspect, verify and debug USDC and x402 payments on Arc" width="100%">
 </p>
 
