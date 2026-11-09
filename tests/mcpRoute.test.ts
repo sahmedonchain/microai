@@ -101,9 +101,12 @@ describe("MCP guards", () => {
     expect(last).toBe(429);
   });
   it("fails closed when Redis is down", async () => {
-    redis = { ...makeFakeRedis(), eval: async () => { throw new Error("down"); }, incr: async () => { throw new Error("down"); } } as never;
+    redis.multi = () => {
+      throw new Error("redis down");
+    };
     const res = await rpc({ jsonrpc: "2.0", id: 1, method: "ping" }, "198.51.100.62");
-    expect([429, 503]).toContain(res.status);
+    expect(res.status).toBe(503);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
