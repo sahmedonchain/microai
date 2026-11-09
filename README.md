@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="MicroAI: inspect, verify and debug USDC and x402 payments on Arc" width="100%">
+  <img src="docs/assets/banner-v2.svg" alt="MicroAI: inspect, verify and debug USDC and x402 payments on Arc" width="100%">
 </p>
 
 <p align="center">
