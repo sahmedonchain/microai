@@ -141,3 +141,52 @@ describe("/api/verify request rules", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 });
+
+describe("/api/verify remembers which transactions it has checked", () => {
+  const ids = (json: { transaction: { findings: { id: string }[] } }) => json.transaction.findings.map((f) => f.id);
+  const body = { txHash: HASH, network: "mainnet", expect: { payTo: PAYEE, amount: "10000" } };
+
+  it("says nothing the first time and notes the repeat, without changing the verdict", async () => {
+    rpc.mockResolvedValue(goodReceipt());
+    const first = await (await POST(post(body))).json();
+    expect(ids(first)).not.toContain("tx.seen");
+    const second = await (await POST(post(body))).json();
+    expect(ids(second)).toContain("tx.seen");
+    const note = second.transaction.findings.find((f: { id: string }) => f.id === "tx.seen");
+    expect(note.severity).toBe("info");
+    expect(note.reason).toMatch(/does not know your orders/);
+    expect(second.transaction.counts.error).toBe(0);
+    expect(second.transaction.counts.warning).toBe(0);
+  });
+
+  it("matches the hash regardless of letter case", async () => {
+    rpc.mockResolvedValue(goodReceipt());
+    await POST(post(body));
+    rpc.mockResolvedValue(goodReceipt());
+    const again = await (await POST(post({ ...body, txHash: HASH.toUpperCase().replace("0X", "0x") }))).json();
+    expect(ids(again)).toContain("tx.seen");
+  });
+
+  it("does not remember a transaction that reverted", async () => {
+    rpc.mockResolvedValue({ ...goodReceipt(), status: "0x0" });
+    await POST(post(body));
+    expect(await redis.get(`microai:txseen:mainnet:${HASH}`)).toBeNull();
+  });
+
+  it("two simultaneous first checks cannot both be first", async () => {
+    rpc.mockResolvedValue(goodReceipt());
+    const [a, b] = await Promise.all([POST(post(body)), POST(post(body))]);
+    const seen = [ids(await a.json()), ids(await b.json())].filter((x) => x.includes("tx.seen"));
+    expect(seen).toHaveLength(1);
+  });
+
+  it("a Redis failure adds no finding and does not break the check", async () => {
+    rpc.mockResolvedValue(goodReceipt());
+    redis.set = async () => {
+      throw new Error("redis down");
+    };
+    const res = await POST(post(body));
+    expect(res.status).toBe(200);
+    expect(ids(await res.json())).not.toContain("tx.seen");
+  });
+});
