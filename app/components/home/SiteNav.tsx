@@ -6,6 +6,7 @@ import { Brand } from "./Brand";
 
 const LINKS = [
   { label: "Why", id: "why" },
+  { label: "How it works", id: "how" },
   { label: "Tools", id: "tools" },
   { label: "Ways to use it", id: "ways" },
   { label: "Limits", id: "limits" },
@@ -159,7 +160,7 @@ export function SiteNav() {
               <a
                 href={`#${id}`}
                 aria-current={active === id ? "true" : undefined}
-                className={`block rounded-full px-4 py-1.5 transition-all duration-300 ${
+                className={`block rounded-full px-3 py-1.5 lg:px-4 transition-all duration-300 ${
                   active === id
                     ? "bg-accent-dim text-accent-text shadow-[0_0_20px_-4px_rgb(139_107_192/0.7)] ring-1 ring-accent/40"
                     : "hover:bg-surface-raised hover:text-text"
