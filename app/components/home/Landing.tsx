@@ -195,10 +195,6 @@ function Hero() {
         </p>
 
         <TryIt />
-
-        <div className="mt-8 flex justify-center">
-          <LaunchButton />
-        </div>
       </div>
 
       <div className="relative z-20 mx-auto mt-14 max-w-6xl px-4 sm:px-6 md:mt-20">
