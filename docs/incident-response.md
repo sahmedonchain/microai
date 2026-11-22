@@ -1,6 +1,6 @@
 # Incident response and monitoring
 
-MicroAI is live on Arc Mainnet, early preview, not independently audited. This page is the plan for when something goes wrong. Nothing here is automatic: the monitors and alerts below must be set up by the owner in their own accounts.
+MicroAI is live on Arc Mainnet, not independently audited. This page is the plan for when something goes wrong. Nothing here is automatic: the monitors and alerts below must be set up by the owner in their own accounts.
 
 ## What to watch
 

@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/network-Arc%20Mainnet-5b3df5" alt="Network: Arc Mainnet">
   <img src="https://img.shields.io/badge/tools-read--only-22d3ee" alt="Tools: read-only">
   <img src="https://img.shields.io/badge/MCP-server-1d4fff" alt="MCP server">
-  <img src="https://img.shields.io/badge/status-early%20preview-orange" alt="Status: early preview">
+  <img src="https://img.shields.io/badge/status-live%20on%20Arc%20Mainnet-brightgreen" alt="Status: live on Arc Mainnet">
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 **MicroAI is a set of read-only developer tools for checking USDC and [x402](https://www.x402.org) payments on [Arc](https://docs.arc.io).** Give it an endpoint, a payment header or a transaction hash and it tells you, with evidence, what is right, what is wrong and how to fix it. It never sends a payment and never asks for a private key or seed phrase. It is free to use, with rate limits, and live on Arc Mainnet.
 
 > [!NOTE]
-> **Early preview.** Live on Arc Mainnet, built and maintained by one developer. It has not been independently audited, and it is an independent project, not an official Arc or Circle product. See [What is and is not verified](#what-is-and-is-not-verified).
+> **Live on Arc Mainnet.** Built and maintained by one developer. It has not been independently audited, and it is an independent project, not an official Arc or Circle product. See [What is and is not verified](#what-is-and-is-not-verified).
 
 ## Contents
 
@@ -331,7 +331,7 @@ This is a direction, not a promise. **A stage starts only when the previous one 
 | **Delivery checks** | Catch "payment went through but the service was not delivered": a Delivered / Mismatch / Pending / Failed / Unknown verdict from the on-chain check plus what the service answered | Built into Verify, uses the answer you report (MicroAI sends no payment and cannot see it); outside builder feedback still to come |
 | **Shareable reports** | One link per check, with history, to share with a team | Built into Verify: opt-in link, stored 30 days, server-made content only, delete token; history is kept in your own browser |
 | **Trust API** | Let an agent ask "is this service's payment setup sound?" before paying | Read-only version built (`GET /api/trust`). Paying per call with x402 and writing proof to an ERC-8004 registry are deliberately not built until there is proven demand, because both handle real money or on-chain state |
-| **Payload inspector** | See what a payment attempt asked, signed and reported | Built (early preview, `/inspect`). Decodes `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` in the browser only: nothing is sent or stored, because a signed payload can move money until it is used. Compares recipient, amount, network and expiry. It does not verify the signature, settlement or delivery |
+| **Payload inspector** | See what a payment attempt asked, signed and reported | Built (live on Arc Mainnet, `/inspect`). Decodes `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` in the browser only: nothing is sent or stored, because a signed payload can move money until it is used. Compares recipient, amount, network and expiry. It does not verify the signature, settlement or delivery |
 
 **Definition of done for Verify v1:** at least 20 test cases pass (good and bad configurations), 5 deliberately broken endpoints are each caught correctly, at least 5 real Mainnet transactions are verified correctly, at least 3 outside builders have used it and given feedback, and at least 1 says it caught a real problem. If builders do not find it useful, the plan changes, and any change would be announced in advance.
 

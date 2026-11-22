@@ -212,7 +212,7 @@ export function VerifyClient({ embedded = false }: { embedded?: boolean } = {}) 
 
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">MicroAI Verify</h1>
-        <span className="inline-flex items-center rounded-full border border-warning/25 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">Early preview</span>
+        <span className="inline-flex items-center rounded-full border border-success/25 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Live on Arc Mainnet</span>
       </div>
       <p className="mt-3 max-w-prose leading-relaxed text-muted">
         Check an x402 payment setup on Arc before real money moves. Give it your endpoint and it reads the payment requirements the way a client would, then tells you what is wrong and how to fix it. It can also match a transaction against what the endpoint asked for.
@@ -378,7 +378,7 @@ export function VerifyClient({ embedded = false }: { embedded?: boolean } = {}) 
       <section className="mt-12 border-t border-border pt-6">
         <h2 className="text-lg font-semibold">Did Verify miss something, or get it wrong?</h2>
         <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted">
-          This is an early preview and your experience decides what it checks next. Tell me what you tried and what you expected.
+          This tool is live on Arc Mainnet and your experience decides what it checks next. Tell me what you tried and what you expected.
         </p>
         <a
           href="https://github.com/sahmedonchain/microai/issues/new?title=Verify%20feedback%3A%20"

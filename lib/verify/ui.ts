@@ -100,7 +100,7 @@ export function reportToText(input: {
   notChecked?: string[];
   delivery?: DeliveryVerdict;
 }): string {
-  const out: string[] = ["MicroAI Verify (early preview)"];
+  const out: string[] = ["MicroAI Verify (live on Arc Mainnet)"];
   if (input.url) out.push(`Endpoint: ${input.url}${input.httpStatus !== undefined ? ` (HTTP ${input.httpStatus})` : ""}`);
   if (input.findings.length) {
     const g = groupFindings(input.findings);

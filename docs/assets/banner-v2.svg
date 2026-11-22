@@ -35,7 +35,7 @@
 
   <text x="270" y="150" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="76" font-weight="800" fill="#ffffff">MicroAI</text>
   <text x="272" y="198" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="500" fill="#9fd8ff">Inspect, verify and debug USDC and x402 payments on Arc</text>
-  <text x="272" y="244" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#8b93b8">Read-only tools for developers and AI agents. Early preview.</text>
+  <text x="272" y="244" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="21" fill="#8b93b8">Read-only tools for developers and AI agents. Live on Arc Mainnet.</text>
 
   <rect x="1000" y="40" width="240" height="40" rx="20" fill="#0d2a2a" stroke="#22D3EE" stroke-width="1.5"/>
   <circle cx="1026" cy="60" r="6" fill="#22D3EE"/>

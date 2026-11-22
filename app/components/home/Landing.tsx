@@ -184,7 +184,7 @@ function Hero() {
       <div className="relative z-20 mx-auto max-w-6xl px-4 pt-20 text-center sm:px-6 md:pt-32">
         <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-4 py-1.5 text-xs text-muted backdrop-blur">
           <span className="hm-pulse size-1.5 rounded-full bg-success" aria-hidden="true" />
-          Live on Arc Mainnet. Early preview.
+          Live on Arc Mainnet.
         </span>
 
         <h1 id="hero-title" className="hm-title mx-auto mt-6 max-w-3xl text-4xl font-semibold leading-[1.08] sm:text-5xl md:text-6xl">
@@ -557,7 +557,7 @@ const LIMITS: { icon: LucideIcon; title: string; text: string }[] = [
   { icon: Globe2, title: "Arc only", text: "MicroAI checks Arc Mainnet and Arc Testnet. Other networks are not checked." },
   { icon: Lock, title: "Not independently audited", text: "Built and maintained by one developer. Do not rely on it for large amounts." },
   { icon: EyeOff, title: "It cannot know who owns an address", text: "It can confirm a recipient is valid, not whose it is. Confirm that it is yours." },
-  { icon: FlaskConical, title: "Early preview", text: "Tests so far use mocks. A live Testnet end-to-end run is the next step." },
+  { icon: FlaskConical, title: "Mocked tests", text: "Tests so far use mocks. A live Testnet end-to-end run is the next step." },
   { icon: Network, title: "Independent project", text: "Not an official Arc or Circle product, and not endorsed by either." },
 ];
 
