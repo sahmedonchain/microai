@@ -6,3 +6,4 @@ allowBuilds:
   unrs-resolver: true
 overrides:
   postcss-selector-parser@<7.1.6: ">=7.1.6"
+  minimatch@>=7.0.0 <11.0.1: ">=11.0.1"

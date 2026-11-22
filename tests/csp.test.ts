@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { buildCsp, cspHeaderName, isCspEnforced, makeNonce } from "@/lib/csp";
@@ -31,8 +32,9 @@ describe("buildCsp", () => {
     expect(directive(csp, "form-action")).toBe("form-action 'self'");
   });
 
-  it("limits connections to self and Arc mainnet RPC; no third-party script origins", () => {
-    expect(directive(csp, "connect-src")).toBe("connect-src 'self' https://rpc.mainnet.arc.io");
+  it("limits connections and images to this origin; no third-party script origins", () => {
+    expect(directive(csp, "connect-src")).toBe("connect-src 'self'");
+    expect(directive(csp, "img-src")).toBe("img-src 'self' data: blob:");
     expect(directive(csp, "script-src")).not.toMatch(/https?:/);
   });
 
@@ -102,5 +104,26 @@ describe("proxy", () => {
     expect(re.test("/_next/static/x.js")).toBe(false);
     expect(re.test("/favicon.ico")).toBe(false);
     expect(m.missing).toContainEqual({ type: "header", key: "next-router-prefetch" });
+  });
+});
+
+describe("the CSP matches what the browser code actually does", () => {
+  // If a client component starts calling another origin, this fails and the CSP must be reviewed first.
+  const walk = (dir: string): string[] =>
+    readdirSync(dir).flatMap((n: string) => {
+      const p = `${dir}/${n}`;
+      return statSync(p).isDirectory() ? walk(p) : /\.tsx$/.test(p) ? [p] : [];
+    });
+  const clientFiles = walk("app").filter((f) => /^\s*["']use client["']/m.test(readFileSync(f, "utf8")));
+
+  it("client components fetch only same-origin /api paths or relative URLs", () => {
+    for (const f of clientFiles) {
+      const src = readFileSync(f, "utf8");
+      expect(src, f).not.toMatch(/fetch\(\s*["'`]https?:/);
+      expect(src, f).not.toMatch(/new WebSocket\(|new EventSource\(/);
+    }
+  });
+  it("no component renders a remote image", () => {
+    for (const f of walk("app")) expect(readFileSync(f, "utf8"), f).not.toMatch(/<img\b|next\/image|src=["']https?:/);
   });
 });

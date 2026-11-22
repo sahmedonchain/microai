@@ -1,31 +1,38 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="MicroAI: Payment tools for builders on Arc" width="100%">
+  <img src="docs/assets/banner-v2.svg" alt="MicroAI: inspect, verify and debug USDC and x402 payments on Arc" width="100%">
 </p>
 
 <p align="center">
   <a href="https://github.com/sahmedonchain/microai/actions/workflows/ci.yml"><img src="https://github.com/sahmedonchain/microai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/sahmedonchain/microai/actions/workflows/github-code-scanning/codeql"><img src="https://github.com/sahmedonchain/microai/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL"></a>
   <img src="https://img.shields.io/badge/network-Arc%20Mainnet-5b3df5" alt="Network: Arc Mainnet">
-  <img src="https://img.shields.io/badge/node-24%20LTS-339933" alt="Node 24 LTS">
-  <img src="https://img.shields.io/badge/status-experimental-orange" alt="Status: experimental">
+  <img src="https://img.shields.io/badge/tools-read--only-22d3ee" alt="Tools: read-only">
+  <img src="https://img.shields.io/badge/MCP-server-1d4fff" alt="MCP server">
+  <img src="https://img.shields.io/badge/status-live%20on%20Arc%20Mainnet-brightgreen" alt="Status: live on Arc Mainnet">
 </p>
 
 <p align="center">
   <a href="https://microai-tan.vercel.app"><b>Live app</b></a> ·
+  <a href="https://microai-tan.vercel.app/verify">Verify</a> ·
+  <a href="https://microai-tan.vercel.app/inspect">Payload inspector</a> ·
+  <a href="https://microai-tan.vercel.app/lab">Testnet lab</a> ·
+  <a href="#connect-an-ai-agent-mcp">MCP</a> ·
   <a href="https://microai-tan.vercel.app/security">Security</a> ·
-  <a href="https://microai-tan.vercel.app/terms">Terms</a> ·
-  <a href="https://microai-tan.vercel.app/privacy">Privacy</a> ·
   <a href="#roadmap">Roadmap</a>
 </p>
 
-MicroAI is a developer app for **Arc** that is live on Arc Mainnet today and is growing into a **payment verification tool for builders**. Today it checks x402 payment setups on Arc (**MicroAI Verify**), inspects payment headers in the browser, explains transactions and analyses wallets. It is free to use: there are no credits and MicroAI takes no payments. See [Where MicroAI is going](#where-microai-is-going).
+**MicroAI is a set of read-only developer tools for checking USDC and [x402](https://www.x402.org) payments on [Arc](https://docs.arc.io).** Give it an endpoint, a payment header or a transaction hash and it tells you, with evidence, what is right, what is wrong and how to fix it. It never sends a payment and never asks for a private key or seed phrase. It is free to use, with rate limits, and live on Arc Mainnet.
 
 > [!NOTE]
-> Live on Arc Mainnet. Experimental and not independently audited. Built on Arc: MicroAI is an independent project, not an official Arc or Circle product.
+> **Live on Arc Mainnet.** Built and maintained by one developer. It has not been independently audited, and it is an independent project, not an official Arc or Circle product. See [What is and is not verified](#what-is-and-is-not-verified).
 
 ## Contents
 
-- [Where MicroAI is going](#where-microai-is-going)
+- [Why it exists](#why-it-exists)
+- [What you can do with it](#what-you-can-do-with-it)
+- [Connect an AI agent (MCP)](#connect-an-ai-agent-mcp)
+- [What is and is not verified](#what-is-and-is-not-verified)
+- [What a Verify report looks like](#what-a-verify-report-looks-like)
 - [Live today](#live-today)
 - [How it works](#how-it-works)
 - [On-chain details](#on-chain-details-arc-mainnet)
@@ -38,33 +45,75 @@ MicroAI is a developer app for **Arc** that is live on Arc Mainnet today and is 
 - [Contributing and feedback](#contributing-and-feedback)
 - [Author](#author)
 
-## Where MicroAI is going
+## Why it exists
 
 Paying with USDC on Arc looks simple, but the mistakes are easy to make and usually show up after real money has moved:
 
 | Common mistake | What goes wrong |
 |---|---|
 | USDC has 6 decimals in its ERC-20 interface but 18 as the native gas token | Wrong amount, off by a factor of a million or more |
-| A Testnet address used on Mainnet | Money sent to the wrong place, or the transaction fails |
-| Wrong chain ID or recipient address | Payment lands on the wrong network or with the wrong person |
+| A Testnet address or chain used on Mainnet | Money sent to the wrong place, or the transaction fails |
+| Wrong chain ID, asset or recipient in a `402` answer | A client pays the wrong network or the wrong person |
 | A malformed x402 payment response | Agents and clients cannot pay at all |
-| Payment succeeded but the app did not notice | Money moved, the user got no service or credits |
+| A payment that succeeded but a service that did not deliver | Money moved, nothing received |
 
-MicroAI already does part of this work in production: it verifies USDC payments on-chain, protects against replays, recovers lost payments and explains transactions. **MicroAI Verify** builds on that foundation. A developer gives it an x402 endpoint (and optionally a transaction hash), and it reports what is right and what is wrong, with evidence and a fix.
+MicroAI checks for these before and after a payment, in plain language, without touching any money.
 
-**Planned for Verify v1** (engine, API, transaction check and an early-preview page built; proof from outside builders still to come):
+## What you can do with it
 
-- Reads the endpoint's `402` response **without sending any payment**
-- Checks the network (Arc Mainnet `5042` or Testnet `5042002`), the USDC address, amount decimals (6 versus 18), the recipient address and the x402 response format
-- Optionally checks a transaction hash on-chain against what was expected
-- Returns a plain-language report: OK, warning or error for each check, the reason, the proof and how to fix it
-- Runs in the browser, nothing to install, free with rate limits
+| Tool | For | What it does |
+|---|---|---|
+| **[Verify](https://microai-tan.vercel.app/verify)** | Anyone building or paying an x402 endpoint | Reads an endpoint's `402` answer (no payment sent) and checks the network, USDC address, 6-vs-18 decimals, recipient and format. Optionally matches a transaction on Arc against what the endpoint asked for, and says what a service answered after payment. Reports can be shared by link |
+| **[Payload inspector](https://microai-tan.vercel.app/inspect)** | x402 integrators | Decodes `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` **in your browser only**. Nothing is sent or stored, because a signed payload can move money until it is used |
+| **[Testnet lab](https://microai-tan.vercel.app/lab)** | Anyone who wants to try it safely | Test endpoints with one known mistake each, and small Testnet payments from your own wallet, so you can see how Verify judges them |
+| **Trust API** | Agents and scripts | `GET /api/trust?url=...` returns a machine-readable check of an endpoint's payment setup. It is a configuration check, not a reputation score |
+| **[MCP server](#connect-an-ai-agent-mcp)** | AI agents | Read-only tools an agent can call to check an endpoint before paying |
+| **Debug** | Arc developers | Paste a transaction hash: status, transfers, the decoded function, and a diagnosis from chain data. Revert reasons and events are decoded locally and each finding is labelled confirmed, probable or unknown. An AI explanation follows and is marked as possibly wrong |
+| **Wallet, Stats, Ecosystem, News, Build status** | Arc community | Address lookup with risk signals, network and payment-wallet stats, a directory of Arc and Circle projects, news and repository activity |
 
-What it will **not** do: send payments, give services a score, call other services good or bad, or check any network other than Arc.
+Full panel list: [Live today](#live-today).
 
-**Try the early preview:** [microai-tan.vercel.app/verify](https://microai-tan.vercel.app/verify). It is in the app menu under Verify, it sends no payment, and it is experimental. If it misses something or gets something wrong, please [tell me](https://github.com/sahmedonchain/microai/issues/new?title=Verify%20feedback%3A%20).
+## Try it in a minute
 
-**Test it with Testnet payments, no real money:** [microai-tan.vercel.app/lab](https://microai-tan.vercel.app/lab) sends small test payments from your own wallet and shows how Verify judges each one.
+1. Open **[Verify](https://microai-tan.vercel.app/verify)** and paste a test endpoint: `https://microai-tan.vercel.app/api/lab/x402/good` (a correct one) or `https://microai-tan.vercel.app/api/lab/x402/decimals18` (a deliberate 6-vs-18 decimals mistake). It sends no payment.
+2. Or open the **[Payload inspector](https://microai-tan.vercel.app/inspect)** and paste an x402 header to read it.
+
+## Connect an AI agent (MCP)
+
+MicroAI runs a small, read-only [MCP](https://modelcontextprotocol.io) server. Add this URL as a custom connector in an MCP client such as Claude, with no login:
+
+```text
+https://microai-tan.vercel.app/api/mcp
+```
+
+| Tool | What it does |
+|---|---|
+| `check_x402_endpoint` | Checks an endpoint's payment setup on Arc (same engine as the Trust API) |
+| `explain_x402_error` | Explains a facilitator error code in plain words |
+| `arc_network_info` | Chain IDs, RPC and explorer URLs, USDC address and decimals |
+
+Then ask, for example: *"Use MicroAI to check https://microai-tan.vercel.app/api/lab/x402/good"*. The server can only read: it sends no payment, accepts no signed payload and holds no keys. It was tested with the official MCP TypeScript SDK client and in the Claude app. Details: [`lib/mcp/server.ts`](lib/mcp/server.ts).
+
+## What is and is not verified
+
+MicroAI would rather under-claim. This is the current state, stated plainly.
+
+| Area | State |
+|---|---|
+| Arc configuration (chain IDs `5042` and `5042002`, RPC, explorer, USDC address and decimals) | Matches the official Arc docs, checked 10 Nov 2026 |
+| x402 v2 headers and the `exact` scheme (parsing and the checks above) | Implemented and unit tested |
+| Automated tests | Several hundred; **all use mocks** for Redis, the Arc RPC and the AI provider |
+| Live end-to-end run with a real wallet and a real x402 service on Arc Testnet | **Not done yet.** This is the next milestone, with transaction hashes to be published |
+| Facilitator `/verify` and `/settle` | **Never called, on purpose:** they take a signed payment and `/settle` moves money |
+| Service delivery | Judged only from what *you* report the service answered; MicroAI sends no payment, so it cannot see it |
+| Independent security audit | **None.** Do not rely on MicroAI for large amounts |
+| AI explanations (Debug, Wallet) | Can be wrong; they are labelled |
+
+How it is built and defended is under [Security](#security).
+
+## What a Verify report looks like
+
+A developer gives Verify an x402 endpoint (and optionally a transaction hash). It reads the endpoint's `402` answer **without sending any payment** and returns a plain-language report: OK, warning or error for each check, the reason, the evidence and how to fix it.
 
 <details>
 <summary>Illustrative mock-up of a Verify report (not live)</summary>
@@ -85,7 +134,9 @@ Endpoint: https://api.example.com/paid      Network: Arc Mainnet (5042)
 
 </details>
 
-Every stage below starts only when the previous one is proven. See the [Roadmap](#roadmap).
+What it will **not** do: send payments, score or rate services, call a service good or bad, or check any network other than Arc.
+
+Feedback is the most useful thing right now. If Verify misses something or gets something wrong, please [open an issue](https://github.com/sahmedonchain/microai/issues/new?title=Verify%20feedback%3A%20).
 
 ## Live today
 
@@ -93,12 +144,14 @@ The app is a single page with a sidebar. Each entry below is a panel in it.
 
 | Panel | What it does |
 |---|---|
-| **Verify** | Check an x402 endpoint's payment setup, match a transaction against it, check delivery, and share a report. Sends no payment. |
+| **Verify** | Check an x402 endpoint's payment setup, match a transaction against it, check delivery, and share a report. Sends no payment. A transaction hash that was checked before gets a note (kept 30 days); it is a hint, not replay protection, because MicroAI does not know your orders: accept each hash once in your own system. |
 | **Payload inspector** | Decode `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` in the browser, check them against the x402 v2 spec, recover the signer of an EIP-3009 signature, inspect Permit2 and `upto` payloads, and compare what was signed with what was asked. Nothing is sent or stored. It does not check balances, replay protection or whether the token contract itself accepts the signature. |
 | **Testnet lab** | Send small test payments on Arc Testnet and see how Verify judges each one. |
 | **Trust API** | Machine-readable endpoint check for agents (`GET /api/trust`). Read-only. |
+| **Facilitator check** | `GET /api/facilitator?url=...` asks a facilitator's `/supported` whether it lists Arc and with which schemes. That is the facilitator's own claim. MicroAI never calls a facilitator's `/verify` or `/settle`: they take a signed payment and `/settle` moves money, so they are left out on purpose. Also available as the MCP tool `check_x402_facilitator`. |
+| **MCP server** | Read-only MCP tools for agents over HTTP (`POST /api/mcp`): `check_x402_endpoint`, `explain_x402_error`, `arc_network_info`. No payments, no keys, and no tool accepts a signed payload. Same rate limits and `PAUSE_VERIFY` switch as Verify. |
 | **Wallet** | Look up any address, no sign-in. Native and token balances, the 20 most recent transactions, four rule-based risk signals (unlimited approval, high-value transfer, recent contract call, many transactions in 24 hours) and a short AI summary. |
-| **Debug** | Paste a transaction hash. Shows status, token transfers, internal transactions, the decoded function (8 common selectors), a suggested corrected flow and an AI explanation. No sign-in. |
+| **Debug** | Paste a transaction hash. Shows status, token transfers, internal transactions and the decoded function, then a **diagnosis from chain data**: the revert reason (Error, Panic or known custom error) and the receipt events (ERC-20 Transfer, EIP-3009 AuthorizationUsed) are decoded locally, and each finding is labelled confirmed, probable or unknown. x402 reasons are only read for EIP-3009 settlement calls. An AI explanation follows and is marked as possibly wrong. No sign-in. |
 | **Ecosystem** | Directory of 81 Arc and Circle projects in 12 categories with search and filters, an AI search over the same list, and Arc-chain TVL for 5 protocols from DeFiLlama. |
 | **News** | Arc and Circle news pulled from the Arc and Circle blogs, the Circle pressroom, Google News searches and three finance feeds, filtered for relevance and cached for 30 minutes. |
 | **Stats** | Latest block, gas price and estimated cost of a transfer, plus USDC received and transaction counts for the MicroAI payment wallet. Chain data is read by the server, not by the browser. |
@@ -146,7 +199,7 @@ Implemented controls:
 - **Outbound requests:** server-side fetches go through a guarded client that allows only https, blocks private and internal addresses, limits redirects and response size, and applies a timeout.
 - **Keys:** the app never asks for a private key or seed phrase.
 - **Repository:** the `main` branch is protected: changes go through pull requests, CI must pass, and force pushes are blocked. CodeQL and Dependabot run on the repository.
-- **Tests:** 563 tests in 33 files cover sign-in, payment verification, replay and recovery, the emergency kill switch, same-site write checks, rate limiting, prompt handling, the navigation config and the Verify checks, fetcher and test fixtures. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so.
+- **Tests:** several hundred automated tests cover sign-in, the Verify checks, fetcher and fixtures, the Payload inspector, Debug decoding, the MCP server, the emergency kill switch, same-site write checks, rate limiting and prompt handling. Redis, the chain RPC and the AI provider are mocked in these tests and the files say so. They are not a substitute for a live end-to-end run or an independent audit.
 
 Known limitations:
 
@@ -169,8 +222,11 @@ All routes are under `/api`. "Sign-in" means a valid session cookie from Sign-In
 
 | Route | Method | Sign-in | Purpose |
 |---|---|---|---|
+| `/health` | GET | no | Uptime check: 200 when Redis and the Arc RPC answer, 503 and the name of the failing dependency otherwise. See [docs/incident-response.md](docs/incident-response.md) |
 | `/session/nonce` | GET | no | Issue a single-use sign-in nonce |
 | `/session` | GET, POST | no | Read the session; verify a signed message and start a session |
+| `/facilitator` | GET | no | Read-only facilitator `/supported` check (never `/verify` or `/settle`) |
+| `/mcp` | POST | no | Read-only MCP server (JSON-RPC 2.0, one request per call, `initialize`, `tools/list`, `tools/call`) |
 | `/debug-analyze` | POST | optional | Transaction explanation |
 | `/wallet` | POST | optional | Wallet analysis |
 | `/ecosystem-search` | POST | optional | AI search over the ecosystem list |
@@ -206,7 +262,7 @@ lib/
   killSwitch.ts, csrf.ts, csp.ts, rateLimit.ts   Protections
   verify/         MicroAI Verify: x402 parser, checks, guarded fetch, test fixtures
 tests/            Vitest suites (Redis, RPC and AI are mocked)
-scripts/          One-off maintenance scripts
+scripts/          One-off maintenance scripts (`pnpm export-credit-balances` is read-only: it lists leftover credit balances and their USDC value for refunds, sends nothing)
 docs/assets/      Banner and social preview images
 proxy.ts          Sets the Content-Security-Policy on page responses
 ```
@@ -271,15 +327,15 @@ This is a direction, not a promise. **A stage starts only when the previous one 
 |---|---|---|
 | **Foundation** | On-chain payment verification, wallet and transaction analysis (the pay-per-use credits, Chat and Copilot built here were retired in Nov 2026) | Live on Mainnet |
 | **Hardening** | Emergency pause switches, same-site checks, protected `main`, public Security, Terms and Privacy pages, server-side chain reads, Node 24 | Done |
-| | Enforce the Content-Security-Policy in production | Next |
+| | Enforce the Content-Security-Policy in production | Next, after production-build and browser testing on a preview |
 | **MicroAI Verify v1** | Check an x402 or USDC payment setup on Arc and verify a transaction on-chain, with a plain-language report | In progress: check engine, API, transaction check and an early-preview page built; proof from outside builders still to come |
 | **Testnet proof** | Publish proof that Verify judges real Arc Testnet payments correctly: right amount, too little, too much, wrong recipient, wrong token, plus a slow endpoint and a failing one | In progress: Testnet lab page and test endpoints built; proof from 10 test payments still to come |
 | **Delivery checks** | Catch "payment went through but the service was not delivered": a Delivered / Mismatch / Pending / Failed / Unknown verdict from the on-chain check plus what the service answered | Built into Verify, uses the answer you report (MicroAI sends no payment and cannot see it); outside builder feedback still to come |
 | **Shareable reports** | One link per check, with history, to share with a team | Built into Verify: opt-in link, stored 30 days, server-made content only, delete token; history is kept in your own browser |
 | **Trust API** | Let an agent ask "is this service's payment setup sound?" before paying | Read-only version built (`GET /api/trust`). Paying per call with x402 and writing proof to an ERC-8004 registry are deliberately not built until there is proven demand, because both handle real money or on-chain state |
-| **Payload inspector** | See what a payment attempt asked, signed and reported | Built (early preview, `/inspect`), checked against the official x402 v2 specification. Runs in the browser only: nothing is sent or stored, because a signed payload can move money until it is used. Verifies EIP-3009 signatures offline against the domain the service declares; Permit2 and `upto` payloads are inspected but their signatures are not verified. It does not verify settlement or delivery |
+| **Payload inspector** | See what a payment attempt asked, signed and reported | Built (live on Arc Mainnet, `/inspect`), checked against the official x402 v2 specification. Runs in the browser only: nothing is sent or stored, because a signed payload can move money until it is used. Verifies EIP-3009 signatures offline against the domain the service declares; Permit2 and `upto` payloads are inspected but their signatures are not verified. It does not verify settlement or delivery |
 
-**Definition of done for Verify v1:** at least 20 test cases pass (good and bad configurations), 5 deliberately broken endpoints are each caught correctly, at least 5 real Mainnet transactions are verified correctly, at least 3 outside builders have used it and given feedback, and at least 1 says it caught a real problem. If builders do not find it useful, the plan changes. Chat and Copilot stay available with no major new development planned, and any wind-down would be announced in advance.
+**Definition of done for Verify v1:** at least 20 test cases pass (good and bad configurations), 5 deliberately broken endpoints are each caught correctly, at least 5 real Mainnet transactions are verified correctly, at least 3 outside builders have used it and given feedback, and at least 1 says it caught a real problem. If builders do not find it useful, the plan changes, and any change would be announced in advance.
 
 ## Contributing and feedback
 

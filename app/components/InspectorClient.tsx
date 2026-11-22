@@ -69,7 +69,7 @@ export function InspectorClient({ embedded = false }: { embedded?: boolean } = {
       )}
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">Payload inspector</h1>
-        <span className="inline-flex items-center rounded-full border border-warning/25 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">Early preview</span>
+        <span className="inline-flex items-center rounded-full border border-success/25 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Live on Arc Mainnet</span>
         <span className="inline-flex items-center rounded-full border border-success/25 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Runs in your browser</span>
       </div>
       <p className="mt-3 max-w-prose leading-relaxed text-muted">

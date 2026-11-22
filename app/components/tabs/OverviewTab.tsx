@@ -11,8 +11,8 @@ interface Service {
 }
 
 const VERIFY_SERVICES: Service[] = [
-  { href: "/verify", title: "Verify", icon: ShieldCheck, tag: "Early preview", text: "Check an x402 endpoint's payment setup on Arc and match a transaction against it. Sends no payment." },
-  { href: "/inspect", title: "Payload inspector", icon: ScanSearch, tag: "Early preview", text: "Paste x402 headers and see what was asked, what was signed and what was reported. Runs in your browser, sends nothing." },
+  { href: "/verify", title: "Verify", icon: ShieldCheck, tag: "Arc Mainnet", text: "Check an x402 endpoint's payment setup on Arc and match a transaction against it. Sends no payment." },
+  { href: "/inspect", title: "Payload inspector", icon: ScanSearch, tag: "Arc Mainnet", text: "Paste x402 headers and see what was asked, what was signed and what was reported. Runs in your browser, sends nothing." },
   { href: "/lab", title: "Testnet lab", icon: FlaskConical, tag: "Arc Testnet", text: "Send small test payments and see how Verify judges each one. No real money." },
   { href: "/trust", title: "Trust API", icon: Plug, tag: "Read-only", text: "A machine-readable endpoint check for agents that want to know a service's setup before paying it." },
 ];

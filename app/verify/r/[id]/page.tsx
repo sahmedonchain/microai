@@ -10,7 +10,7 @@ import { isReportId, loadReport } from "@/lib/verify/reportStore";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Shared Verify report — MicroAI",
+  title: "Shared MicroAI Verify Report",
   description: "A MicroAI Verify report shared by link.",
   robots: { index: false, follow: false },
   referrer: "no-referrer",

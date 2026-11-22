@@ -38,7 +38,7 @@ export const categories = [
 export const projects: Project[] = [
   {
     name: "MicroAI",
-    desc: "MicroAI — Payment tools for builders on Arc",
+    desc: "Read-only tools to inspect, verify and debug USDC and x402 payments on Arc",
     category: "COMMUNITY BUILDS",
     tags: ["AI", "Pay-per-use", "USDC", "Arc MAINNET"],
     url: "https://microai-tan.vercel.app",

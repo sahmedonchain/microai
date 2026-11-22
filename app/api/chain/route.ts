@@ -14,7 +14,7 @@ const tokenBalance = (token: string, holder: string) =>
   rpcCall<string>("eth_call", [{ to: token, data: balanceOfData(holder) }, "latest"]);
 
 export const GET = withApi(
-  { name: "chain", limits: [{ limit: 90, windowSec: 60 }] },
+  { name: "chain", limits: [{ limit: 90, windowSec: 60 }], onLimiterError: "closed" },
   async ({ req }) => {
     const q = parseQuery(req, chainQuery);
     try {
