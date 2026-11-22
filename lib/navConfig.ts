@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Newspaper,
   Plug,
+  Undo2,
   ScanSearch,
   ShieldCheck,
   Wallet,
@@ -51,6 +52,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { group: "verify", label: "Payload inspector", icon: ScanSearch, panel: "inspect" },
   { group: "verify", label: "Testnet lab", icon: FlaskConical, panel: "lab" },
   { group: "verify", label: "Trust API", icon: Plug, panel: "trust" },
+  { group: "verify", label: "Refund & Disputes", icon: Undo2, panel: "refunds" },
 
   { group: "build", label: "Debug", icon: Bug, panel: "debugger" },
 

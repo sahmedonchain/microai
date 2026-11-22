@@ -57,7 +57,7 @@ interface Transfer {
   value: bigint;
 }
 
-function readTransfers(receipt: TxReceipt): Transfer[] {
+export function readTransfers(receipt: TxReceipt): Transfer[] {
   const out: Transfer[] = [];
   for (const l of receipt.logs ?? []) {
     if (l.removed === true || l.topics?.length !== 3 || l.topics[0].toLowerCase() !== ERC20_TRANSFER_TOPIC || typeof l.data !== "string" || l.data.length <= 2 || typeof l.address !== "string") continue;

@@ -6,6 +6,7 @@ import { EcosystemTab } from "@/app/components/tabs/EcosystemTab";
 import { OverviewTab } from "@/app/components/tabs/OverviewTab";
 import { VerifyClient } from "@/app/components/VerifyClient";
 import { LabClient } from "@/app/components/LabClient";
+import { RefundsClient } from "@/app/components/RefundsClient";
 import { TrustClient } from "@/app/components/TrustClient";
 import { BuildStatusTab } from "@/app/components/tabs/BuildStatusTab";
 import { StatsTab } from "@/app/components/tabs/StatsTab";
@@ -201,6 +202,7 @@ export function HomeTab({
           {activePanel === "verify" && <VerifyClient embedded />}
           {activePanel === "inspect" && <InspectorClient embedded />}
           {activePanel === "lab" && <LabClient embedded />}
+          {activePanel === "refunds" && <RefundsClient embedded />}
           {activePanel === "trust" && <TrustClient />}
           {activePanel === "debugger" && <DebuggerTab />}
           {activePanel === "wallet" && <WalletTab />}

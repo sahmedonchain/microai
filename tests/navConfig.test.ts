@@ -18,7 +18,7 @@ describe("menu config", () => {
     ];
     expect(shape).toEqual([
       "Overview",
-      "Verify: Verify, Payload inspector, Testnet lab, Trust API",
+      "Verify: Verify, Payload inspector, Testnet lab, Trust API, Refund & Disputes",
       "Build: Debug",
       "Analyze: Wallet, Stats",
       "Explore: Ecosystem, News, Build status",
@@ -39,7 +39,7 @@ describe("menu config", () => {
       expect(item.href).toMatch(/^https:\/\//);
       expect(item.panel).toBeUndefined();
     }
-    expect(panels.sort()).toEqual(["build-status", "debugger", "ecosystem", "home", "inspect", "lab", "news", "stats", "trust", "verify", "wallet"]);
+    expect(panels.sort()).toEqual(["build-status", "debugger", "ecosystem", "home", "inspect", "lab", "news", "refunds", "stats", "trust", "verify", "wallet"]);
   });
 
   it("labels are unique (they are used as React keys)", () => {
