@@ -8,6 +8,7 @@ import { selectPaymentOption } from "@/lib/verify/option";
 import { consume, RateLimiterUnavailableError } from "@/lib/rateLimit";
 import { classifyDelivery } from "@/lib/verify/delivery";
 import { saveReport } from "@/lib/verify/reportStore";
+import { recordTxSeen, seenFinding } from "@/lib/verify/txSeen";
 import { verifyTransaction, type ExpectedPayment } from "@/lib/verify/txVerify";
 import type { EndpointResponse, Finding, VerifyReport } from "@/lib/verify/types";
 import { verifyBody } from "@/lib/schemas";
@@ -90,7 +91,13 @@ export const POST = withApi(
       if (expected) {
         try {
           const r = await verifyTransaction(txHash, expected);
-          transaction = txResult(r.network, r.txHash, r.findings);
+          const findings = [...r.findings];
+          // Only a transaction that succeeded on chain is remembered.
+          if (findings.some((f) => f.id === "tx.status" && f.severity === "ok")) {
+            const first = await recordTxSeen(r.network, r.txHash);
+            if (first) findings.push(seenFinding(first));
+          }
+          transaction = txResult(r.network, r.txHash, findings);
         } catch (err) {
           if (err instanceof RpcError) {
             log.warn("verify rpc failed", { network: expected.network });
