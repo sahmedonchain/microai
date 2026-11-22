@@ -39,6 +39,7 @@ export const POST = withApi(
     // Only the wallet that paid can ask for the money back.
     if (payment.payer !== session!.sub) throw apiErrors.forbidden("Only the wallet that made the payment can open a refund case for it.");
 
+    if (payment.payer === payment.payee) throw apiErrors.badRequest("The payer and the recipient are the same wallet, so there is nothing to refund.");
     const paid = BigInt(payment.amount);
     const requested = b.requestedAmount ? BigInt(b.requestedAmount) : paid;
     if (requested > paid) throw apiErrors.badRequest("You cannot ask for more than was paid.");
