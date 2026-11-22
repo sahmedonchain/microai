@@ -73,7 +73,7 @@ export function InspectorClient({ embedded = false }: { embedded?: boolean } = {
         <span className="inline-flex items-center rounded-full border border-success/25 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">Runs in your browser</span>
       </div>
       <p className="mt-3 max-w-prose leading-relaxed text-muted">
-        Paste the x402 headers from a payment attempt. The inspector decodes them, checks the fields, and compares what the payer signed with what the service asked for. It sends nothing anywhere and saves nothing.
+        Paste the x402 headers from a payment attempt. The inspector decodes them, checks the fields against the x402 v2 specification, recovers the signer of an EIP-3009 signature, and compares what the payer signed with what the service asked for. It sends nothing anywhere and saves nothing.
       </p>
       <p className="mt-3 max-w-prose rounded-lg border border-warning/25 bg-warning/10 p-3 text-sm leading-relaxed text-warning">
         A PAYMENT-SIGNATURE is a signed authorization to move money until it is used. Only paste one from a test payment, or one that has already been settled or has expired.
