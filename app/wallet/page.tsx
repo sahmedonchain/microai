@@ -4,6 +4,7 @@ import { ARC_ADDRESSES } from "@/lib/arcAddresses";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WalletModal } from "@/app/components/WalletModal";
+import { ConnectWallet } from "@/app/components/ConnectWallet";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const USDC = USDC_ADDRESS;
@@ -154,6 +155,9 @@ export default function WalletPage() {
       {/* MAIN */}
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mx-auto max-w-3xl space-y-4">
+          <ConnectWallet onChange={(a) => { setOwnAddress(a); if (a) setAddress((prev) => prev || a); }} />
+          <p className="text-xs text-muted">Signed in? Open <Link href="/refunds" className="text-accent-text hover:underline">Refund &amp; Disputes</Link>. Or paste any address below to analyze it.</p>
+
           {/* Input card */}
           <div className="rounded-lg border border-border bg-surface p-6">
             <p className="mb-1 font-mono text-xs font-semibold uppercase tracking-widest text-muted">Wallet address</p>

@@ -2,6 +2,7 @@
 import { USDC_ADDRESS } from "@/lib/arcConfig";
 import { ARC_ADDRESSES } from "@/lib/arcAddresses";
 import { useState, useEffect } from "react";
+import { ConnectWallet } from "@/app/components/ConnectWallet";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const USDC = USDC_ADDRESS;
@@ -120,7 +121,17 @@ export function WalletTab() {
         <h1 className="text-2xl font-semibold leading-tight text-text">Wallet intelligence</h1>
         <p className="mt-2 text-sm text-muted">AI-powered wallet analysis on Arc Mainnet</p>
 
-        <div className={`${CARD} mt-8`}>
+        <div className="mt-8">
+          <ConnectWallet
+            onChange={(a) => {
+              setOwnAddress(a);
+              if (a) setAddress((prev) => prev || a);
+            }}
+          />
+          <p className="mt-3 text-xs text-muted">Signed in? Open <a href="/refunds" className="text-accent-text hover:underline">Refund &amp; Disputes</a>. Or paste any address below to analyze it.</p>
+        </div>
+
+        <div className={`${CARD} mt-4`}>
           <label htmlFor="wallet-address" className={CARD_TITLE}>Wallet address</label>
           <div className="flex flex-wrap gap-2.5">
             <input
