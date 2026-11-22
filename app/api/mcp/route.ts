@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiErrors, withApi } from "@/lib/api";
 import { handleRpc, MAX_BODY_BYTES, parseRpc } from "@/lib/mcp/server";
+import { runFacilitatorCheck } from "@/lib/verify/facilitatorCheck";
 import { runTrustCheck } from "@/lib/verify/trustCheck";
 
 // Read-only MCP server: POST /api/mcp (JSON-RPC 2.0, one request per call).
@@ -29,7 +30,7 @@ export const POST = withApi(
     const parsed = parseRpc(text);
     if ("error" in parsed) return json(parsed.error, 400);
 
-    const out = await handleRpc(parsed, { checkEndpoint: (url, network) => runTrustCheck(url, network, log) });
+    const out = await handleRpc(parsed, { checkEndpoint: (url, network) => runTrustCheck(url, network, log), checkFacilitator: (url, network) => runFacilitatorCheck(url, network, log) });
     if (out === null) return new Response(null, { status: 202 });
     return json(out);
   }
