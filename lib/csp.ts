@@ -20,8 +20,11 @@ export function makeNonce(): string {
   return Buffer.from(crypto.randomUUID()).toString("base64");
 }
 
-// The browser talks to Arc's RPC directly (live stats); everything else goes
-// through our own API. No third-party scripts, frames or widgets are used.
+// Reviewed against the code on 10 Nov 2026: the browser's own fetch() calls all go to
+// our /api routes (Stats reads the chain through /api/chain, not the RPC directly),
+// wallet calls go through the injected wallet provider, fonts are self-hosted by
+// next/font, and no component renders a remote <img>. So connections and images need
+// only this origin. No third-party scripts, frames or widgets are used.
 export function buildCsp(nonce: string, opts: { dev?: boolean } = {}): string {
   const dev = opts.dev ?? process.env.NODE_ENV === "development";
   return [
@@ -32,9 +35,9 @@ export function buildCsp(nonce: string, opts: { dev?: boolean } = {}): string {
     // Styles keep 'unsafe-inline': the UI uses inline style attributes widely,
     // which nonces cannot cover. Inline CSS cannot run script.
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://rpc.mainnet.arc.io",
+    "connect-src 'self'",
     "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'self'",
