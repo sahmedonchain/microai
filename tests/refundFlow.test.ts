@@ -32,11 +32,12 @@ const MERCHANT = "0x1111111111111111111111111111111111111111";
 const STRANGER = "0x3333333333333333333333333333333333333333";
 const PAY = "0x" + "ab".repeat(32);
 const REFUND = "0x" + "cd".repeat(32);
+const PAY2 = "0x" + "ef".repeat(32);
 const pad = (a: string) => "0x" + "0".repeat(24) + a.slice(2);
-const receipt = (hash: string, from: string, to: string, units: number) => ({
+const receipt = (hash: string, from: string, to: string, units: number, block = "0x10") => ({
   transactionHash: hash,
   status: "0x1",
-  blockNumber: "0x10",
+  blockNumber: block,
   logs: [{ address: USDC_ADDRESS, topics: [ERC20_TRANSFER_TOPIC, pad(from), pad(to)], data: "0x" + units.toString(16).padStart(64, "0") }],
 });
 
@@ -68,9 +69,11 @@ beforeEach(() => {
   jar.value = "";
   rpc.mockReset();
   rpc.mockImplementation(async (method: string, params: string[]) => {
+    if (method === "eth_getBlockByNumber") return { timestamp: "0x" + Math.floor(Date.now() / 1000 + 5).toString(16) };
     if (method !== "eth_getTransactionReceipt") return null;
     if (params[0] === PAY) return receipt(PAY, BUYER, MERCHANT, 10_000);
-    if (params[0] === REFUND) return receipt(REFUND, MERCHANT, BUYER, 10_000);
+    if (params[0] === PAY2) return receipt(PAY2, BUYER, MERCHANT, 10_000);
+    if (params[0] === REFUND) return receipt(REFUND, MERCHANT, BUYER, 10_000, "0x20");
     return null;
   });
 });
@@ -142,7 +145,7 @@ describe("refund flow", () => {
     const id = body.case.id as string;
     as(MERCHANT);
     await call(approve, {}, idCtx(id));
-    rpc.mockImplementation(async (_m: string, p: string[]) => (p[0] === REFUND ? receipt(REFUND, MERCHANT, BUYER, 100) : null));
+    rpc.mockImplementation(async (_m: string, p: string[]) => (p[0] === REFUND ? receipt(REFUND, MERCHANT, BUYER, 100, "0x20") : null));
     expect((await call(settle, { txHash: REFUND }, idCtx(id))).status).toBe(400);
   });
 
@@ -172,5 +175,105 @@ describe("refund flow", () => {
   it("cannot ask for more than was paid", async () => {
     const { res } = await openCase({ requestedAmount: "10001" });
     expect(res.status).toBe(400);
+  });
+
+  it("partial refund of the payment stays PARTIALLY_REFUNDED even when it is all the buyer asked for", async () => {
+    const { body } = await openCase({ requestedAmount: "4000" });
+    as(MERCHANT);
+    await call(approve, {}, idCtx(body.case.id));
+    const out = await (await call(settle, { txHash: REFUND }, idCtx(body.case.id))).json();
+    expect(out.case.status).toBe("PARTIALLY_REFUNDED");
+  });
+});
+
+describe("refund security", () => {
+  const approved = async (hash = PAY) => {
+    as(BUYER);
+    const r = await call(create, { network: "mainnet", txHash: hash, payTo: MERCHANT, reason: "OTHER", statement: "I never asked for this purchase." });
+    const id = (await r.json()).case.id as string;
+    as(MERCHANT);
+    await call(approve, {}, idCtx(id));
+    return id;
+  };
+  const refundTx = (from: string, to: string, units = 10_000, block = "0x20") =>
+    rpc.mockImplementation(async (m: string, p: string[]) => {
+      if (m === "eth_getBlockByNumber") return { timestamp: "0x" + Math.floor(Date.now() / 1000 + 5).toString(16) };
+      if (p[0] === PAY) return receipt(PAY, BUYER, MERCHANT, 10_000);
+      return p[0] === REFUND ? receipt(REFUND, from, to, units, block) : null;
+    });
+
+  it("rejects a refund sent by the wrong sender", async () => {
+    const id = await approved();
+    refundTx(STRANGER, BUYER);
+    expect((await call(settle, { txHash: REFUND }, idCtx(id))).status).toBe(400);
+  });
+
+  it("rejects a refund sent to the wrong receiver", async () => {
+    const id = await approved();
+    refundTx(MERCHANT, STRANGER);
+    expect((await call(settle, { txHash: REFUND }, idCtx(id))).status).toBe(400);
+  });
+
+  it("rejects a refund below the approved amount", async () => {
+    const id = await approved();
+    refundTx(MERCHANT, BUYER, 9_999);
+    expect((await call(settle, { txHash: REFUND }, idCtx(id))).status).toBe(400);
+  });
+
+  it("rejects a malformed transaction hash", async () => {
+    const id = await approved();
+    expect((await call(settle, { txHash: "0x1234" }, idCtx(id))).status).toBe(400);
+    expect((await call(create, { network: "mainnet", txHash: "nope", payTo: MERCHANT, reason: "OTHER", statement: "A malformed hash here." })).status).toBe(400);
+  });
+
+  it("one refund transaction cannot settle two cases", async () => {
+    const a = await approved(PAY);
+    const b = await approved(PAY2);
+    as(MERCHANT);
+    expect((await call(settle, { txHash: REFUND }, idCtx(a))).status).toBe(200);
+    expect((await call(settle, { txHash: REFUND }, idCtx(b))).status).toBe(400);
+  });
+
+  it("a transfer from before the payment or before the approval does not count as the refund", async () => {
+    const id = await approved();
+    refundTx(MERCHANT, BUYER, 10_000, "0x05");
+    expect((await call(settle, { txHash: REFUND }, idCtx(id))).status).toBe(400);
+    rpc.mockImplementation(async (m: string, p: string[]) => {
+      if (m === "eth_getBlockByNumber") return { timestamp: "0x10" };
+      return p[0] === REFUND ? receipt(REFUND, MERCHANT, BUYER, 10_000, "0x20") : null;
+    });
+    expect((await call(settle, { txHash: REFUND }, idCtx(id))).status).toBe(400);
+  });
+
+  it("only the merchant can approve, reject or settle; strangers cannot even see the case", async () => {
+    const { body } = await openCase();
+    const id = body.case.id as string;
+    for (const who of [BUYER, STRANGER]) {
+      as(who);
+      expect([403, 404]).toContain((await call(approve, {}, idCtx(id))).status);
+      expect([403, 404]).toContain((await call(reject, { reason: "no thanks" }, idCtx(id))).status);
+      expect([403, 404]).toContain((await call(settle, { txHash: REFUND }, idCtx(id))).status);
+    }
+  });
+
+  it("a wallet that pays itself cannot open a case", async () => {
+    rpc.mockImplementation(async (_m: string, p: string[]) => (p[0] === PAY ? receipt(PAY, MERCHANT, MERCHANT, 10_000) : null));
+    as(MERCHANT);
+    expect((await call(create, { network: "mainnet", txHash: PAY, payTo: MERCHANT, reason: "OTHER", statement: "Paid myself by mistake." })).status).toBe(400);
+  });
+
+  it("never keeps the response body, and never logs it or any key", async () => {
+    const logs: string[] = [];
+    for (const m of ["log", "warn", "error"] as const) vi.spyOn(console, m).mockImplementation((...a) => void logs.push(a.join(" ")));
+    const MARK = "RESPONSE_BODY_MARKER_9f3a";
+    as(BUYER);
+    const res = await call(deliveryCheck, { ...CHECK, responseBody: `{"data":{},"note":"${MARK}"}` });
+    const check = (await res.json()).check;
+    const c = await call(create, { network: "mainnet", txHash: PAY, payTo: MERCHANT, reason: "WRONG_DATA", statement: "Data was wrong.", deliveryCheckId: check.id });
+    const detail = await call(getCase, undefined, idCtx((await c.json()).case.id));
+    const everything = JSON.stringify([...(redis as unknown as { store: Map<string, unknown> }).store.values()]) + (await detail.text()) + JSON.stringify(check) + logs.join("\n");
+    expect(everything).not.toContain(MARK);
+    expect(everything).not.toMatch(/private.?key|seed.?phrase|mnemonic/i);
+    expect(check.responseHash).toMatch(/^[0-9a-f]{64}$/);
   });
 });

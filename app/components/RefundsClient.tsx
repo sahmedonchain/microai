@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ARC_NETWORKS, USDC_ADDRESS, type ArcNetworkId } from "@/lib/arcConfig";
 import { encodeErc20Transfer, walletErrorMessage } from "@/lib/verify/lab";
-import { TabLink } from "@/app/components/tabs/TabNav";
+import { ConnectWallet } from "@/app/components/ConnectWallet";
 
 // Refund & Disputes: a buyer opens a case for an x402 payment that was not
 // delivered; the merchant approves or rejects; an approved refund is sent by the
@@ -127,9 +127,10 @@ export function RefundsClient({ embedded = false }: { embedded?: boolean } = {})
       </p>
 
       {me === null && (
-        <p className="mt-6 rounded-lg border border-border bg-surface p-4 text-sm text-muted">
-          Sign in with your wallet first on the <TabLink href="/wallet" className="text-accent-text hover:underline">Wallet page</TabLink>, then come back.
-        </p>
+        <div className="mt-6 space-y-3">
+          <p className="text-sm text-muted">Sign in with your wallet to open or manage cases.</p>
+          <ConnectWallet onChange={(a) => { if (a) void load(); }} />
+        </div>
       )}
       {error && <p role="alert" className="mt-4 rounded-lg border border-danger/20 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
 
