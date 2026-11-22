@@ -36,7 +36,7 @@ describe("/api/health", () => {
     const res = await get();
     const text = await res.text();
     expect(res.status).toBe(503);
-    expect(JSON.parse(text)).toMatchObject({ status: "degraded", checks: { redis: "ok", arcRpc: "down" } });
+    expect(JSON.parse(text)).toMatchObject({ app: "ok", status: "degraded", checks: { redis: "ok", arcRpc: "down" } });
     expect(text).not.toMatch(/secret|rpc\.example/);
   });
 
