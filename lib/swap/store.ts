@@ -6,7 +6,7 @@ import type { SwapToken } from "./config";
 // Swap records in Redis. Only non-sensitive metadata: public wallet address,
 // tokens, amounts, hashes, status. No keys, no raw service answers.
 
-export type SwapStatus = "QUOTED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+export type SwapStatus = "QUOTED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED" | "UNKNOWN";
 
 export interface SwapRecord {
   v: 1;
@@ -23,6 +23,11 @@ export interface SwapRecord {
   feeToken: "input" | "output";
   feeMode: { percentageBps: number } | { amount: string };
   slippageBps: number;
+  /** Fee recipient this quote is bound to (public address). */
+  feeRecipient: string;
+  providerFeeUnits: string;
+  gasUsd: string | null;
+  route: string;
   status: SwapStatus;
   createdAt: string;
   expiresAt: string;

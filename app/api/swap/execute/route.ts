@@ -16,7 +16,9 @@ export const POST = withApi(
     if (!r || r.wallet !== session!.sub) throw apiErrors.notFound("Quote not found.");
 
     if (!confirm) {
-      if (r.status === "QUOTED" && !r.confirmedAt) {
+      // Also covers a confirmed swap the wallet never signed (for example the wallet or network changed).
+      if (r.status === "QUOTED" && !r.txHash) {
+        if (r.confirmedAt) await releaseDaily(r.wallet, BigInt(r.amountIn)).catch(() => undefined);
         r.status = "CANCELLED";
         await saveSwap(r);
       }

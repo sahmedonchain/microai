@@ -61,6 +61,8 @@ export function buildQuoteQuery(search: URLSearchParams, r: SwapRecord): Q {
 }
 
 export function buildSwapBody(body: unknown, r: SwapRecord, treasury: string): Record<string, unknown> {
+  // The quote was shown with one fee recipient. If the configuration changed since, it is no longer valid.
+  if (r.feeRecipient !== treasury.toLowerCase()) throw bad("The fee settings changed. Ask for a new quote.");
   if (!body || typeof body !== "object" || Array.isArray(body)) throw bad("Invalid request body.");
   const p = body as Record<string, unknown>;
   checkCommon(p, r);

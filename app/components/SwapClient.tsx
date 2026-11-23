@@ -26,6 +26,9 @@ interface Quote {
   minimumReceive: string;
   fee: string;
   feeToken: string;
+  providerFee: string;
+  gasUsd: string | null;
+  route: string;
   feePercent: string;
   slippage: string;
   network: string;
@@ -46,7 +49,7 @@ interface Hist {
 type Msg =
   | { id: number; role: "user"; text: string }
   | { id: number; role: "bot"; text: string }
-  | { id: number; role: "quote"; quote: Quote; phase: "ready" | "signing" | "pending" | "done" | "failed" | "cancelled"; note?: string; tx?: string; received?: string; reason?: string };
+  | { id: number; role: "quote"; quote: Quote; phase: "ready" | "awaiting_wallet" | "pending" | "confirmed" | "failed" | "unknown" | "cancelled"; note?: string; tx?: string; received?: string; reason?: string; timing?: string };
 
 async function api<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, body === undefined ? undefined : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -71,6 +74,7 @@ function routeCircleCalls(quoteId: string): () => void {
   };
 }
 
+const clock = () => performance.now();
 type Eip1193 = { request(a: { method: string; params?: unknown[] }): Promise<unknown> };
 
 const friendly = (e: unknown) => {
@@ -87,6 +91,9 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [history, setHistory] = useState<Hist[]>([]);
   const [busy, setBusy] = useState(false);
+  const [enabled, setEnabled] = useState(true);
+  const lock = useRef(false);
+  const live = useRef<{ quoteId: number; serverId: string } | null>(null);
   const idRef = useRef(1);
   const next = () => idRef.current++;
   const patch = (id: number, p: Partial<Extract<Msg, { role: "quote" }>>) => setMsgs((m) => m.map((x) => (x.id === id && x.role === "quote" ? { ...x, ...p } : x)));
@@ -94,16 +101,47 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
 
   const loadHistory = useCallback(async () => {
     try {
-      setHistory((await api<{ swaps: Hist[] }>("/api/swap/history")).swaps);
+      const h = await api<{ enabled: boolean; swaps: Hist[] }>("/api/swap/history");
+      setEnabled(h.enabled);
+      setHistory(h.swaps);
     } catch { /* signed out */ }
   }, []);
   useEffect(() => {
     if (me) void loadHistory();
   }, [me, loadHistory]);
 
+  // A reload must not lose a swap that was still pending: keep checking those on chain.
+  useEffect(() => {
+    const pending = history.filter((h) => h.status === "PENDING" && h.txHash);
+    if (pending.length === 0) return;
+    const t = setInterval(async () => {
+      await Promise.all(pending.map((h) => api(`/api/swap/status/${h.txHash}`).catch(() => null)));
+      void loadHistory();
+    }, 6000);
+    return () => clearInterval(t);
+  }, [history, loadHistory]);
+
+  // If the account or network changes while a confirmation is open, that confirmation is cancelled.
+  useEffect(() => {
+    const eth = (window as unknown as { ethereum?: { on?(e: string, h: () => void): void; removeListener?(e: string, h: () => void): void } }).ethereum;
+    const onChange = () => {
+      const l = live.current;
+      if (!l) return;
+      live.current = null;
+      setMsgs((m) => m.map((x) => (x.id === l.quoteId && x.role === "quote" && (x.phase === "ready" || x.phase === "awaiting_wallet") ? { ...x, phase: "failed", reason: "Your wallet account or network changed, so this confirmation was cancelled. Ask for a new quote." } : x)));
+      void api("/api/swap/execute", { quoteId: l.serverId, confirm: false }).catch(() => undefined);
+    };
+    eth?.on?.("accountsChanged", onChange);
+    eth?.on?.("chainChanged", onChange);
+    return () => {
+      eth?.removeListener?.("accountsChanged", onChange);
+      eth?.removeListener?.("chainChanged", onChange);
+    };
+  }, []);
+
   const send = async () => {
     const t = text.trim();
-    if (!t || busy) return;
+    if (!t || lock.current) return;
     setText("");
     setMsgs((m) => [...m, { id: next(), role: "user", text: t }]);
     const p = parseSwapCommand(t);
@@ -111,31 +149,44 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
     if (p.kind === "clarify") return say(p.question);
     if (p.kind === "unsupported") return say(p.message);
     if (!me) return say("Connect your wallet first, then ask again.");
+    if (!enabled) return say("Swap is currently disabled.");
+    lock.current = true;
     setBusy(true);
+    const loadingId = next();
+    setMsgs((m) => [...m, { id: loadingId, role: "bot", text: "Getting your quote…" }]);
+    const t0 = clock();
     try {
       const { quote } = await api<{ quote: Quote }>("/api/swap/quote", { amount: p.amount, fromToken: p.from, toToken: p.to });
-      setMsgs((m) => [...m, { id: next(), role: "quote", quote, phase: "ready" }]);
+      const ms = Math.round(clock() - t0);
+      setMsgs((m) => [...m.filter((x) => x.id !== loadingId), { id: next(), role: "quote", quote, phase: "ready", timing: `Quote ready in ${(ms / 1000).toFixed(1)}s` }]);
     } catch (e) {
+      setMsgs((m) => m.filter((x) => x.id !== loadingId));
       say((e as Error).message);
     } finally {
+      lock.current = false;
       setBusy(false);
     }
   };
 
   const cancel = async (m: Extract<Msg, { role: "quote" }>) => {
+    live.current = null;
     patch(m.id, { phase: "cancelled" });
     await api("/api/swap/execute", { quoteId: m.quote.id, confirm: false }).catch(() => undefined);
   };
 
   const confirm = async (m: Extract<Msg, { role: "quote" }>) => {
+    if (lock.current) return;
+    lock.current = true;
     const q = m.quote;
     setBusy(true);
+    live.current = { quoteId: m.id, serverId: q.id };
+    const tStart = clock();
     let restore: (() => void) | null = null;
     try {
       const eth = (window as unknown as { ethereum?: Eip1193 }).ethereum;
       if (!eth) throw new Error("No wallet found. Install a browser wallet such as MetaMask.");
       const ex = await api<{ swap: { chain: string; tokenIn: string; tokenOut: string; amountIn: string; slippageBps: number } }>("/api/swap/execute", { quoteId: q.id, confirm: true });
-      patch(m.id, { phase: "signing", note: "Please approve this swap in your wallet." });
+      patch(m.id, { phase: "awaiting_wallet", note: "Please approve this swap in your wallet." });
       try {
         await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_MAINNET.chainIdHex }] });
       } catch {
@@ -155,19 +206,25 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
       restore = null;
       const tx = (result as { txHash?: string }).txHash;
       if (!tx) throw new Error("The wallet returned no transaction hash.");
+      const tSigned = clock();
+      live.current = null;
       await api("/api/swap/submit", { quoteId: q.id, txHash: tx });
-      patch(m.id, { phase: "pending", tx, note: "Swap submitted." });
+      patch(m.id, { phase: "pending", tx, note: "Swap submitted. Waiting for confirmation on Arc." });
       for (let i = 0; i < 45; i++) {
         await new Promise((r) => setTimeout(r, 3000));
         const s = await api<{ swap: Hist }>(`/api/swap/status/${tx}`).catch(() => null);
-        if (s?.swap.status === "SUCCESS") return patch(m.id, { phase: "done", received: s.swap.actualOut ?? undefined });
-        if (s?.swap.status === "FAILED") return patch(m.id, { phase: "failed", reason: "Slippage limit exceeded, or the network rejected it" });
+        const secs = (ms: number) => (ms / 1000).toFixed(1);
+        if (s?.swap.status === "SUCCESS") return patch(m.id, { phase: "confirmed", received: s.swap.actualOut ?? undefined, timing: `${m.timing ?? ""} · Signed in ${secs(tSigned - tStart)}s · Confirmed ${secs(clock() - tSigned)}s after sending` });
+        if (s?.swap.status === "FAILED") return patch(m.id, { phase: "failed", reason: "The transaction failed on chain (for example the slippage limit was exceeded). No swap happened; only network gas was used." });
+        if (s?.swap.status === "UNKNOWN") return patch(m.id, { phase: "unknown", reason: s.swap.error ?? "The result could not be verified. Check the explorer." });
       }
-      patch(m.id, { note: "Still pending. Check the explorer, or ask again later." });
+      patch(m.id, { note: "Still pending. It will keep updating in your history, even after a reload." });
     } catch (e) {
       patch(m.id, { phase: "failed", reason: friendly(e) });
     } finally {
       restore?.();
+      live.current = null;
+      lock.current = false;
       setBusy(false);
       void loadHistory();
     }
@@ -183,6 +240,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
         Type what you want, such as <span className="text-text">100 USDC to EURC</span> or <span className="text-text">50 EURC থেকে USDC করো</span>. You see the quote, fee and slippage first. Only your own wallet can sign. MicroAI never holds your keys and never swaps for you. Limits: 1 to 1,000 per swap, 5,000 per wallet a day.
       </p>
 
+      {!enabled && <p role="status" className="mt-4 rounded-lg border border-warning/25 bg-warning/10 p-3 text-sm text-warning">Swap is currently disabled. Nothing can be swapped until it is switched on.</p>}
       <div className="mt-6"><ConnectWallet onChange={setMe} /></div>
 
       <ul className="mt-6 space-y-3" aria-live="polite">
@@ -193,11 +251,11 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
             <li key={m.id} className="max-w-[85%] rounded-lg border border-border bg-surface px-3.5 py-2.5 text-sm">{m.text}</li>
           ) : (
             <li key={m.id} className="rounded-lg border border-border bg-surface p-4 text-sm">
-              <div className="font-semibold">{m.phase === "done" ? "Swap completed." : m.phase === "failed" ? "Swap failed." : m.phase === "cancelled" ? "Swap cancelled." : m.phase === "pending" ? "Swap submitted." : "Swap quote"}</div>
+              <div className="font-semibold">{m.phase === "confirmed" ? "Swap completed." : m.phase === "failed" ? "Swap failed." : m.phase === "unknown" ? "Result unknown." : m.phase === "cancelled" ? "Swap cancelled." : m.phase === "pending" ? "Swap submitted. Pending." : m.phase === "awaiting_wallet" ? "Waiting for your wallet" : "Swap quote"}</div>
               <dl className="mt-2 space-y-1 text-muted">
                 <div>From: <span className="text-text">{m.quote.amountIn} {m.quote.from}</span></div>
                 <div>To: <span className="text-text">{m.quote.to}</span></div>
-                {m.phase === "done" ? (
+                {m.phase === "confirmed" ? (
                   <div>You received: <span className="text-text">{m.received ?? "?"} {m.quote.to}</span></div>
                 ) : (
                   <>
@@ -205,11 +263,15 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
                     <div>Minimum receive: <span className="text-text">{m.quote.minimumReceive} {m.quote.to}</span></div>
                   </>
                 )}
-                <div>Swap fee: <span className="text-text">{m.quote.feePercent} ({m.quote.fee} {m.quote.feeToken}, minimum 0.01)</span></div>
+                <div>MicroAI fee: <span className="text-text">{m.quote.feePercent} ({m.quote.fee} {m.quote.feeToken}, minimum 0.01)</span></div>
+                <div>Provider fee: <span className="text-text">≈ {m.quote.providerFee} {m.quote.feeToken} (0.02%, charged by the swap provider)</span></div>
+                <div>Network gas: <span className="text-text">{m.quote.gasUsd ? `≈ $${m.quote.gasUsd}, paid in USDC from your wallet` : "paid in USDC from your wallet, shown by your wallet"}</span></div>
+                {m.quote.route && <div>Route: <span className="text-text">{m.quote.route}</span></div>}
                 <div>Slippage limit: <span className="text-text">{m.quote.slippage}</span></div>
                 <div>Network: <span className="text-text">{m.quote.network}</span></div>
               </dl>
               {m.reason && <p role="alert" className="mt-2 text-danger">Reason: {m.reason}</p>}
+              {m.timing && <p className="mt-2 text-xs text-muted">{m.timing}</p>}
               {m.note && m.phase !== "failed" && <p className="mt-2">{m.note}</p>}
               {m.tx && (
                 <p className="mt-2 break-all">
@@ -230,7 +292,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
 
       <form className="mt-4 flex flex-wrap gap-3" onSubmit={(e) => { e.preventDefault(); void send(); }}>
         <input aria-label="Swap command" className={`${FIELD} min-w-0 flex-1`} placeholder="100 USDC to EURC" value={text} maxLength={300} onChange={(e) => setText(e.target.value)} />
-        <button type="submit" className={BTN} disabled={busy || !text.trim()}>{busy ? "Working…" : "Send"}</button>
+        <button type="submit" className={BTN} disabled={busy || !enabled || !text.trim()}>{busy ? "Working…" : "Send"}</button>
       </form>
 
       {me && (

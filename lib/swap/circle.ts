@@ -23,6 +23,29 @@ export async function circleCall(
   init: { query?: Record<string, string>; body?: unknown },
   fetchImpl: typeof fetch = fetch
 ): Promise<{ status: number; text: string }> {
+  // Reads are tried at most twice. A swap request is never repeated.
+  const reads = init.body === undefined;
+  let last: { status: number; text: string } | CircleError | null = null;
+  for (let attempt = 0; attempt < (reads ? 2 : 1); attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 300));
+    try {
+      const r = await circleOnce(path, init, fetchImpl);
+      if (!(reads && (r.status >= 500 || r.status === 429))) return r;
+      last = r;
+    } catch (err) {
+      if (!(err instanceof CircleError && err.retryable && reads)) throw err;
+      last = err;
+    }
+  }
+  if (last instanceof CircleError) throw last;
+  return last as { status: number; text: string };
+}
+
+async function circleOnce(
+  path: CirclePath,
+  init: { query?: Record<string, string>; body?: unknown },
+  fetchImpl: typeof fetch
+): Promise<{ status: number; text: string }> {
   const cfg = swapServerConfig();
   if (!cfg) throw new CircleError("Swap is not configured.", 503);
   const url = new URL(`${BASE}/${path}`);
@@ -33,7 +56,7 @@ export async function circleCall(
       method: init.body === undefined ? "GET" : "POST",
       headers: { Authorization: `Bearer ${cfg.kitKey}`, "Content-Type": "application/json", Accept: "application/json" },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(init.body === undefined ? 8_000 : 12_000),
       redirect: "error",
       cache: "no-store",
     });
@@ -48,18 +71,24 @@ export interface CircleQuote {
   estimatedAmount: bigint;
   minAmount: bigint;
   feeToken: "input" | "output";
+  /** From the route: which provider and DEX, and the gas estimate in USD, as text. */
+  route: string;
+  gasUsd: string | null;
 }
 
 /** The fields of Circle's quote answer that MicroAI uses. Anything else is ignored. */
 export function readQuote(text: string): CircleQuote | null {
   try {
-    const j = JSON.parse(text) as { quote?: { estimatedAmount?: unknown; minAmount?: unknown }; feeContext?: { type?: unknown } };
+    const j = JSON.parse(text) as { quote?: { estimatedAmount?: unknown; minAmount?: unknown; route?: { provider?: unknown; steps?: { toolName?: unknown; estimate?: { gasCostUSD?: unknown } }[] } }; feeContext?: { type?: unknown } };
     const e = j.quote?.estimatedAmount;
     const m = j.quote?.minAmount;
     if (typeof e !== "string" || typeof m !== "string" || !/^\d+$/.test(e) || !/^\d+$/.test(m)) return null;
     const t = j.feeContext?.type;
     if (t !== "input" && t !== "output") return null;
-    return { estimatedAmount: BigInt(e), minAmount: BigInt(m), feeToken: t };
+    const steps = j.quote?.route?.steps ?? [];
+    const gas = steps.reduce((sum, st) => sum + (typeof st.estimate?.gasCostUSD === "string" ? Number(st.estimate.gasCostUSD) || 0 : 0), 0);
+    const route = [j.quote?.route?.provider, ...steps.map((st) => st.toolName)].filter((x): x is string => typeof x === "string").join(" / ").slice(0, 60);
+    return { estimatedAmount: BigInt(e), minAmount: BigInt(m), feeToken: t, route, gasUsd: gas > 0 ? gas.toFixed(4) : null };
   } catch {
     return null;
   }
