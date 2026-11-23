@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowLeftRight,
   BarChart3,
   BookOpen,
   Bug,
@@ -55,6 +56,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { group: "verify", label: "Refund & Disputes", icon: Undo2, panel: "refunds" },
 
   { group: "build", label: "Debug", icon: Bug, panel: "debugger" },
+  { group: "build", label: "Swap", icon: ArrowLeftRight, panel: "swap" },
 
   { group: "analyze", label: "Wallet", icon: Wallet, panel: "wallet" },
   { group: "analyze", label: "Stats", icon: BarChart3, panel: "stats" },

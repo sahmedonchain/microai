@@ -7,6 +7,7 @@ export type TabId =
   | "inspect"
   | "lab"
   | "refunds"
+  | "swap"
   | "trust"
   | "ecosystem"
   | "build-status"
@@ -21,6 +22,7 @@ const HREF_TO_TAB: Record<string, TabId> = {
   "/inspect": "inspect",
   "/lab": "lab",
   "/refunds": "refunds",
+  "/swap": "swap",
   "/trust": "trust",
   "/ecosystem": "ecosystem",
   "/build-status": "build-status",
