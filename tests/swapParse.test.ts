@@ -29,6 +29,7 @@ describe("swap command parser", () => {
   });
   it("ignores ordinary chat and rejects same-token swaps", () => {
     expect(parseSwapCommand("hello there")).toEqual({ kind: "none" });
+    expect(parseSwapCommand("0.02")).toMatchObject({ kind: "clarify", question: 'Which way? Type "0.02 USDC to EURC" or "0.02 EURC to USDC".' });
     expect(parseSwapCommand("")).toEqual({ kind: "none" });
     expect(parseSwapCommand("100 USDC to USDC").kind).toBe("clarify");
   });
@@ -48,17 +49,18 @@ describe("swap math", () => {
   });
   it("fee is 0.10% with a $0.01 minimum", () => {
     expect(planFee(BigInt(1_000_000_000))).toEqual({ units: BigInt(1_000_000), mode: { percentageBps: 10 } });
-    expect(planFee(BigInt(5_000_000))).toEqual({ units: BigInt(10_000), mode: { amount: "10000" } });
+    expect(planFee(BigInt(5_000_000))).toEqual({ units: BigInt(5_000), mode: { percentageBps: 10 } });
+    expect(planFee(BigInt(20_000))).toEqual({ units: BigInt(20), mode: { percentageBps: 10 } });
     expect(planFee(BigInt(10_000_000)).mode).toEqual({ percentageBps: 10 });
   });
   it("slippage floor is 0.50% under the estimate", () => {
     expect(minOutFor(BigInt(100_000_000))).toBe(BigInt(99_500_000));
   });
-  it("has no minimum swap, except the amount must be above the 0.01 fee", () => {
-    expect(checkAmount(BigInt(0))).toBe("not_above_fee");
-    expect(checkAmount(BigInt(10_000))).toBe("not_above_fee");
-    expect(checkAmount(BigInt(10_001))).toBeNull();
-    expect(checkAmount(BigInt(500_000))).toBeNull();
+  it("the smallest swap is one cent (0.01)", () => {
+    expect(checkAmount(BigInt(0))).toBe("too_small");
+    expect(checkAmount(BigInt(9_999))).toBe("too_small");
+    expect(checkAmount(BigInt(10_000))).toBeNull();
+    expect(checkAmount(BigInt(20_000))).toBeNull();
     expect(checkAmount(BigInt(1_000_000))).toBeNull();
   });
   it("enforces max and daily limits", () => {

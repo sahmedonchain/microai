@@ -21,7 +21,7 @@ export interface SwapRecord {
   minOut: string;
   feeUnits: string;
   feeToken: "input" | "output";
-  feeMode: { percentageBps: number } | { amount: string };
+  feeMode: { percentageBps: number } | { amount: string }; // "amount" only in old records
   slippageBps: number;
   /** Fee recipient this quote is bound to (public address). */
   feeRecipient: string;

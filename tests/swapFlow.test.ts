@@ -138,21 +138,22 @@ describe("swap quote", () => {
 
   it("enforces amount limits and the token allowlist", async () => {
     as(ME);
-    for (const amount of ["0", "0.01", "1000.01", "abc", "-5"]) expect((await call(quote, quoteBody(amount))).status).toBe(400);
+    for (const amount of ["0", "0.009", "1000.01", "abc", "-5"]) expect((await call(quote, quoteBody(amount))).status).toBe(400);
     expect((await call(quote, quoteBody("10", "USDC", "USDT"))).status).toBe(400);
     expect((await call(quote, quoteBody("10", "USDC", "USDC"))).status).toBe(400);
     expect(circle).not.toHaveBeenCalled();
   });
 
-  it("has no minimum swap: a small amount above the fee is quoted", async () => {
+  it("small swaps from one cent are quoted", async () => {
     as(ME);
     expect((await call(quote, quoteBody("0.5"))).status).toBe(200);
+    expect((await call(quote, quoteBody("0.01"))).status).toBe(200);
   });
 
-  it("uses a minimum fee for small swaps", async () => {
+  it("always charges 0.10%, even on small swaps", async () => {
     as(ME);
     const q = (await (await call(quote, quoteBody("5"))).json()).quote;
-    expect(q.fee).toBe("0.01");
+    expect(q.fee).toBe("0.005");
   });
 });
 
@@ -188,6 +189,14 @@ describe("proxy to Circle", () => {
     as(OTHER);
     expect((await proxy(q.id, swapBody())).status).toBe(404);
     expect((await call(circleGet, undefined, { ctx: { params: Promise.resolve({ path: ["quote"] }) } })).status).toBe(404);
+  });
+
+  it("a small swap still sends only a percentage fee (the one Circle documents)", async () => {
+    const { q } = await confirmed("0.02");
+    circle.mockClear();
+    await proxy(q.id, swapBody({ amount: "20000", stopLimit: undefined })); // the canned answer is for 100, so only what was sent is checked
+    const sent = JSON.parse(circle.mock.calls[0][1].body);
+    expect(sent.config).toEqual({ customFee: { percentageBps: 10, recipientAddress: TREASURY } });
   });
 
   it("sets the fee and recipient itself and drops what the browser sent", async () => {
