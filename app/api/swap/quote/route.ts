@@ -1,5 +1,8 @@
 import { ApiError, apiErrors, parseJson, withApi } from "@/lib/api";
-import { QUOTE_TTL_SEC, SWAP_SLIPPAGE_BPS, SWAP_TOKENS, isSwapToken } from "@/lib/swap/config";
+import { RpcError } from "@/lib/arcRpc";
+import { gasBalance, tokenBalance } from "@/lib/swap/chain";
+import { providerFee } from "@/lib/swap/validate";
+import { MIN_GAS_WEI, QUOTE_TTL_SEC, SWAP_SLIPPAGE_BPS, SWAP_TOKENS, isSwapToken } from "@/lib/swap/config";
 import { CircleError, circleCall, quoteQuery, readQuote } from "@/lib/swap/circle";
 import { LIMIT_MESSAGES, checkAmount, minOutFor, planFee, toUnits } from "@/lib/swap/math";
 import { quoteBody } from "@/lib/swap/schemas";
@@ -30,27 +33,52 @@ export const POST = withApi(
     const problem = checkAmount(units, await usedToday(session!.sub));
     if (problem) throw apiErrors.badRequest(LIMIT_MESSAGES[problem]);
 
+    const cfg = swapServerConfig()!;
     const tokenIn = SWAP_TOKENS[b.fromToken];
     const tokenOut = SWAP_TOKENS[b.toToken];
-    let quote;
-    try {
-      const r = await circleCall("quote", { query: quoteQuery({ tokenIn: tokenIn.address, tokenOut: tokenOut.address, wallet: session!.sub, amount: units.toString(), slippageBps: SWAP_SLIPPAGE_BPS }) });
-      if (r.status !== 200) {
-        log.warn("swap quote refused", { status: r.status });
-        throw apiErrors.upstream(r.status === 400 || r.status === 404 ? "No route was found for this swap right now. Try a different amount." : "The swap service is unavailable right now. Try again shortly.");
-      }
-      quote = readQuote(r.text);
-    } catch (err) {
-      if (err instanceof CircleError) throw apiErrors.upstream(err.message);
-      throw err;
+    const t0 = Date.now();
+    // The quote and the wallet pre-checks do not depend on each other, so they run together.
+    const [circleResult, balances] = await Promise.all([
+      circleCall("quote", { query: quoteQuery({ tokenIn: tokenIn.address, tokenOut: tokenOut.address, wallet: session!.sub, amount: units.toString(), slippageBps: SWAP_SLIPPAGE_BPS }) }).then(
+        (r) => ({ r, ms: Date.now() - t0 }),
+        (err: unknown) => ({ err })
+      ),
+      Promise.all([tokenBalance(tokenIn.address, session!.sub), gasBalance(session!.sub)]).then(
+        (v) => ({ v, ms: Date.now() - t0 }),
+        (err: unknown) => ({ err })
+      ),
+    ]);
+    if ("err" in balances) {
+      if (balances.err instanceof RpcError) throw apiErrors.upstream("Arc RPC is unavailable right now, so your balance could not be checked. Try again shortly.");
+      throw balances.err;
     }
+    if (balances.v[0] < units) throw apiErrors.badRequest(`Insufficient ${b.fromToken} balance for this swap.`);
+    if (balances.v[1] < MIN_GAS_WEI) throw apiErrors.badRequest("Not enough USDC in your wallet to pay network gas. Keep at least 0.02 USDC.");
+
+    if ("err" in circleResult) {
+      if (circleResult.err instanceof CircleError) throw apiErrors.upstream(circleResult.err.message);
+      throw circleResult.err;
+    }
+    if (circleResult.r.status !== 200) {
+      log.warn("swap quote refused", { status: circleResult.r.status });
+      throw apiErrors.upstream(circleResult.r.status === 400 || circleResult.r.status === 404 ? "No route was found for this swap right now. Try a different amount." : "The swap service is unavailable right now. Try again shortly.");
+    }
+    const quote = readQuote(circleResult.r.text);
     if (!quote) throw apiErrors.upstream("The swap service gave an answer MicroAI could not read. Try again shortly.");
 
     const fee = planFee(units);
-    // A fee taken from the output comes off what the user receives.
-    const off = quote.feeToken === "output" ? fee.units : BigInt(0);
-    const expected = quote.estimatedAmount > off ? quote.estimatedAmount - off : BigInt(0);
-    const minOut = quote.minAmount > off ? quote.minAmount - off : minOutFor(expected);
+    let expected: bigint;
+    let minOut: bigint;
+    if (quote.feeToken === "output") {
+      // A fee taken from the output comes off what the user receives.
+      expected = quote.estimatedAmount > fee.units ? quote.estimatedAmount - fee.units : BigInt(0);
+      minOut = quote.minAmount > fee.units ? quote.minAmount - fee.units : minOutFor(expected);
+    } else {
+      // A fee taken from the input leaves less to swap. Circle's estimate is for the full amount, so it is scaled to what is left.
+      const net = units - fee.units;
+      expected = (quote.estimatedAmount * net) / units;
+      minOut = (quote.minAmount * net) / units;
+    }
     const now = Date.now();
     const record: SwapRecord = {
       v: 1,
@@ -66,11 +94,15 @@ export const POST = withApi(
       feeToken: quote.feeToken,
       feeMode: fee.mode,
       slippageBps: SWAP_SLIPPAGE_BPS,
+      feeRecipient: cfg.treasury,
+      providerFeeUnits: providerFee(units, fee.units).toString(),
+      gasUsd: quote.gasUsd,
+      route: quote.route,
       status: "QUOTED",
       createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + QUOTE_TTL_SEC * 1000).toISOString(),
     };
     await saveSwap(record);
-    return { quote: quoteView(record) };
+    return { quote: quoteView(record), timings: { quoteMs: circleResult.ms, balanceMs: balances.ms, totalMs: Date.now() - t0 } };
   }
 );

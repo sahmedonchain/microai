@@ -37,6 +37,9 @@ const EURC = SWAP_TOKENS.EURC.address;
 const pad = (a: string) => "0x" + "0".repeat(24) + a.slice(2);
 
 const circle = vi.fn();
+const receipts = new Map<string, unknown>();
+let tokenBal = "0x" + (BigInt(10) ** BigInt(12)).toString(16);
+let gasBal = "0x" + (BigInt(10) ** BigInt(18)).toString(16);
 const logs: string[] = [];
 let n = 0;
 const call = (h: unknown, body?: unknown, opts: { ctx?: unknown; headers?: Record<string, string>; url?: string; method?: string } = {}) =>
@@ -52,6 +55,21 @@ const as = (a: string) => void (jar.value = issueSessionToken(a));
 const quoteBody = (amount: string, fromToken = "USDC", toToken = "EURC") => ({ amount, fromToken, toToken });
 const quoteAnswer = (est = "99800000", min = "99300000", type: "input" | "output" = "input") => ({ quote: { estimatedAmount: est, minAmount: min, route: {} }, feeContext: type === "input" ? { type, tokenAddress: USDC, tokenSymbol: "USDC", amount: "100000" } : { type, tokenAddress: EURC, tokenSymbol: "EURC", minAmount: min, estimatedAmount: est } });
 
+const ROUTER = "0xa4072583658fae592a3506a42431cb6316a8d40b";
+const FEE_COLLECTOR = "0xf992efcb5fa2ed7cb48310d9dd8cb4ce5fb7ddc9";
+// Shaped like a real Arc Mainnet payload (captured 2026-11-23, no key, nothing signed).
+const goodPayload = (over: Record<string, unknown> = {}, ins: Record<string, unknown>[] | null = null) => ({
+  tokenInAddress: USDC, tokenInChain: "Arc", tokenOutAddress: EURC, tokenOutChain: "Arc", fromAddress: ME, toAddress: ME, amount: "100000000",
+  estimatedAmount: "90970000", fees: { provider: [], swap: [], developer: [{ token: USDC, beneficiary: TREASURY }] },
+  config: { customFee: { percentageBps: 10, recipientAddress: TREASURY } },
+  transaction: { signature: "0x" + "ab".repeat(65), executionParams: { execId: "0x1", deadline: "1", metadata: "0x", tokens: [{ token: USDC, beneficiary: ME }, { token: EURC, beneficiary: ME }],
+    instructions: ins ?? [
+      { target: FEE_COLLECTOR, data: "0x00", value: "0", tokenIn: USDC, amountToApprove: "120000", tokenOut: "0x0000000000000000000000000000000000000000", minTokenOut: "0" },
+      { target: ROUTER, data: "0x00", value: "0x0", tokenIn: USDC, amountToApprove: "99880000", tokenOut: EURC, minTokenOut: "99250000" },
+    ] }, gasLimit: "0x11d28a" },
+  ...over,
+});
+
 async function confirmed(amount = "100") {
   as(ME);
   const q = (await (await call(quote, quoteBody(amount))).json()).quote;
@@ -65,11 +83,21 @@ beforeEach(() => {
   process.env.SESSION_SECRET = "test-secret";
   process.env.KIT_KEY = KEY;
   process.env.TREASURY_ADDRESS = TREASURY;
+  process.env.SWAP_ENABLED = "1";
   redis = makeFakeRedis();
   jar.value = "";
   rpc.mockReset();
+  receipts.clear();
+  tokenBal = "0x" + (BigInt(10) ** BigInt(12)).toString(16);
+  gasBal = "0x" + (BigInt(10) ** BigInt(18)).toString(16);
+  rpc.mockImplementation(async (method: string, params: unknown[]) => {
+    if (method === "eth_call") return tokenBal;
+    if (method === "eth_getBalance") return gasBal;
+    if (method === "eth_getTransactionReceipt") return receipts.get(String(params[0])) ?? null;
+    return null;
+  });
   circle.mockReset();
-  circle.mockImplementation(async (url: URL) => (String(url).includes("/quote") ? new Response(JSON.stringify(quoteAnswer()), { status: 200 }) : new Response(JSON.stringify({ transaction: {} }), { status: 200 })));
+  circle.mockImplementation(async (url: URL) => (String(url).includes("/quote") ? new Response(JSON.stringify(quoteAnswer()), { status: 200 }) : new Response(JSON.stringify(goodPayload()), { status: 200 })));
   vi.stubGlobal("fetch", circle);
   logs.length = 0;
   for (const m of ["log", "warn", "error"] as const) vi.spyOn(console, m).mockImplementation((...a) => void logs.push(a.join(" ")));
@@ -93,7 +121,7 @@ describe("swap quote", () => {
     const res = await call(quote, quoteBody("100"));
     const text = await res.text();
     const q = JSON.parse(text).quote;
-    expect(q).toMatchObject({ from: "USDC", to: "EURC", amountIn: "100", estimatedReceive: "99.8", fee: "0.1", feePercent: "0.10%", slippage: "0.50%", network: "Arc" });
+    expect(q).toMatchObject({ from: "USDC", to: "EURC", amountIn: "100", estimatedReceive: "99.7002", fee: "0.1", providerFee: "0.01998", feePercent: "0.10%", slippage: "0.50%", network: "Arc" });
     const [url, init] = circle.mock.calls[0];
     expect(String(url)).toContain("/v1/stablecoinKits/quote");
     expect(init.headers.Authorization).toBe(`Bearer ${KEY}`);
@@ -196,13 +224,13 @@ describe("proxy to Circle", () => {
   });
 });
 
-const receipt = (hash: string, ok: boolean, eurcTo = ME) => ({ transactionHash: hash, status: ok ? "0x1" : "0x0", blockNumber: "0x10", logs: ok ? [{ address: EURC, topics: [ERC20_TRANSFER_TOPIC, pad(TREASURY), pad(eurcTo)], data: "0x" + (99_780_000).toString(16).padStart(64, "0") }] : [] });
+const receipt = (hash: string, ok: boolean, eurcTo = ME) => ({ transactionHash: hash, status: ok ? "0x1" : "0x0", blockNumber: "0x10", logs: ok ? [{ address: USDC, topics: [ERC20_TRANSFER_TOPIC, pad(ME), pad(TREASURY)], data: "0x" + (100_000_000).toString(16).padStart(64, "0") }, { address: EURC, topics: [ERC20_TRANSFER_TOPIC, pad(TREASURY), pad(eurcTo)], data: "0x" + (99_780_000).toString(16).padStart(64, "0") }] : [] });
 const statusOf = (hash: string) => call(status, undefined, { ctx: { params: Promise.resolve({ txHash: hash }) } });
 
 describe("submit, status and history", () => {
   it("records the hash, then reads the result from the chain", async () => {
     const { q } = await confirmed();
-    rpc.mockResolvedValue(receipt(TX, true));
+    receipts.set(TX, receipt(TX, true));
     expect((await call(submit, { quoteId: q.id, txHash: TX })).status).toBe(200);
     const s = await (await statusOf(TX)).json();
     expect(s.swap).toMatchObject({ status: "SUCCESS", actualOut: "99.78", txHash: TX });
@@ -214,7 +242,7 @@ describe("submit, status and history", () => {
 
   it("marks a failed swap FAILED and frees the daily allowance", async () => {
     const { q } = await confirmed("1000");
-    rpc.mockResolvedValue(receipt(TX, false));
+    receipts.set(TX, receipt(TX, false));
     await call(submit, { quoteId: q.id, txHash: TX });
     expect((await (await statusOf(TX)).json()).swap.status).toBe("FAILED");
     for (let i = 0; i < 5; i++) expect((await confirmed("1000")).ex.status).toBe(200);
@@ -222,7 +250,6 @@ describe("submit, status and history", () => {
 
   it("stays PENDING until the chain has it, and rejects bad or reused hashes", async () => {
     const { q } = await confirmed();
-    rpc.mockResolvedValue(null);
     expect((await call(submit, { quoteId: q.id, txHash: "0x12" })).status).toBe(400);
     await call(submit, { quoteId: q.id, txHash: TX });
     expect((await (await statusOf(TX)).json()).swap.status).toBe("PENDING");
@@ -239,5 +266,106 @@ describe("submit, status and history", () => {
     as(ME);
     const unconfirmed = (await (await call(quote, quoteBody("10"))).json()).quote;
     expect((await call(submit, { quoteId: unconfirmed.id, txHash: "0x" + "cd".repeat(32) })).status).toBe(400);
+  });
+});
+
+describe("hardening: flag, balances, provider failures, unsafe payloads", () => {
+  it("is off unless SWAP_ENABLED is exactly 1", async () => {
+    as(ME);
+    for (const v of [undefined, "", "0", "true", "yes"]) {
+      if (v === undefined) delete process.env.SWAP_ENABLED;
+      else process.env.SWAP_ENABLED = v;
+      expect((await call(quote, quoteBody("100"))).status).toBe(503);
+    }
+    expect(circle).not.toHaveBeenCalled();
+    expect((await (await call(history)).json()).enabled).toBe(false);
+  });
+
+  it("refuses when the wallet has too little of the token or too little gas", async () => {
+    as(ME);
+    tokenBal = "0x" + (50_000_000).toString(16);
+    const a = await call(quote, quoteBody("100"));
+    expect(a.status).toBe(400);
+    expect((await a.json()).error).toContain("Insufficient USDC");
+    tokenBal = "0x" + (BigInt(10) ** BigInt(12)).toString(16);
+    gasBal = "0x0";
+    const b = await call(quote, quoteBody("100"));
+    expect(b.status).toBe(400);
+    expect((await b.json()).error).toContain("gas");
+  });
+
+  it("fails closed when the balance cannot be read or the provider is down", async () => {
+    as(ME);
+    rpc.mockRejectedValueOnce(new Error("boom"));
+    expect([500, 502]).toContain((await call(quote, quoteBody("100"))).status);
+    circle.mockClear();
+    circle.mockRejectedValue(new Error("network"));
+    const r = await call(quote, quoteBody("100"));
+    expect(r.status).toBe(502);
+    expect(circle.mock.calls.length).toBe(2); // one try plus one bounded retry, then stop
+  });
+
+  it("retries a read once on a 5xx, and never repeats a swap request", async () => {
+    as(ME);
+    circle.mockResolvedValueOnce(new Response("oops", { status: 503 })).mockResolvedValueOnce(new Response(JSON.stringify(quoteAnswer()), { status: 200 }));
+    expect((await call(quote, quoteBody("100"))).status).toBe(200);
+    const { q } = await confirmed();
+    circle.mockReset();
+    circle.mockResolvedValue(new Response("oops", { status: 503 }));
+    await proxy(q.id, swapBody());
+    expect(circle.mock.calls.length).toBe(1);
+  });
+
+  it("returns a valid route and reports the quote timings", async () => {
+    as(ME);
+    const body = await (await call(quote, quoteBody("100"))).json();
+    expect(body.timings.totalMs).toBeGreaterThanOrEqual(0);
+    const { q } = await confirmed();
+    expect((await proxy(q.id, swapBody())).status).toBe(200);
+  });
+
+  it.each([
+    ["an unknown router", { instructions: [{ target: OTHER, data: "0x00", value: "0", tokenIn: USDC, amountToApprove: "99880000", tokenOut: EURC, minTokenOut: "99250000" }] }],
+    ["more than the confirmed amount", { instructions: [{ target: ROUTER, data: "0x00", value: "0", tokenIn: USDC, amountToApprove: "200000000", tokenOut: EURC, minTokenOut: "99250000" }] }],
+    ["a different input token", { instructions: [{ target: ROUTER, data: "0x00", value: "0", tokenIn: EURC, amountToApprove: "1", tokenOut: EURC, minTokenOut: "99250000" }] }],
+    ["a very low minimum output", { instructions: [{ target: ROUTER, data: "0x00", value: "0", tokenIn: USDC, amountToApprove: "99880000", tokenOut: EURC, minTokenOut: "1" }] }],
+  ])("refuses a payload with %s", async (_n, { instructions }) => {
+    const { q } = await confirmed();
+    circle.mockResolvedValue(new Response(JSON.stringify(goodPayload({}, instructions)), { status: 200 }));
+    const r = await proxy(q.id, swapBody());
+    expect(r.status).toBe(502);
+    expect(await r.text()).not.toContain("signature");
+  });
+
+  it("refuses a payload that pays another wallet or sends the fee elsewhere", async () => {
+    const { q } = await confirmed();
+    for (const over of [{ toAddress: OTHER }, { fees: { developer: [{ token: USDC, beneficiary: OTHER }] } }, { config: { customFee: { percentageBps: 10, recipientAddress: OTHER } } }]) {
+      circle.mockResolvedValue(new Response(JSON.stringify(goodPayload(over)), { status: 200 }));
+      expect((await proxy(q.id, swapBody())).status).toBe(502);
+    }
+  });
+
+  it("a wallet change cancels a confirmed swap and the proxy stops serving it", async () => {
+    const { q } = await confirmed("1000");
+    as(ME);
+    expect((await (await call(execute, { quoteId: q.id, confirm: false })).json()).status).toBe("CANCELLED");
+    expect((await proxy(q.id, swapBody({ amount: "1000000000" }))).status).toBe(403);
+    for (let i = 0; i < 5; i++) expect((await confirmed("1000")).ex.status).toBe(200);
+  });
+
+  it("an expired quote cannot be confirmed", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    as(ME);
+    const q = (await (await call(quote, quoteBody("100"))).json()).quote;
+    vi.setSystemTime(Date.now() + 121_000);
+    expect((await call(execute, { quoteId: q.id, confirm: true })).status).toBe(400);
+    vi.useRealTimers();
+  });
+
+  it("a transaction that is only an approval is never shown as a completed swap", async () => {
+    const { q } = await confirmed();
+    receipts.set(TX, { transactionHash: TX, status: "0x1", blockNumber: "0x10", logs: [] });
+    await call(submit, { quoteId: q.id, txHash: TX });
+    expect((await (await statusOf(TX)).json()).swap.status).toBe("UNKNOWN");
   });
 });

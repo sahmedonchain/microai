@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ApiError, apiErrors, withApi } from "@/lib/api";
 import { circleCall, CircleError } from "@/lib/swap/circle";
+import { validateSwapResponse } from "@/lib/swap/validate";
 import { buildQuoteQuery, buildRatesQuery, buildStatusQuery, buildSwapBody, confirmedQuote, pathOf } from "@/lib/swap/proxy";
 import { swapServerConfig } from "@/lib/swap/server-config";
 
@@ -23,8 +24,10 @@ function handle(method: "GET" | "POST") {
         const search = new URL(req.url).searchParams;
 
         let call: Parameters<typeof circleCall>;
+        let quoteRecord: Awaited<ReturnType<typeof confirmedQuote>> | null = null;
         if (op === "swap" && method === "POST") {
           const r = await confirmedQuote(req, session!.sub);
+          quoteRecord = r;
           let body: unknown;
           try {
             body = await req.json();
@@ -47,6 +50,13 @@ function handle(method: "GET" | "POST") {
           if (r.status === 401 || r.status === 403) {
             log.error("swap service rejected the server credential", { status: r.status });
             throw apiErrors.upstream("The swap service is unavailable right now.");
+          }
+          if (op === "swap" && quoteRecord && r.status === 200) {
+            const problem = validateSwapResponse(r.text, quoteRecord, cfg.treasury, cfg.extraTargets);
+            if (problem) {
+              log.error("swap payload refused", { reason: problem });
+              throw apiErrors.upstream("This swap route was refused because it did not match the confirmed quote. Nothing was sent. Ask for a new quote.");
+            }
           }
           return new NextResponse(r.text, { status: r.status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
         } catch (err) {

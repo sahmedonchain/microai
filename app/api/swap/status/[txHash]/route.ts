@@ -31,11 +31,18 @@ export async function GET(req: Request, ctx: { params: Promise<{ txHash: string 
     }
     if (receipt && typeof receipt.blockNumber === "string") {
       if (receipt.status === "0x1") {
-        const got = readTransfers(receipt)
-          .filter((t) => t.token === SWAP_TOKENS[r.to].address && t.to === r.wallet)
-          .reduce((s, t) => s + t.value, BigInt(0));
-        r.status = "SUCCESS";
-        r.actualOut = got.toString();
+        const moves = readTransfers(receipt);
+        const got = moves.filter((t) => t.token === SWAP_TOKENS[r.to].address && t.to === r.wallet).reduce((s, t) => s + t.value, BigInt(0));
+        const spent = moves.filter((t) => t.token === SWAP_TOKENS[r.from].address && t.from === r.wallet).reduce((s, t) => s + t.value, BigInt(0));
+        if (got > BigInt(0) && spent > BigInt(0)) {
+          // Both sides of a swap are visible: the input left the wallet and the output arrived.
+          r.status = "SUCCESS";
+          r.actualOut = got.toString();
+        } else {
+          // A confirmed transaction that is not a swap result (for example only an approval) is never shown as a completed swap.
+          r.status = "UNKNOWN";
+          r.error = "The transaction succeeded, but no swap result was found in it. Check it on the explorer.";
+        }
       } else {
         r.status = "FAILED";
         r.error = "The transaction failed on chain, for example because the slippage limit was exceeded.";
