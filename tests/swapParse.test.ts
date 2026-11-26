@@ -54,9 +54,14 @@ describe("swap math", () => {
   it("slippage floor is 0.50% under the estimate", () => {
     expect(minOutFor(BigInt(100_000_000))).toBe(BigInt(99_500_000));
   });
-  it("enforces min, max and daily limits", () => {
-    expect(checkAmount(BigInt(999_999))).toBe("below_min");
+  it("has no minimum swap, except the amount must be above the 0.01 fee", () => {
+    expect(checkAmount(BigInt(0))).toBe("not_above_fee");
+    expect(checkAmount(BigInt(10_000))).toBe("not_above_fee");
+    expect(checkAmount(BigInt(10_001))).toBeNull();
+    expect(checkAmount(BigInt(500_000))).toBeNull();
     expect(checkAmount(BigInt(1_000_000))).toBeNull();
+  });
+  it("enforces max and daily limits", () => {
     expect(checkAmount(BigInt(1_000_000_001))).toBe("above_max");
     expect(checkAmount(BigInt(1_000_000_000), BigInt(4_500_000_000))).toBe("daily_exceeded");
     expect(checkAmount(BigInt(500_000_000), BigInt(4_500_000_000))).toBeNull();

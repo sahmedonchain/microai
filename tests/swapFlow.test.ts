@@ -110,10 +110,15 @@ describe("swap quote", () => {
 
   it("enforces amount limits and the token allowlist", async () => {
     as(ME);
-    for (const amount of ["0.5", "1000.01", "abc", "-5"]) expect((await call(quote, quoteBody(amount))).status).toBe(400);
+    for (const amount of ["0", "0.01", "1000.01", "abc", "-5"]) expect((await call(quote, quoteBody(amount))).status).toBe(400);
     expect((await call(quote, quoteBody("10", "USDC", "USDT"))).status).toBe(400);
     expect((await call(quote, quoteBody("10", "USDC", "USDC"))).status).toBe(400);
     expect(circle).not.toHaveBeenCalled();
+  });
+
+  it("has no minimum swap: a small amount above the fee is quoted", async () => {
+    as(ME);
+    expect((await call(quote, quoteBody("0.5"))).status).toBe(200);
   });
 
   it("uses a minimum fee for small swaps", async () => {

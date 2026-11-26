@@ -180,7 +180,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
         <span className="inline-flex items-center rounded-full border border-success/25 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">USDC ↔ EURC on Arc Mainnet</span>
       </div>
       <p className="mt-3 max-w-prose leading-relaxed text-muted">
-        Type what you want, such as <span className="text-text">100 USDC to EURC</span> or <span className="text-text">50 EURC থেকে USDC করো</span>. You see the quote, fee and slippage first. Only your own wallet can sign. MicroAI never holds your keys and never swaps for you. Limits: 1 to 1,000 per swap, 5,000 per wallet a day.
+        Type what you want, such as <span className="text-text">100 USDC to EURC</span> or <span className="text-text">50 EURC থেকে USDC করো</span>. You see the quote, fee and slippage first. Only your own wallet can sign. MicroAI never holds your keys and never swaps for you. No minimum amount. Limits: up to 1,000 per swap, 5,000 per wallet a day.
       </p>
 
       <div className="mt-6"><ConnectWallet onChange={setMe} /></div>

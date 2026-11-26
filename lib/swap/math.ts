@@ -1,4 +1,4 @@
-import { SWAP_DAILY_MAX_UNITS, SWAP_FEE_BPS, SWAP_MAX_UNITS, SWAP_MIN_FEE_UNITS, SWAP_MIN_UNITS, SWAP_SLIPPAGE_BPS } from "./config";
+import { SWAP_DAILY_MAX_UNITS, SWAP_FEE_BPS, SWAP_MAX_UNITS, SWAP_MIN_FEE_UNITS, SWAP_SLIPPAGE_BPS } from "./config";
 
 /** "100.5" -> 100500000n. Returns null when it is not a plain amount with at most 6 decimals. */
 export function toUnits(amount: string): bigint | null {
@@ -30,15 +30,16 @@ export function planFee(amountUnits: bigint): FeePlan {
 /** The smallest output the user will accept: the estimate minus the slippage limit. */
 export const minOutFor = (estimated: bigint, bps = SWAP_SLIPPAGE_BPS) => (estimated * BigInt(10_000 - bps)) / BigInt(10_000);
 
-export type LimitProblem = "below_min" | "above_max" | "daily_exceeded";
+export type LimitProblem = "not_above_fee" | "above_max" | "daily_exceeded";
 export function checkAmount(units: bigint, usedToday: bigint = BigInt(0)): LimitProblem | null {
-  if (units < SWAP_MIN_UNITS) return "below_min";
+  // No minimum swap size. The only floor is practical: the fee is never less than $0.01, so the amount must be more than that.
+  if (units <= SWAP_MIN_FEE_UNITS) return "not_above_fee";
   if (units > SWAP_MAX_UNITS) return "above_max";
   if (usedToday + units > SWAP_DAILY_MAX_UNITS) return "daily_exceeded";
   return null;
 }
 export const LIMIT_MESSAGES: Record<LimitProblem, string> = {
-  below_min: "The minimum swap is 1.",
+  not_above_fee: "The swap fee is at least 0.01, so the amount must be more than 0.01.",
   above_max: "The maximum swap is 1,000 per transaction.",
   daily_exceeded: "This would go over the daily limit of 5,000 per wallet. Try a smaller amount, or come back tomorrow.",
 };
