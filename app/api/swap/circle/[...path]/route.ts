@@ -4,10 +4,24 @@ import { circleCall, CircleError } from "@/lib/swap/circle";
 import { validateSwapResponse } from "@/lib/swap/validate";
 import { buildQuoteQuery, buildRatesQuery, buildStatusQuery, buildSwapBody, confirmedQuote, pathOf } from "@/lib/swap/proxy";
 import { swapServerConfig } from "@/lib/swap/server-config";
+import { saveSwap } from "@/lib/swap/store";
 
 // The only way the browser's wallet SDK reaches Circle's swap service. The API
 // key is added here, on the server. Every request must belong to a swap the
 // user confirmed, and the fee and its recipient are set here, not by the browser.
+
+/** A short, single-line version of an error answer. Control characters are removed and it is cut short. */
+function errorText(text: string): string {
+  let msg = text;
+  try {
+    const j = JSON.parse(text) as { message?: unknown; error?: unknown };
+    const m = typeof j.message === "string" ? j.message : typeof j.error === "string" ? j.error : "";
+    if (m) msg = m;
+  } catch {
+    /* keep the raw text */
+  }
+  return msg.replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, 200) || "no details";
+}
 
 function handle(method: "GET" | "POST") {
   return async (req: Request, ctx: { params: Promise<{ path: string[] }> }): Promise<Response> => {
@@ -51,10 +65,17 @@ function handle(method: "GET" | "POST") {
             log.error("swap service rejected the server credential", { status: r.status });
             throw apiErrors.upstream("The swap service is unavailable right now.");
           }
+          if (op === "swap" && quoteRecord && r.status !== 200) {
+            // Keep the real reason (Circle's own error text, no secrets) so a failed swap can be explained, not guessed.
+            const detail = `Circle answered ${r.status}: ${errorText(r.text).split(cfg.kitKey).join("[removed]")}`;
+            log.error("swap service refused createSwap", { status: r.status, detail });
+            await saveSwap({ ...quoteRecord, error: detail }).catch(() => undefined);
+          }
           if (op === "swap" && quoteRecord && r.status === 200) {
             const problem = validateSwapResponse(r.text, quoteRecord, cfg.treasury, cfg.extraTargets);
             if (problem) {
               log.error("swap payload refused", { reason: problem });
+              await saveSwap({ ...quoteRecord, error: `MicroAI refused the route: ${problem}` }).catch(() => undefined);
               throw apiErrors.upstream("This swap route was refused because it did not match the confirmed quote. Nothing was sent. Ask for a new quote.");
             }
           }

@@ -233,6 +233,25 @@ describe("proxy to Circle", () => {
   });
 });
 
+describe("failed createSwap keeps its real reason", () => {
+  it("stores Circle's error text (without the key) and shows it in the history", async () => {
+    const { q } = await confirmed();
+    circle.mockResolvedValue(new Response(JSON.stringify({ message: `no route for this size ${KEY}` }), { status: 502 }));
+    const r = await proxy(q.id, swapBody());
+    expect(r.status).toBe(502);
+    const h = (await (await call(history)).json()).swaps[0];
+    expect(h.error).toContain("Circle answered 502: no route for this size");
+    expect(h.error).not.toContain("SUPER_SECRET");
+  });
+
+  it("stores why MicroAI itself refused a route", async () => {
+    const { q } = await confirmed();
+    circle.mockResolvedValue(new Response(JSON.stringify(goodPayload({ tokenOutAddress: USDC })), { status: 200 }));
+    await proxy(q.id, swapBody());
+    expect((await (await call(history)).json()).swaps[0].error).toContain("MicroAI refused the route");
+  });
+});
+
 const receipt = (hash: string, ok: boolean, eurcTo = ME) => ({ transactionHash: hash, status: ok ? "0x1" : "0x0", blockNumber: "0x10", logs: ok ? [{ address: USDC, topics: [ERC20_TRANSFER_TOPIC, pad(ME), pad(TREASURY)], data: "0x" + (100_000_000).toString(16).padStart(64, "0") }, { address: EURC, topics: [ERC20_TRANSFER_TOPIC, pad(TREASURY), pad(eurcTo)], data: "0x" + (99_780_000).toString(16).padStart(64, "0") }] : [] });
 const statusOf = (hash: string) => call(status, undefined, { ctx: { params: Promise.resolve({ txHash: hash }) } });
 

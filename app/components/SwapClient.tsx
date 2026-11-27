@@ -222,6 +222,13 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
       patch(m.id, { note: "Still pending. It will keep updating in your history, even after a reload." });
     } catch (e) {
       patch(m.id, { phase: "failed", reason: friendly(e) });
+      // If the server kept the real reason for this swap, show it under the message.
+      void api<{ swaps: Hist[] }>("/api/swap/history")
+        .then((h) => {
+          const why = h.swaps.find((x) => x.id === q.id)?.error;
+          if (why) patch(m.id, { phase: "failed", reason: `${friendly(e)} Details: ${why}` });
+        })
+        .catch(() => undefined);
     } finally {
       restore?.();
       live.current = null;
