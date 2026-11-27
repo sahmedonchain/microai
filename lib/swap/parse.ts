@@ -36,7 +36,11 @@ export function parseSwapCommand(input: string): ParsedSwap {
   const amount = readAmount(text);
   const hasSwapWord = /\b(swap|convert|exchange)\b|থেকে|করো|করুন|কনভার্ট|সোয়াপ|\bto\b|\bfor\b|→|->/i.test(text);
 
-  if (symbols.length === 0) return { kind: "none" };
+  if (symbols.length === 0) {
+    // Just a number, such as "0.02": ask which way, instead of the generic hint.
+    if (amount !== null && /^[\d\s.,]+$/.test(text)) return { kind: "clarify", question: `Which way? Type "${amount} USDC to EURC" or "${amount} EURC to USDC".` };
+    return { kind: "none" };
+  }
   if (symbols.some((s) => !isSwapToken(s))) {
     // Only react when it looks like a swap, so ordinary chat is not answered with a refusal.
     return amount !== null || hasSwapWord ? { kind: "unsupported", message: UNSUPPORTED_MESSAGE } : { kind: "none" };

@@ -1,5 +1,5 @@
 import { apiErrors } from "@/lib/api";
-import { SWAP_CHAIN, SWAP_TOKENS } from "./config";
+import { SWAP_CHAIN, SWAP_FEE_BPS, SWAP_TOKENS } from "./config";
 import { SwapRecord, loadSwap } from "./store";
 import type { CirclePath } from "./circle";
 
@@ -84,7 +84,7 @@ export function buildSwapBody(body: unknown, r: SwapRecord, treasury: string): R
     ...(p.slippageBps !== undefined ? { slippageBps: p.slippageBps } : {}),
     ...(provider ? { provider } : {}),
     // Fee and recipient are set here and only here. Anything the browser sent is dropped.
-    config: { customFee: { ...r.feeMode, recipientAddress: treasury } },
+    config: { customFee: { percentageBps: SWAP_FEE_BPS, recipientAddress: treasury } },
   };
 }
 

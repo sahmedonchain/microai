@@ -19,8 +19,9 @@ export const isSwapToken = (t: string): t is SwapToken => t === "USDC" || t === 
 export const SWAP_CHAIN = "Arc";
 
 export const SWAP_FEE_BPS = 10; // 0.10%
-export const SWAP_MIN_FEE_UNITS = BigInt(10_000); // $0.01 in 6-decimal units
 export const SWAP_SLIPPAGE_BPS = 50; // 0.50%
+/** Smallest swap: one cent. Below this the 0.10% fee rounds to almost nothing and gas costs more than the swap. */
+export const SWAP_FLOOR_UNITS = BigInt(10_000);
 export const SWAP_MAX_UNITS = BigInt(1_000_000_000); // 1,000 per transaction
 export const SWAP_DAILY_MAX_UNITS = BigInt(5_000_000_000); // 5,000 per wallet per day
 /** A quote can be confirmed for this long, then it expires. */

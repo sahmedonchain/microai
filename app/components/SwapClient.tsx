@@ -82,6 +82,7 @@ const friendly = (e: unknown) => {
   if (err?.code === 4001 || /reject|denied|cancel/i.test(err?.message ?? "")) return "You rejected the request in your wallet. Nothing was sent.";
   if (/slippage|min.?out|price/i.test(err?.message ?? "")) return "Slippage limit exceeded";
   if (/insufficient|balance/i.test(err?.message ?? "")) return "Insufficient balance";
+  if (/\b50[0-4]\b|server error|createSwap/i.test(err?.message ?? "")) return "The swap service had a problem on its side. Nothing was sent from your wallet. Try again in a moment.";
   return (err?.message || "Network error").slice(0, 160);
 };
 
@@ -145,7 +146,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
     setText("");
     setMsgs((m) => [...m, { id: next(), role: "user", text: t }]);
     const p = parseSwapCommand(t);
-    if (p.kind === "none") return say("Try: 100 USDC to EURC, or 50 EURC to USDC.");
+    if (p.kind === "none") return say("Type an amount and both tokens, for example: 100 USDC to EURC, or 50 EURC to USDC.");
     if (p.kind === "clarify") return say(p.question);
     if (p.kind === "unsupported") return say(p.message);
     if (!me) return say("Connect your wallet first, then ask again.");
@@ -237,7 +238,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
         <span className="inline-flex items-center rounded-full border border-success/25 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">USDC ↔ EURC on Arc Mainnet</span>
       </div>
       <p className="mt-3 max-w-prose leading-relaxed text-muted">
-        Type what you want, such as <span className="text-text">100 USDC to EURC</span> or <span className="text-text">50 EURC থেকে USDC করো</span>. You see the quote, fee and slippage first. Only your own wallet can sign. MicroAI never holds your keys and never swaps for you. No minimum amount. Limits: up to 1,000 per swap, 5,000 per wallet a day.
+        Type what you want, such as <span className="text-text">100 USDC to EURC</span> or <span className="text-text">50 EURC to USDC</span>. You see the quote, fee and slippage first. Only your own wallet can sign. MicroAI never holds your keys and never swaps for you. Swap from 0.01 up to 1,000 at a time, 5,000 per wallet a day.
       </p>
 
       {!enabled && <p role="status" className="mt-4 rounded-lg border border-warning/25 bg-warning/10 p-3 text-sm text-warning">Swap is currently disabled. Nothing can be swapped until it is switched on.</p>}
@@ -263,7 +264,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
                     <div>Minimum receive: <span className="text-text">{m.quote.minimumReceive} {m.quote.to}</span></div>
                   </>
                 )}
-                <div>MicroAI fee: <span className="text-text">{m.quote.feePercent} ({m.quote.fee} {m.quote.feeToken}, minimum 0.01)</span></div>
+                <div>MicroAI fee: <span className="text-text">{m.quote.feePercent} ({m.quote.fee} {m.quote.feeToken})</span></div>
                 <div>Provider fee: <span className="text-text">≈ {m.quote.providerFee} {m.quote.feeToken} (0.02%, charged by the swap provider)</span></div>
                 <div>Network gas: <span className="text-text">{m.quote.gasUsd ? `≈ $${m.quote.gasUsd}, paid in USDC from your wallet` : "paid in USDC from your wallet, shown by your wallet"}</span></div>
                 {m.quote.route && <div>Route: <span className="text-text">{m.quote.route}</span></div>}
