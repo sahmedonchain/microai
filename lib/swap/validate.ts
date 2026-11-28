@@ -50,11 +50,15 @@ export function validateSwapResponse(text: string, r: SwapRecord, treasury: stri
   if (approved > total) return "The route would spend more than the confirmed amount.";
 
   // The platform fee must go to the treasury MicroAI configured, and nowhere else.
-  const dev = (j.fees as { developer?: { beneficiary?: unknown }[] } | undefined)?.developer ?? [];
-  // Circle's own fee collector contract may hold the fee on the way to the treasury (the
-  // recipient is checked separately below). Anything else is refused, and the address is named.
+  // Circle's fee entries carry no address at all (only token, amount and basis), so an entry is
+  // checked only when it names one. Circle's fee collector contract may hold the fee on the way
+  // to the treasury; any other named address is refused and shown.
+  const dev = (j.fees as { developer?: { beneficiary?: unknown; recipientAddress?: unknown }[] } | undefined)?.developer ?? [];
   const feeOk = new Set<string>([treasury.toLowerCase(), SWAP_KNOWN_TARGETS[0]]);
-  for (const d of dev) if (!feeOk.has(lower(d.beneficiary))) return `A fee in the route goes to an unexpected address (${lower(d.beneficiary) || "none"}).`;
+  for (const d of dev) {
+    const named = lower(d.beneficiary) || lower(d.recipientAddress);
+    if (named && !feeOk.has(named)) return `A fee in the route goes to an unexpected address (${named}).`;
+  }
   const cfg = (j.config as { customFee?: { recipientAddress?: unknown } } | undefined)?.customFee;
   if (cfg && lower(cfg.recipientAddress) !== treasury.toLowerCase()) return "The fee recipient in the route is not the configured treasury.";
   return null;
