@@ -86,6 +86,9 @@ const friendly = (e: unknown) => {
   return (err?.message || "Network error").slice(0, 160);
 };
 
+let kitPromise: Promise<[typeof import("@circle-fin/swap-kit"), typeof import("@circle-fin/adapter-viem-v2")]> | null = null;
+const loadKit = () => (kitPromise ??= Promise.all([import("@circle-fin/swap-kit"), import("@circle-fin/adapter-viem-v2")]).catch((e) => { kitPromise = null; throw e; }));
+
 export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
   const [me, setMe] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -158,6 +161,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
     const t0 = clock();
     try {
       const { quote } = await api<{ quote: Quote }>("/api/swap/quote", { amount: p.amount, fromToken: p.from, toToken: p.to });
+      void loadKit().catch(() => undefined); // warm up so the wallet opens fast on confirm
       const ms = Math.round(clock() - t0);
       setMsgs((m) => [...m.filter((x) => x.id !== loadingId), { id: next(), role: "quote", quote, phase: "ready", timing: `Quote ready in ${(ms / 1000).toFixed(1)}s` }]);
     } catch (e) {
@@ -186,14 +190,17 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
     try {
       const eth = (window as unknown as { ethereum?: Eip1193 }).ethereum;
       if (!eth) throw new Error("No wallet found. Install a browser wallet such as MetaMask.");
+      const kitReady = loadKit(); // the wallet library loads while the server confirms
+      kitReady.catch(() => undefined);
       const ex = await api<{ swap: { chain: string; tokenIn: string; tokenOut: string; amountIn: string; slippageBps: number } }>("/api/swap/execute", { quoteId: q.id, confirm: true });
       patch(m.id, { phase: "awaiting_wallet", note: "Please approve this swap in your wallet." });
       try {
-        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_MAINNET.chainIdHex }] });
+        const now = await eth.request({ method: "eth_chainId" }).catch(() => null);
+        if (String(now).toLowerCase() !== ARC_MAINNET.chainIdHex.toLowerCase()) await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: ARC_MAINNET.chainIdHex }] });
       } catch {
         throw new Error("Switch your wallet to Arc Mainnet, then ask for a new quote.");
       }
-      const [{ SwapKit }, { createAdapterFromProvider }] = await Promise.all([import("@circle-fin/swap-kit"), import("@circle-fin/adapter-viem-v2")]);
+      const [{ SwapKit }, { createAdapterFromProvider }] = await kitReady;
       const adapter = await createAdapterFromProvider({ provider: eth as never });
       restore = routeCircleCalls(q.id);
       const result = await new SwapKit().swap({

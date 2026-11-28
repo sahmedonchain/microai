@@ -21,6 +21,7 @@ import { POST as quote } from "@/app/api/swap/quote/route";
 import { POST as execute } from "@/app/api/swap/execute/route";
 import { POST as submit } from "@/app/api/swap/submit/route";
 import { GET as history } from "@/app/api/swap/history/route";
+import { GET as activity } from "@/app/api/swap/activity/route";
 import { GET as status } from "@/app/api/swap/status/[txHash]/route";
 import { GET as circleGet, POST as circlePost } from "@/app/api/swap/circle/[...path]/route";
 import { issueSessionToken } from "@/lib/session";
@@ -266,6 +267,11 @@ describe("submit, status and history", () => {
     const h = (await (await call(history)).json()).swaps;
     expect(h).toHaveLength(1);
     expect(h[0]).toMatchObject({ from: "USDC", to: "EURC", status: "SUCCESS" });
+    // The public stats feed shows it too, without any wallet address.
+    const a = await (await call(activity)).json();
+    expect(a.total).toBe(1);
+    expect(a.swaps[0]).toMatchObject({ from: "USDC", to: "EURC", txHash: TX });
+    expect(JSON.stringify(a).toLowerCase()).not.toContain(ME.toLowerCase());
   });
 
   it("marks a failed swap FAILED and frees the daily allowance", async () => {

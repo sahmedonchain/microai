@@ -2,7 +2,7 @@ import { apiErrors, withApi } from "@/lib/api";
 import { ARC_NETWORKS } from "@/lib/arcConfig";
 import { RpcError } from "@/lib/arcRpc";
 import { SWAP_TOKENS } from "@/lib/swap/config";
-import { loadSwap, releaseDaily, saveSwap, swapIdForTx } from "@/lib/swap/store";
+import { loadSwap, recordCompleted, releaseDaily, saveSwap, swapIdForTx } from "@/lib/swap/store";
 import { historyView } from "@/lib/swap/view";
 import { fetchReceipt, readTransfers } from "@/lib/verify/txVerify";
 
@@ -49,6 +49,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ txHash: string 
         await releaseDaily(r.wallet, BigInt(r.amountIn)).catch(() => undefined);
       }
       await saveSwap(r);
+      if (r.status === "SUCCESS") await recordCompleted(r).catch(() => undefined);
     }
     return { swap: historyView(r), explorerUrl };
   })(req);
