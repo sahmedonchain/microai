@@ -201,7 +201,7 @@ export function SwapClient({ embedded = false }: { embedded?: boolean } = {}) {
         tokenIn: ex.swap.tokenIn,
         tokenOut: ex.swap.tokenOut,
         amountIn: ex.swap.amountIn,
-        config: { slippageBps: ex.swap.slippageBps, allowanceStrategy: "permit" },
+        config: { slippageBps: ex.swap.slippageBps, allowanceStrategy: "approve" },
       });
       restore();
       restore = null;
