@@ -379,6 +379,12 @@ describe("hardening: flag, balances, provider failures, unsafe payloads", () => 
     expect((await proxy(q.id, swapBody())).status).toBe(200);
   });
 
+  it("accepts Circle's real fee shape, which names no address", async () => {
+    const { q } = await confirmed();
+    circle.mockResolvedValue(new Response(JSON.stringify(goodPayload({ fees: { provider: [], swap: [], developer: [{ token: USDC, amount: "90", decimals: 6, basis: "inputAmount" }] } })), { status: 200 }));
+    expect((await proxy(q.id, swapBody())).status).toBe(200);
+  });
+
   it("a wallet change cancels a confirmed swap and the proxy stops serving it", async () => {
     const { q } = await confirmed("1000");
     as(ME);
