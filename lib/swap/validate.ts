@@ -51,7 +51,10 @@ export function validateSwapResponse(text: string, r: SwapRecord, treasury: stri
 
   // The platform fee must go to the treasury MicroAI configured, and nowhere else.
   const dev = (j.fees as { developer?: { beneficiary?: unknown }[] } | undefined)?.developer ?? [];
-  for (const d of dev) if (lower(d.beneficiary) !== treasury.toLowerCase()) return "A fee in the route goes to an unexpected address.";
+  // Circle's own fee collector contract may hold the fee on the way to the treasury (the
+  // recipient is checked separately below). Anything else is refused, and the address is named.
+  const feeOk = new Set<string>([treasury.toLowerCase(), SWAP_KNOWN_TARGETS[0]]);
+  for (const d of dev) if (!feeOk.has(lower(d.beneficiary))) return `A fee in the route goes to an unexpected address (${lower(d.beneficiary) || "none"}).`;
   const cfg = (j.config as { customFee?: { recipientAddress?: unknown } } | undefined)?.customFee;
   if (cfg && lower(cfg.recipientAddress) !== treasury.toLowerCase()) return "The fee recipient in the route is not the configured treasury.";
   return null;
