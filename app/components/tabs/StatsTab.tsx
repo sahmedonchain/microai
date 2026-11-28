@@ -248,6 +248,26 @@ export function StatsTab() {
 
   const [explorer, setExplorer] = useState<ExplorerData | null>(null);
   const [explorerFailed, setExplorerFailed] = useState(false);
+  const [swaps, setSwaps] = useState<{ total: number; swaps: { id: string; from: string; to: string; amountIn: string; received: string | null; txHash: string | null; at: string }[] } | null>(null);
+
+  // Completed swaps made through MicroAI, refreshed with the rest of the page.
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const res = await fetchWithTimeout("/api/swap/activity", {});
+        if (res.ok && alive) setSwaps(await res.json());
+      } catch {
+        /* keep the last list */
+      }
+    };
+    load();
+    const t = setInterval(load, 10000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
   const explorerRetried = useRef(false);
 
   const [walletInput, setWalletInput] = useState("");
@@ -502,6 +522,36 @@ export function StatsTab() {
                 )}
                 <span className="flex-1 text-center font-mono text-xs text-muted">{timeAgo(tx.timestamp)}</span>
                 <span className="shrink-0 font-mono text-xs font-semibold text-success">${tx.amount} USDC</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* SWAP ACTIVITY */}
+        <div className="mt-10 flex items-center text-sm font-medium text-text">
+          <LiveDot />Swap activity{swaps ? `: ${swaps.total} completed` : ""}
+        </div>
+        <div className="mt-3 overflow-hidden rounded-lg border border-border bg-surface">
+          {swaps === null ? (
+            <div className="flex flex-col gap-2.5 p-5">
+              {[0, 1].map((i) => <Skeleton key={i} width="100%" height={16} />)}
+            </div>
+          ) : swaps.swaps.length === 0 ? (
+            <p className="p-5 text-center text-sm text-muted">No swaps yet.</p>
+          ) : (
+            swaps.swaps.map((sw) => (
+              <div key={sw.id} className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0">
+                {sw.txHash ? (
+                  <a href={`https://explorer.arc.io/tx/${sw.txHash}`} target="_blank" rel="noreferrer" className="shrink-0 font-mono text-xs text-accent-text hover:underline">
+                    {sw.txHash.slice(0, 8)}...{sw.txHash.slice(-6)}
+                  </a>
+                ) : (
+                  <span className="font-mono text-xs text-muted">N/A</span>
+                )}
+                <span className="flex-1 text-center font-mono text-xs text-muted">{timeAgo(sw.at)}</span>
+                <span className="shrink-0 font-mono text-xs font-semibold text-success">
+                  {sw.amountIn} {sw.from} to {sw.received ?? "?"} {sw.to}
+                </span>
               </div>
             ))
           )}

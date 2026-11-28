@@ -99,3 +99,20 @@ export async function usedToday(wallet: string): Promise<bigint> {
 export async function releaseDaily(wallet: string, units: bigint): Promise<void> {
   await getRedis().incrby(day(wallet), -Number(units));
 }
+
+// Public activity feed: only completed swaps, newest first. Used by the stats page.
+const FEED = "microai:swaps:feed";
+const COUNT = "microai:swaps:count";
+// Called once, when a swap moves from pending to success.
+export async function recordCompleted(r: SwapRecord): Promise<void> {
+  const redis = getRedis();
+  await redis.zadd(FEED, { score: Date.parse(r.confirmedAt ?? r.createdAt), member: r.id });
+  await redis.incr(COUNT);
+}
+export async function recentCompleted(max = 10): Promise<{ total: number; swaps: SwapRecord[] }> {
+  const redis = getRedis();
+  const [all, total] = await Promise.all([redis.zrange(FEED, 0, -1) as Promise<string[]>, redis.get<number>(COUNT)]);
+  const ids = all.filter(isSwapId).reverse().slice(0, max);
+  const swaps = (await Promise.all(ids.map(loadSwap))).filter((r): r is SwapRecord => r !== null && r.status === "SUCCESS");
+  return { total: typeof total === "number" ? total : swaps.length, swaps };
+}
